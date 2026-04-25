@@ -688,15 +688,19 @@ async function gerarPDF() {
     });
     htmlContent += "</div>";
     
-    const tempDiv = document.createElement("div");
-    tempDiv.style.position = "fixed";
-    tempDiv.style.top = "0";
-    tempDiv.style.left = "0";
-    tempDiv.style.width = "210mm";
-    tempDiv.style.zIndex = "-9999";
-    tempDiv.style.opacity = "0";
-    tempDiv.innerHTML = htmlContent;
-    document.body.appendChild(tempDiv);
+    let debugContainer = document.getElementById('debug-container');
+    if (!debugContainer) {
+        debugContainer = document.createElement('div');
+        debugContainer.id = 'debug-container';
+        debugContainer.style.border = "2px solid red";
+        debugContainer.style.margin = "20px";
+        debugContainer.style.padding = "20px";
+        debugContainer.style.width = "210mm";
+        document.body.appendChild(debugContainer);
+    }
+    debugContainer.innerHTML = htmlContent;
+    
+    console.log("PDF HTML Content:", htmlContent);
     
     const opt = {
       margin: [10, 10, 10, 10],
@@ -706,8 +710,7 @@ async function gerarPDF() {
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     
-    await html2pdf().set(opt).from(tempDiv).save();
-    document.body.removeChild(tempDiv);
+    await html2pdf().set(opt).from(debugContainer).save();
     
   } catch(e) { alert("Erro ao gerar PDF: "+e.message); }
 }
