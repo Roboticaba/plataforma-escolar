@@ -590,6 +590,7 @@ async function verProva(id) {
     html += `<div class="questao-card">
       <div style="font-weight:600;margin-bottom:8px;">Questão ${i+1} ${q.descritor ? `<span class="badge badge-green">${q.descritor}</span>` : ""}</div>
       ${q.textoAntes ? `<p style="font-style:italic;">${q.textoAntes}</p>` : ""}
+      ${q.imagens && q.imagens.length ? q.imagens.map(img=>`<img src="${img}" style="max-height:100px;margin:5px 0;display:block;">`).join("") : ""}
       <p><b>${q.pergunta}</b></p>
       ${q.alternativas ? q.alternativas.map((a,j) => `<div>(${letras[j]}) ${a}</div>`).join("") : "<i>Resposta discursiva</i>"}
     </div>`;
@@ -620,15 +621,37 @@ async function exportarPDF() {
     const cab = userDoc.exists ? (userDoc.data().cabecalho || {}) : {};
     
     const letras = ["A","B","C","D","E"];
-    let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${p.nome}</title><style>body{font-family:Arial;padding:40px;max-width:800px;margin:0 auto;} .cab{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;border-bottom:2px solid #000;padding-bottom:15px;} .cab-esq img{max-height:70px;} .cab-dir{text-align:right;font-size:14px;} .info{background:#f5f5f5;padding:15px;margin:20px 0;text-align:center;} .q{margin:25px 0;page-break-inside:avoid;} .alt{margin:5px 0;margin-left:20px;} .rod{display:flex;justify-content:space-between;margin-top:30px;border-top:1px solid #000;padding-top:10px;} .valor-total{font-size:18px;font-weight:bold;} .valor-questao{font-size:14px;}</style></head><body>`;
+    let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${p.nome}</title><style>
+      body{font-family:Arial;padding:40px;max-width:800px;margin:0 auto;}
+      .cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #000;padding-bottom:15px;}
+      .cab-esq img{max-height:80px; width:auto;}
+      .cab-dir{text-align:center;flex:1;}
+      .cab-dir h2{margin:0;font-size:18px;}
+      .cab-dir p{margin:2px 0;font-size:14px;}
+      .dados-prova{margin-bottom:20px;border:1px solid #ccc;padding:10px;}
+      .linha-campo{display:flex;justify-content:space-between;padding:5px 0;}
+      .q{margin:25px 0;page-break-inside:avoid;}
+      .alt{margin:5px 0;margin-left:20px;}
+      .valor-total{font-size:18px;font-weight:bold;}
+      .valor-questao{font-size:14px;color:#666;}
+    </style></head><body>`;
     
     html += `<div class="cab">
       <div class="cab-esq">${cab.logoUrl?`<img src="${cab.logoUrl}">`:""}</div>
       <div class="cab-dir">
-        ${cab.nomeEscola?`<div><strong>${cab.nomeEscola}</strong></div>`:""}
-        ${cab.endereco?`<div>${cab.endereco}</div>`:""}
-        <div>Aluno(a): ________________ (Turma: ____)</div>
-        <div>Professor(a): ${cab.nomeProfessor||"_____________"} Data: ___/___/___</div>
+        ${cab.nomeEscola?`<h2>${cab.nomeEscola}</h2>`:""}
+        ${cab.endereco?`<p>${cab.endereco}</p>`:""}
+      </div>
+    </div>
+    
+    <div class="dados-prova">
+      <div class="linha-campo">
+        <span>ALUNO(A): _________________________________________________</span>
+        <span>ANO: __________</span>
+      </div>
+      <div class="linha-campo">
+        <span>PROFESSOR(A): __________________________________________</span>
+        <span>DATA: ___/___/___</span>
       </div>
     </div>`;
     
@@ -641,6 +664,7 @@ async function exportarPDF() {
     (p.questoes||[]).forEach((q,i) => {
       html += `<div class="q"><div><b>Questão ${i+1}</b>${q.descritor?" ("+q.descritor.split("|")[0]+")":""} <span class="valor-questao">(${valorPorQuestao.replace(".",",")} pontos)</span></div>`;
       if(q.textoAntes) html+=`<div style="font-style:italic;">${q.textoAntes}</div>`;
+      if(q.imagens && q.imagens.length) html+=q.imagens.map(img=>`<img src="${img}" style="max-height:150px;margin:10px 0;display:block;">`).join("");
       html+=`<div><b>${q.pergunta}</b></div>`;
       if(q.alternativas) html+=q.alternativas.map((a,j)=>`<div class="alt">(${letras[j]}) ${a}</div>`).join("");
       html+="</div>";
