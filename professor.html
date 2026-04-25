@@ -625,26 +625,25 @@ async function gerarPDF() {
     
     let htmlContent = `
       <style>
-      .header-container { border: 2px solid #000; border-radius: 12px; padding: 16px; font-family: Arial, sans-serif; }
-      .top-row { display: flex; align-items: center; }
-      .logo { width: 160px; flex-shrink: 0; text-align: center; }
-      .logo img { max-width: 100%; height: auto; max-height: 80px; }
-      .textos { flex: 1; text-align: center; }
-      .titulo { font-weight: bold; font-size: 16px; }
-      .endereco { font-size: 13px; margin-top: 4px; }
-      .linha { display: flex; justify-content: space-between; margin-top: 10px; font-size: 14px; }
-      .esquerda { flex: 1; }
-      .direita { width: 180px; text-align: right; }
-      .linha-input { display: inline-block; border-bottom: 1px solid #000; width: 70%; margin-left: 8px; }
-      .titulo-prova { text-align: center; font-weight: bold; font-size: 16px; margin-top: 16px; }
-      
-      #area-impressao { width: 190mm; margin: 0 auto; padding: 0; }
-      
-      body { font-family: Arial; margin: 0; padding: 0; }
-      .q{margin:25px 0;page-break-inside:avoid;}
-      .alt{margin:5px 0;margin-left:20px;}
-      .valor-total{font-size:18px;font-weight:bold;}
-      .valor-questao{font-size:14px;color:#666;}
+        .header-container { border: 2px solid #000; border-radius: 12px; padding: 16px; font-family: Arial, sans-serif; }
+        .top-row { display: flex; align-items: center; }
+        .logo { width: 160px; flex-shrink: 0; text-align: center; }
+        .logo img { max-width: 100%; height: auto; max-height: 80px; }
+        .textos { flex: 1; text-align: center; }
+        .titulo { font-weight: bold; font-size: 16px; }
+        .endereco { font-size: 13px; margin-top: 4px; }
+        .linha { display: flex; justify-content: space-between; margin-top: 10px; font-size: 14px; }
+        .esquerda { flex: 1; }
+        .direita { width: 180px; text-align: right; }
+        .linha-input { display: inline-block; border-bottom: 1px solid #000; width: 70%; margin-left: 8px; }
+        .titulo-prova { text-align: center; font-weight: bold; font-size: 16px; margin-top: 16px; }
+        
+        #area-impressao { width: 190mm; margin: 0 auto; padding: 0; }
+        
+        .q{margin:25px 0;page-break-inside:avoid;}
+        .alt{margin:5px 0;margin-left:20px;}
+        .valor-total{font-size:18px;font-weight:bold;}
+        .valor-questao{font-size:14px;color:#666;}
       </style>
       
       <div id="area-impressao">
@@ -690,6 +689,10 @@ async function gerarPDF() {
     htmlContent += "</div>";
     
     const tempDiv = document.createElement("div");
+    tempDiv.style.position = "fixed";
+    tempDiv.style.left = "-9999px";
+    tempDiv.style.top = "0";
+    tempDiv.style.width = "210mm";
     tempDiv.innerHTML = htmlContent;
     document.body.appendChild(tempDiv);
     
@@ -697,7 +700,7 @@ async function gerarPDF() {
       margin: [10, 10, 10, 10],
       filename: 'prova.pdf',
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: { scale: 2, useCORS: true, windowWidth: 794 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     
