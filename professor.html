@@ -403,8 +403,7 @@ async function carregarTurmas() {
   const lista = document.getElementById("listaTurmas");
   lista.innerHTML = "<p>Carregando...</p>";
   try {
-    const q = db.collection("turmas").where("criadoPor", "==", usuario.uid);
-    const snap = await q.get();
+    const snap = await db.collection("turmas").where("criadoPor", "==", usuario.uid).get();
     if (snap.empty) {
       lista.innerHTML = '<div class="empty-state"><div>📚</div><div>Nenhuma turma</div><div>Crie sua primeira turma</div></div>';
       return;
@@ -511,8 +510,7 @@ async function mostrarAtribuirProvas() {
   document.getElementById("areaAtribuirProvas").style.display = "block";
   const select = document.getElementById("selectProvaAtribuir");
   select.innerHTML = "<option>Carregando...</option>";
-  const q = db.collection("simulados").where("criadoPor", "==", usuario.uid);
-  const snap = await q.get();
+  const snap = await db.collection("simulados").where("criadoPor", "==", usuario.uid).get();
   select.innerHTML = snap.docs.map(d => `<option value="${d.id}">${d.data().nome}</option>`).join("");
 }
 
@@ -547,13 +545,12 @@ async function filtrarProvas() {
   const disc = document.getElementById("filtroDisciplina").value;
   
   try {
-    let q;
-    if (ano && disc) q = db.collection("simulados").where("ano","==",ano).where("disciplina","==",disc).where("criadoPor","==",usuario.uid);
-    else if (ano) q = db.collection("simulados").where("ano","==",ano).where("criadoPor","==",usuario.uid);
-    else if (disc) q = db.collection("simulados").where("disciplina","==",disc).where("criadoPor","==",usuario.uid);
-    else q = db.collection("simulados").where("criadoPor","==", usuario.uid);
+    let snap;
+    if (ano && disc) snap = await db.collection("simulados").where("ano","==",ano).where("disciplina","==",disc).where("criadoPor","==",usuario.uid).get();
+    else if (ano) snap = await db.collection("simulados").where("ano","==",ano).where("criadoPor","==",usuario.uid).get();
+    else if (disc) snap = await db.collection("simulados").where("disciplina","==",disc).where("criadoPor","==",usuario.uid).get();
+    else snap = await db.collection("simulados").where("criadoPor","==", usuario.uid).get();
     
-    const snap = await q.get();
     if (snap.empty) {
       lista.innerHTML = '<div class="empty-state"><div>📋</div><div>Nenhuma prova</div></div>';
       return;
@@ -620,7 +617,7 @@ async function exportarPDF() {
     const docP = await db.collection("simulados").doc(provaAtualId).get();
     const p = docP.data();
     const userDoc = await db.collection("users").doc(usuario.uid).get();
-    const cab = userDoc.exists() ? (userDoc.data().cabecalho || {}) : {};
+    const cab = userDoc.exists ? (userDoc.data().cabecalho || {}) : {};
     
     const letras = ["A","B","C","D","E"];
     let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${p.nome}</title><style>body{font-family:Arial;padding:40px;max-width:800px;margin:0 auto;} .cab{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;border-bottom:2px solid #000;padding-bottom:15px;} .cab-esq img{max-height:70px;} .cab-dir{text-align:right;font-size:14px;} .info{background:#f5f5f5;padding:15px;margin:20px 0;text-align:center;} .q{margin:25px 0;page-break-inside:avoid;} .alt{margin:5px 0;margin-left:20px;} .rod{display:flex;justify-content:space-between;margin-top:30px;border-top:1px solid #000;padding-top:10px;} .valor-total{font-size:18px;font-weight:bold;} .valor-questao{font-size:14px;}</style></head><body>`;
@@ -804,7 +801,7 @@ async function salvarProva() {
 async function abrirConfig() {
   try {
     const userDoc = await db.collection("users").doc(usuario.uid).get();
-    const dados = userDoc.exists() ? userDoc.data() : {};
+    const dados = userDoc.exists ? userDoc.data() : {};
     const cab = dados.cabecalho || {};
     document.getElementById("cfgNomeEscola").value = cab.nomeEscola || "";
     document.getElementById("cfgEndereco").value = cab.endereco || "";
