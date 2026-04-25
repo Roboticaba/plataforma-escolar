@@ -403,8 +403,8 @@ async function carregarTurmas() {
   const lista = document.getElementById("listaTurmas");
   lista.innerHTML = "<p>Carregando...</p>";
   try {
-    const q = db.query(db.collection("turmas"), db.where("criadoPor", "==", usuario.uid));
-    const snap = await db.getDoc(q);
+    const q = db.collection("turmas").where("criadoPor", "==", usuario.uid);
+    const snap = await q.get();
     if (snap.empty) {
       lista.innerHTML = '<div class="empty-state"><div>📚</div><div>Nenhuma turma</div><div>Crie sua primeira turma</div></div>';
       return;
@@ -450,7 +450,7 @@ function trocarAbaTurma(aba) {
 
 async function carregarDadosTurma() {
   if (!turmaAtualId) return;
-  const docT = await db.getDoc(db.collection("turmas").doc(turmaAtualId));
+  const docT = await db.collection("turmas").doc(turmaAtualId).get();
   if (!docT.exists) return;
   const t = docT.data();
   
@@ -467,7 +467,7 @@ async function carregarDadosTurma() {
   if (t.provas && t.provas.length) {
     let html = "";
     for (const pid of t.provas) {
-      const dp = await db.getDoc(db.collection("simulados").doc(pid));
+      const dp = await db.collection("simulados").doc(pid).get();
       if (dp.exists) html += `<div class="list-item"><div>${dp.data().nome}</div><button class="btn btn-danger btn-sm" onclick="removerProva('${pid}')">✕</button></div>`;
     }
     provasDiv.innerHTML = html;
@@ -480,7 +480,7 @@ async function adicionarAluno() {
   const senha = document.getElementById("senhaAluno").value.trim();
   if (!nome || !senha) { alert("Preencha nome e senha"); return; }
   
-  const docT = await db.getDoc(db.collection("turmas").doc(turmaAtualId));
+  const docT = await db.collection("turmas").doc(turmaAtualId).get();
   const t = docT.data();
   const alunos = t.alunos || [];
   alunos.push({ nome, senha });
@@ -493,7 +493,7 @@ async function adicionarAluno() {
 
 async function removerAluno(index) {
   if (!confirm("Remover aluno?")) return;
-  const docT = await db.getDoc(db.collection("turmas").doc(turmaAtualId));
+  const docT = await db.collection("turmas").doc(turmaAtualId).get();
   const t = docT.data();
   const alunos = t.alunos || [];
   alunos.splice(index, 1);
@@ -511,15 +511,15 @@ async function mostrarAtribuirProvas() {
   document.getElementById("areaAtribuirProvas").style.display = "block";
   const select = document.getElementById("selectProvaAtribuir");
   select.innerHTML = "<option>Carregando...</option>";
-  const q = db.query(db.collection("simulados"), db.where("criadoPor", "==", usuario.uid));
-  const snap = await db.getDoc(q);
+  const q = db.collection("simulados").where("criadoPor", "==", usuario.uid);
+  const snap = await q.get();
   select.innerHTML = snap.docs.map(d => `<option value="${d.id}">${d.data().nome}</option>`).join("");
 }
 
 async function atribuirProva() {
   const pid = document.getElementById("selectProvaAtribuir").value;
   if (!pid || !turmaAtualId) return;
-  const docT = await db.getDoc(db.collection("turmas").doc(turmaAtualId));
+  const docT = await db.collection("turmas").doc(turmaAtualId).get();
   const t = docT.data();
   const provas = t.provas || [];
   if (!provas.includes(pid)) provas.push(pid);
@@ -529,7 +529,7 @@ async function atribuirProva() {
 }
 
 async function removerProva(pid) {
-  const docT = await db.getDoc(db.collection("turmas").doc(turmaAtualId));
+  const docT = await db.collection("turmas").doc(turmaAtualId).get();
   const t = docT.data();
   const provas = (t.provas || []).filter(p => p !== pid);
   await db.updateDoc(db.collection("turmas").doc(turmaAtualId), { provas });
@@ -548,12 +548,12 @@ async function filtrarProvas() {
   
   try {
     let q;
-    if (ano && disc) q = db.query(db.collection("simulados"), db.where("ano","==",ano), db.where("disciplina","==",disc), db.where("criadoPor","==",usuario.uid));
-    else if (ano) q = db.query(db.collection("simulados"), db.where("ano","==",ano), db.where("criadoPor","==",usuario.uid));
-    else if (disc) q = db.query(db.collection("simulados"), db.where("disciplina","==",disc), db.where("criadoPor","==",usuario.uid));
-    else q = db.query(db.collection("simulados"), db.where("criadoPor","==", usuario.uid));
+    if (ano && disc) q = db.collection("simulados").where("ano","==",ano).where("disciplina","==",disc).where("criadoPor","==",usuario.uid);
+    else if (ano) q = db.collection("simulados").where("ano","==",ano).where("criadoPor","==",usuario.uid);
+    else if (disc) q = db.collection("simulados").where("disciplina","==",disc).where("criadoPor","==",usuario.uid);
+    else q = db.collection("simulados").where("criadoPor","==", usuario.uid);
     
-    const snap = await db.getDoc(q);
+    const snap = await q.get();
     if (snap.empty) {
       lista.innerHTML = '<div class="empty-state"><div>📋</div><div>Nenhuma prova</div></div>';
       return;
@@ -577,7 +577,7 @@ async function filtrarProvas() {
 
 async function verProva(id) {
   provaAtualId = id;
-  const docP = await db.getDoc(db.collection("simulados").doc(id));
+  const docP = await db.collection("simulados").doc(id).get();
   if (!docP.exists) return;
   const p = docP.data();
   document.getElementById("tituloVerProva").textContent = p.nome;
@@ -617,9 +617,9 @@ async function excluirProva() {
 async function exportarPDF() {
   if (!provaAtualId) return;
   try {
-    const docP = await db.getDoc(db.collection("simulados").doc(provaAtualId));
+    const docP = await db.collection("simulados").doc(provaAtualId).get();
     const p = docP.data();
-    const userDoc = await db.getDoc(db.collection("users").doc(usuario.uid));
+    const userDoc = await db.collection("users").doc(usuario.uid).get();
     const cab = userDoc.exists() ? (userDoc.data().cabecalho || {}) : {};
     
     const letras = ["A","B","C","D","E"];
@@ -803,7 +803,7 @@ async function salvarProva() {
 
 async function abrirConfig() {
   try {
-    const userDoc = await db.getDoc(db.collection("users").doc(usuario.uid));
+    const userDoc = await db.collection("users").doc(usuario.uid).get();
     const dados = userDoc.exists() ? userDoc.data() : {};
     const cab = dados.cabecalho || {};
     document.getElementById("cfgNomeEscola").value = cab.nomeEscola || "";
