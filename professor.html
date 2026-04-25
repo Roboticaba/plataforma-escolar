@@ -623,35 +623,48 @@ async function exportarPDF() {
     const letras = ["A","B","C","D","E"];
     let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${p.nome}</title><style>
       body{font-family:Arial;padding:40px;max-width:800px;margin:0 auto;}
-      .cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #000;padding-bottom:15px;}
-      .cab-esq img{max-height:80px; width:auto;}
-      .cab-dir{text-align:center;flex:1;}
-      .cab-dir h2{margin:0;font-size:18px;}
-      .cab-dir p{margin:2px 0;font-size:14px;}
-      .dados-prova{margin-bottom:20px;border:1px solid #ccc;padding:10px;}
-      .linha-campo{display:flex;justify-content:space-between;padding:5px 0;}
+      @media print {
+        .header-container { display: flex; flex-direction: row; align-items: center; width: 100%; margin-bottom: 20px; }
+        .logo-section { width: 200px; flex-shrink: 0; display: flex; justify-content: center; }
+        .logo-section img { max-height: 80px; width: auto; }
+        .info-section { flex: 1; text-align: center; }
+        .info-section h2 { margin: 0; font-size: 20px; }
+        .info-section p { margin: 4px 0; font-size: 14px; }
+        .divider { border-top: 1px solid #000; margin: 15px 0; width: 100%; }
+        .texto-livre-section { width: 100%; text-align: center; margin-bottom: 15px; font-style: italic; font-size: 14px; }
+        .form-section { width: 100%; margin-bottom: 20px; }
+        .form-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
+        .field-label { font-weight: bold; }
+        .field-line { border-bottom: 1px solid #000; display: inline-block; }
+      }
       .q{margin:25px 0;page-break-inside:avoid;}
       .alt{margin:5px 0;margin-left:20px;}
       .valor-total{font-size:18px;font-weight:bold;}
       .valor-questao{font-size:14px;color:#666;}
     </style></head><body>`;
     
-    html += `<div class="cab">
-      <div class="cab-esq">${cab.logoUrl?`<img src="${cab.logoUrl}">`:""}</div>
-      <div class="cab-dir">
+    html += `<div class="header-container">
+      <div class="logo-section">${cab.logoUrl?`<img src="${cab.logoUrl}">`:""}</div>
+      <div class="info-section">
         ${cab.nomeEscola?`<h2>${cab.nomeEscola}</h2>`:""}
         ${cab.endereco?`<p>${cab.endereco}</p>`:""}
       </div>
     </div>
     
-    <div class="dados-prova">
-      <div class="linha-campo">
-        <span>ALUNO(A): _________________________________________________</span>
-        <span>ANO: __________</span>
+    <div class="divider"></div>
+    
+    <div class="texto-livre-section">
+      <p>${cab.textoLivre || ""}</p>
+    </div>
+    
+    <div class="form-section">
+      <div class="form-row">
+        <div><span class="field-label">ALUNO(A):</span><span class="field-line" style="width: 400px;"></span></div>
+        <div><span class="field-label">ANO:</span><span class="field-line" style="width: 100px;"></span></div>
       </div>
-      <div class="linha-campo">
-        <span>PROFESSOR(A): __________________________________________</span>
-        <span>DATA: ___/___/___</span>
+      <div class="form-row">
+        <div><span class="field-label">PROFESSOR(A):</span><span class="field-line" style="width: 350px;"></span></div>
+        <div><span class="field-label">DATA:</span><span class="field-line" style="width: 120px;"></span></div>
       </div>
     </div>`;
     
