@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Aluno</title>
+<style>
+body { font-family: Arial; margin: 30px; background: #f5f5f5; }
+.container { background: white; padding: 20px; border-radius: 10px; }
+button { padding: 10px 20px; margin-top: 10px; background: #28a745; color: white; border: none; cursor: pointer; }
+.opcao { margin: 5px 0; padding: 8px; border: 1px solid #ccc; cursor: pointer; border-radius: 5px; }
+.opcao:hover { background: #eee; }
+.selecionado { background: #cce5ff; }
+img { max-width: 200px; margin: 5px 0; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h2>Prova</h2>
+
+<p><b>Aluno:</b> <span id="nomeAluno"></span></p>
+
+<label>Escolha a prova:</label>
+<select id="listaProvas"></select>
+
+<button onclick="carregarProva()">Carregar Prova</button>
+
+<hr>
+
+<div id="prova"></div>
+
+<button onclick="enviarProva()">Enviar Prova</button>
+
+<h3 id="status"></h3>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
+  authDomain: "plataforma-escolar-71635.firebaseapp.com",
+  projectId: "plataforma-escolar-71635",
+  storageBucket: "plataforma-escolar-71635.firebasestorage.app",
+  messagingSenderId: "194897243209",
+  appId: "1:194897243209:web:ff339bee22bced4098e398"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+
+if (!usuario || usuario.role !== "aluno") {
+  window.location.href = "index.html";
+}
+
+document.getElementById("nomeAluno").innerText = usuario.nome;
+
+const lista = document.getElementById("listaProvas");
+const divProva = document.getElementById("prova");
+const statusEl = document.getElementById("status");
+
+let provaData = null;
+let respostas = {};
+
+async function carregarLista() {
+  if (!usuario.turmaId) {
+    statusEl.innerText = "Erro: Turma não encontrada";
+    return;
+  }
+
+  try {
+    const docSnap = await db.collection("turmas").doc(usuario.turmaId).get();
+    const provas = docSnap.data()?.provas || [];
+
+    lista.innerHTML = "";
+
+    for (const id of provas) {
+      const snap = await db.collection("simulados").doc(id).get();
+      if (!snap.exists) continue;
+
+      const resp = await db.collection("respostas")
+        .where("alunoId", "==", usuario.uid)
+        .where("provaId", "==", id)
+        .get();
+
+      if (!resp.empty) continue;
+
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = snap.data().nome;
+      lista.appendChild(opt);
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+window.carregarProva = async function() {
+  const provaId = lista.value;
+  if (!provaId) return;
+
+  divProva.innerHTML = "Carregando...";
+
+  try {
+    const snap = await db.collection("simulados").doc(provaId).get();
+    provaData = snap.data();
+    respostas = {};
+    render();
+  } catch (e) {
+    statusEl.innerText = "Erro ao carregar prova";
+  }
+};
+
+function render() {
+  divProva.innerHTML = "";
+
+  provaData.questoes.forEach((q, i) => {
+    const bloc = document.createElement("div");
+    bloc.style.marginBottom = "15px";
+
+    if (q.textoAntes) {
+      bloc.innerHTML += `<i>${q.textoAntes}</i><br>`;
+    }
+
+    bloc.innerHTML += `<b>${i + 1}) ${q.pergunta}</b><br>`;
+
+    (q.imagens || []).forEach(img => {
+      const im = document.createElement("img");
+      im.src = img;
+      bloc.appendChild(im);
+      bloc.appendChild(document.createElement("br"));
+    });
+
+    if (q.alternativas && q.alternativas.length > 0) {
+      const letras = ["A", "B", "C", "D"];
+      q.alternativas.forEach((alt, idx) => {
+        const op = document.createElement("div");
+        op.className = "opcao";
+
+        if (q.tipoAlt === "imagem") {
+          op.innerHTML = `(${letras[idx]})<br><img src="${alt}">`;
+        } else {
+          op.innerText = `(${letras[idx]}) ${alt}`;
+        }
+
+        op.onclick = () => {
+          document.querySelectorAll(".opcao").forEach(el => el.classList.remove("selecionado"));
+          op.classList.add("selecionado");
+          respostas[i] = idx;
+        };
+
+        bloc.appendChild(op);
+      });
+    } else {
+      const t = document.createElement("textarea");
+      t.onchange = () => { respostas[i] = t.value; };
+      bloc.appendChild(t);
+    }
+
+    divProva.appendChild(bloc);
+  });
+}
+
+window.enviarProva = async function() {
+  if (!provaData) return;
+
+  try {
+    await db.collection("respostas").add({
+      alunoId: usuario.uid,
+      provaId: lista.value,
+      respostas,
+      data: new Date()
+    });
+
+    statusEl.innerText = "Prova enviada!";
+    divProva.innerHTML = "";
+    carregarLista();
+  } catch (e) {
+    statusEl.innerText = "Erro ao enviar";
+  }
+};
+
+carregarLista();
+</script>
+
+</body>
+</html>

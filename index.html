@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Login - Plataforma Escolar</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+.box { background: white; padding: 40px; border-radius: 16px; width: 100%; max-width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+h2 { margin: 0 0 30px; color: #333; text-align: center; }
+.input-group { margin-bottom: 20px; }
+.input-group label { display: block; margin-bottom: 8px; color: #555; font-weight: 600; font-size: 14px; }
+input { width: 100%; padding: 14px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px; transition: border-color 0.3s; }
+input:focus { outline: none; border-color: #667eea; }
+button { width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.2s; }
+button:hover { transform: translateY(-2px); }
+button:disabled { opacity: 0.7; cursor: not-allowed; }
+.link { text-align: center; margin-top: 20px; color: #666; }
+.link a { color: #667eea; text-decoration: none; font-weight: 600; }
+.link a:hover { text-decoration: underline; }
+#erro { color: #e74c3c; text-align: center; margin-top: 15px; }
+</style>
+</head>
+<body>
+
+<div class="box">
+
+<h2>Login</h2>
+
+<div class="input-group">
+<label>Usuário</label>
+<input id="login" placeholder="Seu usuário">
+</div>
+
+<div class="input-group">
+<label>Senha</label>
+<input id="senha" placeholder="Sua senha" type="password">
+</div>
+
+<button id="btnEntrar" onclick="entrar()">Entrar</button>
+
+<p id="erro"></p>
+
+<p class="link">É professor? <a href="cadastro.html">Cadastre-se</a></p>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
+  authDomain: "plataforma-escolar-71635.firebaseapp.com",
+  projectId: "plataforma-escolar-71635",
+  storageBucket: "plataforma-escolar-71635.firebasestorage.app",
+  messagingSenderId: "194897243209",
+  appId: "1:194897243209:web:ff339bee22bced4098e398"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+window.entrar = async function() {
+  const identificador = document.getElementById("login").value.trim();
+  const senha = document.getElementById("senha").value;
+  const erro = document.getElementById("erro");
+  const btn = document.getElementById("btnEntrar");
+
+  erro.innerText = "";
+  btn.disabled = true;
+  btn.innerText = "Entrando...";
+
+  if (!identificador || !senha) {
+    erro.innerText = "Digite usuário e senha";
+    btn.disabled = false;
+    btn.innerText = "Entrar";
+    return;
+  }
+
+  try {
+    const email = `${identificador}@plataforma.app`;
+    const userCred = await auth.signInWithEmailAndPassword(email, senha);
+    const uid = userCred.user.uid;
+
+    const userDoc = await db.collection("users").doc(uid).get();
+
+    if (!userDoc.exists) {
+      await auth.signOut();
+      erro.innerText = "Usuário não configurado. Contacte o professor.";
+      btn.disabled = false;
+      btn.innerText = "Entrar";
+      return;
+    }
+
+    const userData = userDoc.data() || {};
+
+    if (userData.ativo === false) {
+      await auth.signOut();
+      erro.innerText = "Conta inativada. Contacte o professor.";
+      btn.disabled = false;
+      btn.innerText = "Entrar";
+      return;
+    }
+
+    localStorage.setItem('usuario', JSON.stringify({
+      uid: uid,
+      email: userCred.user.email,
+      nome: userData.nome || "Aluno",
+      role: userData.role || "aluno",
+      turmaId: userData.turmaId || null
+    }));
+
+    window.location = userData.role === 'professor' ? 'professor.html' : 'home.html';
+
+  } catch (err) {
+    console.error('Erro login:', err);
+
+    let mensagem = "Erro ao fazer login";
+    if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+      mensagem = "Usuário ou senha inválidos";
+    } else if (err.code === 'auth/invalid-email') {
+      mensagem = "Email inválido";
+    } else if (err.code === 'auth/too-many-requests') {
+      mensagem = "Muitas tentativas. Tente novamente mais tarde";
+    }
+
+    erro.innerText = mensagem;
+    btn.disabled = false;
+    btn.innerText = "Entrar";
+  }
+};
+</script>
+
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Criar Professor</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #f5f5f5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+}
+
+.box {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  width: 300px;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  box-sizing: border-box;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  background: #28a745;
+  color: white;
+  border: none;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+#mensagem {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.sucesso {
+  background: #d4edda;
+  color: #155724;
+}
+
+.erro {
+  background: #f8d7da;
+  color: #721c24;
+}
+</style>
+</head>
+<body>
+
+<div class="box">
+<h2>Criar Professor</h2>
+
+<input id="nome" placeholder="Nome completo">
+<input id="login" placeholder="Login (sem @)">
+<input id="senha" placeholder="Senha (mín 6 caracteres)">
+
+<button id="btnCriar" onclick="criarProfessor()">Criar Professor</button>
+
+<div id="mensagem" style="display:none;"></div>
+
+<p style="font-size:12px; color:#666;">
+Após criar, faça login com o login e senha acima.
+</p>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
+  authDomain: "plataforma-escolar-71635.firebaseapp.com",
+  projectId: "plataforma-escolar-71635",
+  storageBucket: "plataforma-escolar-71635.firebasestorage.app",
+  messagingSenderId: "194897243209",
+  appId: "1:194897243209:web:ff339bee22bced4098e398",
+  measurementId: "G-BGPZRDJQVS"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+window.criarProfessor = async function() {
+  const nome = document.getElementById("nome").value.trim();
+  const login = document.getElementById("login").value.trim();
+  const senha = document.getElementById("senha").value;
+  const msg = document.getElementById("mensagem");
+  const btn = document.getElementById("btnCriar");
+
+  msg.style.display = "none";
+  msg.className = "";
+
+  if (!nome || !login || !senha) {
+    msg.style.display = "block";
+    msg.className = "erro";
+    msg.innerText = "Preencha todos os campos";
+    return;
+  }
+
+  if (senha.length < 6) {
+    msg.style.display = "block";
+    msg.className = "erro";
+    msg.innerText = "Senha deve ter pelo menos 6 caracteres";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerText = "Criando...";
+
+  try {
+    // 1. Criar usuário no Firebase Auth
+    const email = `${login}@plataforma.app`;
+    const userCred = await createUserWithEmailAndPassword(auth, email, senha);
+    const uid = userCred.user.uid;
+
+    // 2. Criar documento no Firestore
+    await setDoc(doc(db, "users", uid), {
+      nome: nome,
+      role: "professor",
+      turmas: []
+    });
+
+    msg.style.display = "block";
+    msg.className = "sucesso";
+    msg.innerText = "✅ Professor criado com sucesso!";
+    btn.innerText = "Criado!";
+
+    // Limpar campos
+    document.getElementById("nome").value = "";
+    document.getElementById("login").value = "";
+    document.getElementById("senha").value = "";
+
+  } catch (err) {
+    console.error(err);
+    btn.disabled = false;
+    btn.innerText = "Criar Professor";
+
+    let mensagem = "Erro ao criar";
+    if (err.code === "auth/email-already-in-use") {
+      mensagem = "Este login já existe";
+    } else if (err.code === "auth/invalid-email") {
+      mensagem = "Login inválido";
+    } else if (err.code === "auth/weak-password") {
+      mensagem = "Senha fraca";
+    }
+
+    msg.style.display = "block";
+    msg.className = "erro";
+    msg.innerText = mensagem;
+  }
+};
+</script>
+
+</body>
+</html>

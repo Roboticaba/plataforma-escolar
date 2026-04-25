@@ -1,0 +1,341 @@
+﻿<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Prova</title>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); min-height: 100vh; padding: 20px; color: #1f2937; }
+.container { max-width: 800px; margin: 0 auto; }
+.card { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+.topo-prova { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #e5e7eb; }
+.topo-prova h2 { color: #1f2937; font-size: 24px; }
+.tempo-box { display: flex; align-items: center; gap: 8px; background: #fef3c7; padding: 8px 16px; border-radius: 8px; font-weight: 600; color: #92400e; }
+.tempo-box .icon { font-size: 20px; }
+.barra-progresso { height: 8px; background: #e5e7eb; border-radius: 4px; margin-bottom: 24px; overflow: hidden; }
+.barra-progresso .fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 4px; transition: width 0.3s ease; width: 0%; }
+.questao { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.questao .numero { display: inline-block; background: #667eea; color: white; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-weight: 700; font-size: 14px; margin-right: 10px; }
+.questao .texto { font-size: 16px; line-height: 1.6; margin-bottom: 12px; }
+.questao .apoio { font-style: italic; color: #6b7280; margin-bottom: 12px; }
+.questao img { max-width: 100%; border-radius: 8px; margin: 10px 0; border: 1px solid #e5e7eb; }
+.opcoes { display: flex; flex-direction: column; gap: 8px; }
+.opcao { padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; }
+.opcao:hover { border-color: #667eea; background: #eff6ff; }
+.opcao.selecionada { border-color: #667eea; background: #dbeafe; }
+.opcao .letra { width: 28px; height: 28px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+.opcao.selecionada .letra { background: #667eea; color: white; }
+textarea.resposta-discursiva { width: 100%; min-height: 100px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 10px; font-family: inherit; font-size: 14px; resize: vertical; }
+textarea.resposta-discursiva:focus { border-color: #667eea; outline: none; }
+.botoes { display: flex; gap: 12px; margin-top: 24px; justify-content: center; }
+.btn { padding: 14px 32px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-iniciar { background: #10b981; color: white; }
+.btn-iniciar:hover { background: #059669; }
+.btn-enviar { background: #667eea; color: white; }
+.btn-enviar:hover { background: #5a67d8; }
+.btn-enviar:disabled { background: #9ca3af; cursor: not-allowed; }
+.btn-enviar.enviado { background: #10b981; }
+.modal-resultado { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
+.modal-resultado.ativo { display: flex; }
+.modal-box { background: white; border-radius: 20px; padding: 40px; text-align: center; max-width: 450px; width: 90%; animation: modalPop 0.5s ease; }
+@keyframes modalPop { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.modal-box .trofeu { font-size: 80px; margin-bottom: 20px; }
+.modal-box h3 { color: #1f2937; font-size: 24px; margin-bottom: 10px; }
+.modal-box .resultado-nota { font-size: 48px; font-weight: 700; color: #667eea; margin: 20px 0; }
+.modal-box .resultado-detalhe { color: #6b7280; margin-bottom: 20px; font-size: 16px; }
+.modal-box .btn-voltar { background: #667eea; color: white; padding: 14px 40px; font-size: 16px; }
+.modal-box .btn-voltar:hover { background: #5a67d8; }
+.confetti-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3000; }
+</style>
+</head>
+<body>
+<canvas id="confetti" class="confetti-canvas"></canvas>
+
+<div class="container">
+  <div class="card">
+    <div class="topo-prova">
+      <h2 id="titulo">Carregando...</h2>
+      <div class="tempo-box">
+        <span class="icon">⏱️</span>
+        <span id="tempo">--</span>
+      </div>
+    </div>
+    
+    <div class="barra-progresso">
+      <div class="fill" id="barra"></div>
+    </div>
+    
+    <div id="prova"></div>
+    
+    <div class="botoes">
+      <button id="btnIniciar" class="btn btn-iniciar" onclick="iniciarProva()">▶️ Iniciar Prova</button>
+      <button id="btnEnviar" class="btn btn-enviar" onclick="enviar()" style="display:none;">📤 Enviar Respostas</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalResultado" class="modal-resultado">
+  <div class="modal-box">
+    <div class="trofeu" id="trofeu">🏆</div>
+    <h3 id="msgResultado">Prova Enviada!</h3>
+    <div class="resultado-nota" id="notaObjetivas">-</div>
+    <div class="resultado-detalhe" id="detalheResultado"></div>
+    <button class="btn btn-voltar" onclick="voltarInicio()">🏠 Voltar ao Início</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
+  authDomain: "plataforma-escolar-71635.firebaseapp.com",
+  projectId: "plataforma-escolar-71635",
+  storageBucket: "plataforma-escolar-71635.firebasestorage.app",
+  messagingSenderId: "194897243209",
+  appId: "1:194897243209:web:ff339bee22bced4098e398"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+const provaId = localStorage.getItem("provaSelecionada");
+
+if (!usuario || usuario.role !== "aluno" || !provaId) {
+  window.location.href = "index.html";
+}
+
+let respostas = JSON.parse(localStorage.getItem("respostasTemp")) || {};
+let prova = null;
+let tempo = 600;
+let timer = null;
+let provaIniciada = false;
+
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+function atualizarTempo() {
+  tempo--;
+  document.getElementById("tempo").innerText = formatTime(tempo);
+  if (tempo <= 60) {
+    document.getElementById("tempo").style.color = "#dc2626";
+  }
+  if (tempo <= 0) { enviar(); }
+}
+
+async function carregarProva() {
+  try {
+    const docSnap = await db.collection("simulados").doc(provaId).get();
+    if (!docSnap.exists) {
+      alert("Prova não encontrada!");
+      window.location.href = "home.html";
+      return;
+    }
+    prova = docSnap.data();
+    document.getElementById("titulo").innerText = prova.nome || "Prova";
+    render();
+  } catch (e) {
+    console.error("Erro ao carregar prova:", e);
+    alert("Erro ao carregar prova!");
+    window.location.href = "home.html";
+  }
+}
+
+function render() {
+  const div = document.getElementById("prova");
+  div.innerHTML = "";
+  
+  prova.questoes.forEach((q, i) => {
+    const bloco = document.createElement("div");
+    bloco.className = "questao";
+    
+    let html = `<div class="texto"><span class="numero">${i + 1}</span>${q.pergunta || ""}</div>`;
+    
+    if (q.textoAntes) {
+      html += `<div class="apoio">${q.textoAntes}</div>`;
+    }
+    
+    if (q.imagens && q.imagens.length > 0) {
+      q.imagens.forEach(imgUrl => {
+        html += `<img src="${imgUrl}" alt="Imagem" onerror="this.style.display='none'">`;
+      });
+    }
+    
+    if (q.alternativas && q.alternativas.length > 0) {
+      const letras = ["A", "B", "C", "D"];
+      html += '<div class="opcoes">';
+      q.alternativas.forEach((alt, idx) => {
+        const sel = respostas[i] === idx ? "selecionada" : "";
+        if (q.tipoAlt === "imagem") {
+          html += `<div class="opcao ${sel}" onclick="selecionar(${i}, ${idx})"><span class="letra">${letras[idx]}</span><img src="${alt}" style="max-width:150px; border-radius:6px;"></div>`;
+        } else {
+          html += `<div class="opcao ${sel}" onclick="selecionar(${i}, ${idx})"><span class="letra">${letras[idx]}</span><span>${alt}</span></div>`;
+        }
+      });
+      html += '</div>';
+    } else {
+      html += `<textarea class="resposta-discursiva" placeholder="Digite sua resposta aqui..." onchange="salvarTexto(${i}, this.value)">${respostas[i] || ""}</textarea>`;
+    }
+    
+    bloco.innerHTML = html;
+    div.appendChild(bloco);
+  });
+  
+  atualizarBarra();
+}
+
+window.selecionar = function(questao, indice) {
+  respostas[questao] = indice;
+  salvar();
+  render();
+  atualizarBarra();
+};
+
+window.salvarTexto = function(questao, valor) {
+  respostas[questao] = valor;
+  salvar();
+  atualizarBarra();
+};
+
+function salvar() {
+  localStorage.setItem("respostasTemp", JSON.stringify(respostas));
+}
+
+function atualizarBarra() {
+  if (!prova) return;
+  const total = prova.questoes.length;
+  const feitas = Object.keys(respostas).length;
+  const pct = (feitas / total) * 100;
+  document.getElementById("barra").style.width = pct + "%";
+}
+
+window.iniciarProva = function() {
+  if (provaIniciada) return;
+  provaIniciada = true;
+  document.getElementById("btnIniciar").style.display = "none";
+  document.getElementById("btnEnviar").style.display = "inline-block";
+  document.getElementById("tempo").innerText = formatTime(tempo);
+  timer = setInterval(atualizarTempo, 1000);
+};
+
+function calcularNotaInstantanea() {
+  if (!prova) return { acertos: 0, total: 0 };
+  
+  let acertos = 0;
+  let objetivas = 0;
+  
+  prova.questoes.forEach((q, i) => {
+    if (q.alternativas && q.alternativas.length > 0) {
+      objetivas++;
+      if (respostas[i] === q.correta) {
+        acertos++;
+      }
+    }
+  });
+  
+  return { acertos, total: objetivas };
+}
+
+function disparaConfete() {
+  const myCanvas = document.getElementById('confetti');
+  const myConfetti = confetti.create(myCanvas, { resize: true, useClientRendering: true });
+  
+  var duration = 3000;
+  var end = Date.now() + duration;
+
+  (function frame() {
+    myConfetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0 } });
+    myConfetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1 } });
+    if (Date.now() < end) { requestAnimationFrame(frame); }
+  }());
+  
+  setTimeout(() => {
+    myConfetti({ particleCount: 100, spread: 100, origin: { y: 0.6 }, colors: ['#667eea', '#764ba2', '#fbbf24', '#10b981', '#f472b6'] });
+  }, 1500);
+}
+
+function mostrarResultado(acertos, total) {
+  const modal = document.getElementById("modalResultado");
+  const trofeu = document.getElementById("trofeu");
+  const msg = document.getElementById("msgResultado");
+  const notaEl = document.getElementById("notaObjetivas");
+  const detalhe = document.getElementById("detalheResultado");
+  
+  if (acertos === total && total > 0) {
+    trofeu.textContent = "🏆";
+    msg.textContent = "Parabéns! Nota Máxima!";
+  } else if (acertos >= total * 0.7) {
+    trofeu.textContent = "🌟";
+    msg.textContent = "Muito Bem!";
+  } else if (acertos >= total * 0.5) {
+    trofeu.textContent = "👍";
+    msg.textContent = "Bom Trabalho!";
+  } else {
+    trofeu.textContent = "💪";
+    msg.textContent = "Continue Tentando!";
+  }
+  
+  notaEl.textContent = `${acertos}/${total}`;
+  detalhe.textContent = total > 0 ? `Você acertou ${acertos} de ${total} questões objetivas.\nAs discursivas serão corrigidas pelo professor.` : "Prova sem questões objetivas.";
+  
+  modal.classList.add("ativo");
+  disparaConfete();
+}
+
+window.voltarInicio = function() {
+  window.location.href = "home.html";
+};
+
+window.enviar = async function() {
+  const btn = document.getElementById("btnEnviar");
+  
+  if (btn.disabled) return;
+  
+  btn.disabled = true;
+  btn.classList.add("enviado");
+  btn.textContent = "⏳ Enviando...";
+  
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
+
+  const resultado = calcularNotaInstantanea();
+  
+  try {
+    await db.collection("respostas").add({
+      alunoId: usuario.uid,
+      aluno: usuario.nome,
+      provaId,
+      prova: prova.nome,
+      turmaId: usuario.turmaId,
+      respostas,
+      data: new Date()
+    });
+
+    localStorage.removeItem("respostasTemp");
+    
+    setTimeout(() => {
+      mostrarResultado(resultado.acertos, resultado.total);
+    }, 500);
+    
+  } catch (e) {
+    console.error("Erro ao enviar:", e);
+    alert("Erro ao enviar prova. Tente novamente!");
+    btn.disabled = false;
+    btn.classList.remove("enviado");
+    btn.textContent = "📤 Enviar Respostas";
+  }
+};
+
+carregarProva();
+</script>
+</body>
+</html>

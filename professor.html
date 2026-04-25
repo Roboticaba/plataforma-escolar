@@ -1,0 +1,859 @@
+﻿<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Painel do Professor</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f1f5f9; color: #1e293b; min-height: 100vh; }
+.header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; }
+.logo { font-size: 22px; font-weight: bold; color: #3b82f6; margin: 0; }
+.header-actions { display: flex; gap: 10px; align-items: center; }
+.user-name { color: #64748b; font-size: 14px; margin-right: 10px; }
+.tabs { background: white; display: flex; padding: 0 30px; border-bottom: 1px solid #e2e8f0; }
+.tab { padding: 15px 25px; cursor: pointer; border: none; background: none; font-size: 15px; color: #64748b; font-weight: 500; border-bottom: 3px solid transparent; transition: all 0.2s; }
+.tab:hover { color: #3b82f6; }
+.tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+.main { padding: 30px; max-width: 1200px; margin: 0 auto; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.page-title { font-size: 24px; font-weight: bold; color: #1e293b; margin-bottom: 20px; }
+.card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+.btn { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+.btn-primary { background: #3b82f6; color: white; }
+.btn-primary:hover { background: #2563eb; }
+.btn-secondary { background: #64748b; color: white; }
+.btn-success { background: #10b981; color: white; }
+.btn-danger { background: #ef4444; color: white; }
+.btn-outline { background: white; border: 1px solid #cbd5e1; color: #374151; }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; font-weight: 600; color: #374151; margin-bottom: 6px; font-size: 14px; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: white; }
+.form-row { display: flex; gap: 15px; }
+.form-col { flex: 1; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+.badge-blue { background: #dbeafe; color: #1d4ed8; }
+.badge-purple { background: #ede9fe; color: #7c3aed; }
+.badge-green { background: #d1fae5; color: #059669; }
+.list-item { padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+.prova-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; cursor:pointer; }
+.prova-card-title { font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 10px; }
+.prova-card-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+.modal-overlay.active { display: flex; }
+.modal { background: white; border-radius: 16px; padding: 30px; width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal-title { font-size: 20px; font-weight: 600; color: #1e293b; }
+.modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+.etapa { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+.etapa-title { font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 15px; }
+.questao-card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 10px; }
+.sair-btn { background: #ef4444; color: white; padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; }
+.empty-state { text-align: center; padding: 50px 20px; color: #64748b; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <h1 class="logo">📚 Plataforma Escolar</h1>
+  <div class="header-actions">
+    <span class="user-name" id="nomeProfessor"></span>
+    <button class="btn btn-outline btn-sm" onclick="abrirConfig()">⚙ Configurações</button>
+    <button class="sair-btn" onclick="sair()">Sair</button>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" onclick="trocarAba('turmas')" id="tab-turmas">📚 Turmas</button>
+  <button class="tab" onclick="trocarAba('banco')" id="tab-banco">📋 Banco de Provas</button>
+  <button class="tab" onclick="trocarAba('criar')" id="tab-criar">➕ Criar Prova</button>
+</nav>
+
+<main class="main">
+  <div class="tab-content active" id="aba-turmas">
+    <div class="page-title">Turmas</div>
+    <div style="margin-bottom: 20px;">
+      <button class="btn btn-primary" onclick="criarTurma()">➕ Criar Nova Turma</button>
+    </div>
+    <div id="listaTurmas"></div>
+  </div>
+
+  <div class="tab-content" id="aba-banco">
+    <div class="page-title">Banco de Provas</div>
+    <div class="card" style="margin-bottom: 20px;">
+      <div class="form-row">
+        <div class="form-col">
+          <div class="form-group">
+            <label>Filtrar por Ano</label>
+            <select id="filtroAno" onchange="filtrarProvas()">
+              <option value="">Todos</option>
+              <option value="1">1º Ano</option>
+              <option value="2">2º Ano</option>
+              <option value="3">3º Ano</option>
+              <option value="4">4º Ano</option>
+              <option value="5">5º Ano</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-col">
+          <div class="form-group">
+            <label>Filtrar por Disciplina</label>
+            <select id="filtroDisciplina" onchange="filtrarProvas()">
+              <option value="">Todas</option>
+              <option value="portugues">Português</option>
+              <option value="matematica">Matemática</option>
+              <option value="ciencias">Ciências</option>
+              <option value="historia">História</option>
+              <option value="geografia">Geografia</option>
+              <option value="arte">Arte</option>
+              <option value="edfisica">Ed. Física</option>
+              <option value="ingles">Inglês</option>
+              <option value="robotica">Robótica</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="listaProvas"></div>
+  </div>
+
+  <div class="tab-content" id="aba-criar">
+    <div class="page-title">Criar Nova Prova</div>
+    
+    <div class="etapa">
+      <div class="etapa-title">1. Dados da Prova</div>
+      <div class="form-group">
+        <label>Nome da Prova</label>
+        <input id="nomeProva" placeholder="Ex.: Avaliação de Matemática - 3º Bimestre">
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <div class="form-group">
+            <label>Ano</label>
+            <select id="anoProva">
+              <option value="">Selecione</option>
+              <option value="1">1º Ano</option>
+              <option value="2">2º Ano</option>
+              <option value="3">3º Ano</option>
+              <option value="4">4º Ano</option>
+              <option value="5">5º Ano</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-col">
+          <div class="form-group">
+            <label>Disciplina</label>
+            <select id="disciplinaProva" onchange="atualizarDescritores()">
+              <option value="portugues">Português</option>
+              <option value="matematica">Matemática</option>
+              <option value="ciencias">Ciências</option>
+              <option value="historia">História</option>
+              <option value="geografia">Geografia</option>
+              <option value="arte">Arte</option>
+              <option value="edfisica">Ed. Física</option>
+              <option value="ingles">Inglês</option>
+              <option value="robotica">Robótica</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-col">
+          <div class="form-group">
+            <label>Tempo (minutos)</label>
+            <input id="tempoProva" type="number" placeholder="Ex.: 60">
+          </div>
+        </div>
+        <div class="form-col">
+          <div class="form-group">
+            <label>Valor da Prova</label>
+            <input id="valorProva" type="number" step="0.1" placeholder="Ex.: 8,0">
+          </div>
+        </div>
+      </div>
+      <div class="form-group" id="areaDescritor" style="display:none;">
+        <label>Descritor (opcional)</label>
+        <select id="descritorProva">
+          <option value="">Selecione</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="etapa">
+      <div class="etapa-title">2. Adicionar Questão</div>
+      <div class="form-row">
+        <div class="form-col">
+          <div class="form-group">
+            <label>Tipo de Questão</label>
+            <select id="tipoQuestao" onchange="mudouTipoQuestao()">
+              <option value="multipla">Múltipla Escolha</option>
+              <option value="texto">Resposta Escrita</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-col">
+          <div class="form-group">
+            <label>Alternativas</label>
+            <select id="tipoAlternativa" onchange="mudouTipoAlternativa()">
+              <option value="texto">Texto</option>
+              <option value="imagem">Imagem</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Texto de Apoio (opcional)</label>
+        <textarea id="textoAntes" placeholder="Ex.: Observe a imagem..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Pergunta</label>
+        <textarea id="pergunta" placeholder="O que o aluno deve responder?"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Imagens da Pergunta (links - um por linha)</label>
+        <textarea id="imagensPergunta" placeholder="https://exemplo.com/imagem1.png
+https://exemplo.com/imagem2.png"></textarea>
+      </div>
+      <div class="form-group" id="areaAltTexto">
+        <label>Alternativas de Texto (uma por linha)</label>
+        <textarea id="alternativasTexto" placeholder="(A) Alternativa A
+(B) Alternativa B
+(C) Alternativa C
+(D) Alternativa D"></textarea>
+      </div>
+      <div class="form-group" id="areaAltImagem" style="display:none;">
+        <label>Links das Imagens das Alternativas (um por linha)</label>
+        <textarea id="alternativasImg" placeholder="https://exemplo.com/a.png
+https://exemplo.com/b.png
+https://exemplo.com/c.png
+https://exemplo.com/d.png"></textarea>
+      </div>
+      <div class="form-group" id="areaCorreta">
+        <label>Resposta Correta</label>
+        <select id="correta">
+          <option value="0">(A)</option>
+          <option value="1">(B)</option>
+          <option value="2">(C)</option>
+          <option value="3">(D)</option>
+        </select>
+      </div>
+      <button class="btn btn-success" onclick="adicionarQuestao()">➕ Adicionar Questão</button>
+    </div>
+
+    <div class="etapa">
+      <div class="etapa-title">3. Questões Adicionadas</div>
+      <p id="resumoQuestoes" style="color:#64748b;margin-bottom:15px;">Nenhuma questão adicionada ainda.</p>
+      <div id="listaQuestoes"></div>
+    </div>
+
+    <button class="btn btn-success" style="width:100%;padding:15px;font-size:16px;" onclick="salvarProva()">💾 Salvar Prova</button>
+  </div>
+</main>
+
+<div class="modal-overlay" id="modalConfig">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Configurações do Cabeçalho</h3>
+      <button class="modal-close" onclick="fecharConfig()">&times;</button>
+    </div>
+    <div class="form-group">
+      <label>Nome da Escola</label>
+      <input id="cfgNomeEscola" placeholder="Escola Municipal...">
+    </div>
+    <div class="form-group">
+      <label>Endereço da Escola</label>
+      <input id="cfgEndereco" placeholder="Rua, número - Bairro - Cidade">
+    </div>
+    <div class="form-group">
+      <label>Logo (imagem)</label>
+      <input type="file" id="inputLogo" accept="image/*" onchange="uploadLogo()" style="padding:10px;">
+      <div id="previewLogo" style="margin-top:10px;"></div>
+    </div>
+    <div class="form-group">
+      <label>Nome do Professor</label>
+      <input id="cfgNomeProfessor" placeholder="Seu nome">
+    </div>
+    <div class="form-group">
+      <label>Texto Livre (opcional)</label>
+      <textarea id="cfgTextoLivre" placeholder="Ex.: Leia com atenção..."></textarea>
+    </div>
+    <div style="background:#e8f5e9;padding:15px;border-radius:8px;margin-top:15px;">
+      <p style="margin:0;font-size:13px;color:#2e7d32;">💡 Estes dados serão salvos e usados automaticamente em todos os PDFs que você gerar.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="salvarConfig()">Salvar</button>
+      <button class="btn btn-secondary" onclick="fecharConfig()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalTurma">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="tituloTurmaModal">Turma</h3>
+      <button class="modal-close" onclick="fecharTurma()">&times;</button>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:15px;">
+      <button class="btn btn-outline btn-sm" onclick="trocarAbaTurma('alunos')" id="aba-alunos">📋 Alunos</button>
+      <button class="btn btn-outline btn-sm" onclick="trocarAbaTurma('provas')" id="aba-provas">📝 Provas</button>
+    </div>
+    <div class="turma-conteudo active" id="conteudo-alunos">
+      <div class="form-row" style="margin-bottom:15px;">
+        <input id="nomeAluno" placeholder="Nome do aluno" style="flex:2;">
+        <input id="senhaAluno" placeholder="Senha" style="flex:1;">
+        <button class="btn btn-primary" onclick="adicionarAluno()">➕ Adicionar</button>
+      </div>
+      <div id="listaAlunos"></div>
+    </div>
+    <div class="turma-conteudo" id="conteudo-provas">
+      <div style="margin-bottom:15px;">
+        <button class="btn btn-primary btn-sm" onclick="mostrarAtribuirProvas()">➕ Atribuir Prova</button>
+      </div>
+      <div id="provasAtribuidas"></div>
+      <div id="areaAtribuirProvas" style="display:none;margin-top:15px;padding:15px;background:#f8fafc;border-radius:8px;">
+        <div class="form-group">
+          <label>Selecione uma prova:</label>
+          <select id="selectProvaAtribuir"></select>
+        </div>
+        <button class="btn btn-success btn-sm" onclick="atribuirProva()">Atribuir</button>
+        <button class="btn btn-secondary btn-sm" onclick="ocultarAtribuirProvas()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalVerProva">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="tituloVerProva">Prova</h3>
+      <button class="modal-close" onclick="fecharVerProva()">&times;</button>
+    </div>
+    <div id="conteudoVerProva"></div>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="exportarPDF()">📄 Exportar PDF</button>
+      <button class="btn btn-danger" onclick="excluirProva()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
+  authDomain: "plataforma-escolar-71635.firebaseapp.com",
+  projectId: "plataforma-escolar-71635",
+  storageBucket: "plataforma-escolar-71635.firebasestorage.app",
+  messagingSenderId: "194897243209",
+  appId: "1:194897243209:web:ff339bee22bced4098e398"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+if (!usuario || usuario.role !== "professor") {
+  window.location.href = "index.html";
+}
+
+document.getElementById("nomeProfessor").textContent = usuario.nome || "Professor";
+
+let turmaAtualId = null;
+let provaAtualId = null;
+let questoesTemp = [];
+let logoData = "";
+
+const descritoresPortugues = {
+  "1": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D05",n:"Interpretar com gráfico"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D14",n:"Efeito de pontuação"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}],
+  "2": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D05",n:"Interpretar com gráfico"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D14",n:"Efeito de pontuação"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}],
+  "3": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D05",n:"Interpretar com gráfico"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D14",n:"Efeito de pontuação"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}],
+  "4": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D05",n:"Interpretar com gráfico"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D14",n:"Efeito de pontuação"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}],
+  "5": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D05",n:"Interpretar com gráfico"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D14",n:"Efeito de pontuação"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}]
+};
+const descritoresMatematica = {
+  "1": [{c:"D01",n:"Ler números"},{c:"D02",n:"Ordenar"},{c:"D03",n:"Figuras"},{c:"D07",n:"Unidades"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}],
+  "2": [{c:"D01",n:"Ler números"},{c:"D02",n:"Ordenar"},{c:"D03",n:"Figuras"},{c:"D07",n:"Unidades"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}],
+  "3": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"Perímetro"},{c:"D12",n:"Área"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D19",n:"Problema"},{c:"D23",n:"Dinheiro"},{c:"D24",n:"Fração"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}],
+  "4": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"Perímetro"},{c:"D12",n:"Área"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D19",n:"Problema"},{c:"D23",n:"Dinheiro"},{c:"D24",n:"Fração"},{c:"D26",n:"Porcentagem"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}],
+  "5": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"Perímetro"},{c:"D12",n:"Área"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D19",n:"Problema"},{c:"D23",n:"Dinheiro"},{c:"D24",n:"Fração"},{c:"D26",n:"Porcentagem"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}]
+};
+
+function trocarAba(aba) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+  document.getElementById("tab-" + aba).classList.add("active");
+  document.getElementById("aba-" + aba).classList.add("active");
+  if (aba === "turmas") carregarTurmas();
+  if (aba === "banco") filtrarProvas();
+}
+
+async function criarTurma() {
+  const nome = prompt("Nome da turma:");
+  if (!nome) return;
+  try {
+    await db.collection("turmas").add({ nome, alunos: [], provas: [], criadoPor: usuario.uid });
+    carregarTurmas();
+  } catch (e) { alert("Erro: " + e.message); }
+}
+
+async function carregarTurmas() {
+  const lista = document.getElementById("listaTurmas");
+  lista.innerHTML = "<p>Carregando...</p>";
+  try {
+    const q = db.query(db.collection("turmas"), db.where("criadoPor", "==", usuario.uid));
+    const snap = await db.getDoc(q);
+    if (snap.empty) {
+      lista.innerHTML = '<div class="empty-state"><div>📚</div><div>Nenhuma turma</div><div>Crie sua primeira turma</div></div>';
+      return;
+    }
+    lista.innerHTML = "";
+    snap.forEach(doc => {
+      const t = doc.data();
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:600;font-size:18px;">${t.nome}</div>
+            <div style="font-size:13px;color:#64748b;">${(t.alunos||[]).length} alunos • ${(t.provas||[]).length} provas</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary btn-sm" onclick="abrirTurma('${doc.id}', '${t.nome}')">Gerenciar</button>
+            <button class="btn btn-danger btn-sm" onclick="excluirTurma('${doc.id}')">Excluir</button>
+          </div>
+        </div>
+      `;
+      lista.appendChild(div);
+    });
+  } catch (e) { lista.innerHTML = "<p>Erro ao carregar: "+e.message+"</p>"; }
+}
+
+function abrirTurma(id, nome) {
+  turmaAtualId = id;
+  document.getElementById("tituloTurmaModal").textContent = nome;
+  document.getElementById("modalTurma").classList.add("active");
+  carregarDadosTurma();
+}
+
+function fecharTurma() {
+  document.getElementById("modalTurma").classList.remove("active");
+  turmaAtualId = null;
+}
+
+function trocarAbaTurma(aba) {
+  document.querySelectorAll(".turma-conteudo").forEach(c => c.classList.remove("active"));
+  document.getElementById("conteudo-" + aba).classList.add("active");
+}
+
+async function carregarDadosTurma() {
+  if (!turmaAtualId) return;
+  const docT = await db.getDoc(db.collection("turmas").doc(turmaAtualId));
+  if (!docT.exists) return;
+  const t = docT.data();
+  
+  const listaAl = document.getElementById("listaAlunos");
+  listaAl.innerHTML = t.alunos && t.alunos.length ? t.alunos.map((a,i) => `
+    <div class="list-item">
+      <div style="font-weight:600;">${a.nome}</div>
+      <button class="btn btn-danger btn-sm" onclick="removerAluno(${i})">✕</button>
+    </div>
+  `).join("") : "<p style='color:#64748b;'>Nenhum aluno</p>";
+  
+  const provasDiv = document.getElementById("provasAtribuidas");
+  provasDiv.innerHTML = t.provas && t.provas.length ? "<p>Carregando...</p>" : "<p style='color:#64748b;'>Nenhuma prova atribuída</p>";
+  if (t.provas && t.provas.length) {
+    let html = "";
+    for (const pid of t.provas) {
+      const dp = await db.getDoc(db.collection("simulados").doc(pid));
+      if (dp.exists) html += `<div class="list-item"><div>${dp.data().nome}</div><button class="btn btn-danger btn-sm" onclick="removerProva('${pid}')">✕</button></div>`;
+    }
+    provasDiv.innerHTML = html;
+  }
+}
+
+async function adicionarAluno() {
+  if (!turmaAtualId) return;
+  const nome = document.getElementById("nomeAluno").value.trim();
+  const senha = document.getElementById("senhaAluno").value.trim();
+  if (!nome || !senha) { alert("Preencha nome e senha"); return; }
+  
+  const docT = await db.getDoc(db.collection("turmas").doc(turmaAtualId));
+  const t = docT.data();
+  const alunos = t.alunos || [];
+  alunos.push({ nome, senha });
+  await db.updateDoc(db.collection("turmas").doc(turmaAtualId), { alunos });
+  
+  document.getElementById("nomeAluno").value = "";
+  document.getElementById("senhaAluno").value = "";
+  carregarDadosTurma();
+}
+
+async function removerAluno(index) {
+  if (!confirm("Remover aluno?")) return;
+  const docT = await db.getDoc(db.collection("turmas").doc(turmaAtualId));
+  const t = docT.data();
+  const alunos = t.alunos || [];
+  alunos.splice(index, 1);
+  await db.updateDoc(db.collection("turmas").doc(turmaAtualId), { alunos });
+  carregarDadosTurma();
+}
+
+async function excluirTurma(id) {
+  if (!confirm("Excluir turma?")) return;
+  await db.deleteDoc(db.collection("turmas").doc(id));
+  carregarTurmas();
+}
+
+async function mostrarAtribuirProvas() {
+  document.getElementById("areaAtribuirProvas").style.display = "block";
+  const select = document.getElementById("selectProvaAtribuir");
+  select.innerHTML = "<option>Carregando...</option>";
+  const q = db.query(db.collection("simulados"), db.where("criadoPor", "==", usuario.uid));
+  const snap = await db.getDoc(q);
+  select.innerHTML = snap.docs.map(d => `<option value="${d.id}">${d.data().nome}</option>`).join("");
+}
+
+async function atribuirProva() {
+  const pid = document.getElementById("selectProvaAtribuir").value;
+  if (!pid || !turmaAtualId) return;
+  const docT = await db.getDoc(db.collection("turmas").doc(turmaAtualId));
+  const t = docT.data();
+  const provas = t.provas || [];
+  if (!provas.includes(pid)) provas.push(pid);
+  await db.updateDoc(db.collection("turmas").doc(turmaAtualId), { provas });
+  document.getElementById("areaAtribuirProvas").style.display = "none";
+  carregarDadosTurma();
+}
+
+async function removerProva(pid) {
+  const docT = await db.getDoc(db.collection("turmas").doc(turmaAtualId));
+  const t = docT.data();
+  const provas = (t.provas || []).filter(p => p !== pid);
+  await db.updateDoc(db.collection("turmas").doc(turmaAtualId), { provas });
+  carregarDadosTurma();
+}
+
+function ocultarAtribuirProvas() {
+  document.getElementById("areaAtribuirProvas").style.display = "none";
+}
+
+async function filtrarProvas() {
+  const lista = document.getElementById("listaProvas");
+  lista.innerHTML = "<p>Carregando...</p>";
+  const ano = document.getElementById("filtroAno").value;
+  const disc = document.getElementById("filtroDisciplina").value;
+  
+  try {
+    let q;
+    if (ano && disc) q = db.query(db.collection("simulados"), db.where("ano","==",ano), db.where("disciplina","==",disc), db.where("criadoPor","==",usuario.uid));
+    else if (ano) q = db.query(db.collection("simulados"), db.where("ano","==",ano), db.where("criadoPor","==",usuario.uid));
+    else if (disc) q = db.query(db.collection("simulados"), db.where("disciplina","==",disc), db.where("criadoPor","==",usuario.uid));
+    else q = db.query(db.collection("simulados"), db.where("criadoPor","==", usuario.uid));
+    
+    const snap = await db.getDoc(q);
+    if (snap.empty) {
+      lista.innerHTML = '<div class="empty-state"><div>📋</div><div>Nenhuma prova</div></div>';
+      return;
+    }
+    lista.innerHTML = snap.docs.map(d => {
+      const p = d.data();
+      return `
+        <div class="prova-card" onclick="verProva('${d.id}')">
+          <div class="prova-card-title">${p.nome}</div>
+          <div class="prova-card-meta">
+            <span class="badge badge-blue">${p.ano}º ano</span>
+            <span class="badge badge-purple">${p.disciplina}</span>
+            ${p.tempo ? `<span class="badge badge-yellow">${p.tempo}min</span>` : ""}
+            <span class="badge">${(p.questoes||[]).length} questões</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  } catch (e) { lista.innerHTML = "<p>Erro ao carregar</p>"; }
+}
+
+async function verProva(id) {
+  provaAtualId = id;
+  const docP = await db.getDoc(db.collection("simulados").doc(id));
+  if (!docP.exists) return;
+  const p = docP.data();
+  document.getElementById("tituloVerProva").textContent = p.nome;
+  
+  const letras = ["A","B","C","D"];
+  let html = `<div style="margin-bottom:15px;">
+    <span class="badge badge-blue">${p.ano}º ano</span>
+    <span class="badge badge-purple">${p.disciplina}</span>
+    ${p.tempo ? `<span>${p.tempo}min</span>` : ""}
+  </div>`;
+  
+  (p.questoes || []).forEach((q,i) => {
+    html += `<div class="questao-card">
+      <div style="font-weight:600;margin-bottom:8px;">Questão ${i+1} ${q.descritor ? `<span class="badge badge-green">${q.descritor}</span>` : ""}</div>
+      ${q.textoAntes ? `<p style="font-style:italic;">${q.textoAntes}</p>` : ""}
+      <p><b>${q.pergunta}</b></p>
+      ${q.alternativas ? q.alternativas.map((a,j) => `<div>(${letras[j]}) ${a}</div>`).join("") : "<i>Resposta discursiva</i>"}
+    </div>`;
+  });
+  
+  document.getElementById("conteudoVerProva").innerHTML = html;
+  document.getElementById("modalVerProva").classList.add("active");
+}
+
+function fecharVerProva() {
+  document.getElementById("modalVerProva").classList.remove("active");
+  provaAtualId = null;
+}
+
+async function excluirProva() {
+  if (!confirm("Excluir prova?")) return;
+  await db.deleteDoc(db.collection("simulados").doc(provaAtualId));
+  fecharVerProva();
+  filtrarProvas();
+}
+
+async function exportarPDF() {
+  if (!provaAtualId) return;
+  try {
+    const docP = await db.getDoc(db.collection("simulados").doc(provaAtualId));
+    const p = docP.data();
+    const userDoc = await db.getDoc(db.collection("users").doc(usuario.uid));
+    const cab = userDoc.exists() ? (userDoc.data().cabecalho || {}) : {};
+    
+    const letras = ["A","B","C","D","E"];
+    let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${p.nome}</title><style>body{font-family:Arial;padding:40px;max-width:800px;margin:0 auto;} .cab{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;border-bottom:2px solid #000;padding-bottom:15px;} .cab-esq img{max-height:70px;} .cab-dir{text-align:right;font-size:14px;} .info{background:#f5f5f5;padding:15px;margin:20px 0;text-align:center;} .q{margin:25px 0;page-break-inside:avoid;} .alt{margin:5px 0;margin-left:20px;} .rod{display:flex;justify-content:space-between;margin-top:30px;border-top:1px solid #000;padding-top:10px;} .valor-total{font-size:18px;font-weight:bold;} .valor-questao{font-size:14px;}</style></head><body>`;
+    
+    html += `<div class="cab">
+      <div class="cab-esq">${cab.logoUrl?`<img src="${cab.logoUrl}">`:""}</div>
+      <div class="cab-dir">
+        ${cab.nomeEscola?`<div><strong>${cab.nomeEscola}</strong></div>`:""}
+        ${cab.endereco?`<div>${cab.endereco}</div>`:""}
+        <div>Aluno(a): ________________ (Turma: ____)</div>
+        <div>Professor(a): ${cab.nomeProfessor||"_____________"} Data: ___/___/___</div>
+      </div>
+    </div>`;
+    
+    const valorTotal = parseFloat(p.valor||8);
+    const numQuestoes = (p.questoes||[]).length;
+    const valorPorQuestao = numQuestoes > 0 ? (valorTotal / numQuestoes).toFixed(2) : valorTotal.toFixed(2);
+    
+    html += `<div class="info"><strong>${p.nome}</strong><br><span class="valor-total">Valor: ${valorTotal.toFixed(1).replace(".",",")} pontos</span></div>`;
+    
+    (p.questoes||[]).forEach((q,i) => {
+      html += `<div class="q"><div><b>Questão ${i+1}</b>${q.descritor?" ("+q.descritor.split("|")[0]+")":""} <span class="valor-questao">(${valorPorQuestao.replace(".",",")} pontos)</span></div>`;
+      if(q.textoAntes) html+=`<div style="font-style:italic;">${q.textoAntes}</div>`;
+      html+=`<div><b>${q.pergunta}</b></div>`;
+      if(q.alternativas) html+=q.alternativas.map((a,j)=>`<div class="alt">(${letras[j]}) ${a}</div>`).join("");
+      html+="</div>";
+    });
+    
+    html += "</body></html>";
+    
+    const w = window.open("","_blank");
+    w.document.write(html);
+    w.document.close();
+    setTimeout(()=>w.print(),500);
+  } catch(e) { alert("Erro: "+e.message); }
+}
+
+function atualizarDescritores() {
+  const disc = document.getElementById("disciplinaProva").value;
+  const ano = document.getElementById("anoProva").value;
+  const select = document.getElementById("descritorProva");
+  const area = document.getElementById("areaDescritor");
+  
+  select.innerHTML = "<option value=''>Selecione</option>";
+  
+  if ((disc === "portugues" || disc === "matematica") && ano) {
+    area.style.display = "block";
+    const lista = disc === "portugues" ? descritoresPortugues[ano] : descritoresMatematica[ano];
+    if (lista) lista.forEach(d => { select.innerHTML += `<option value="${d.c}|${d.n}">${d.c} - ${d.n}</option>`; });
+  } else {
+    area.style.display = "none";
+  }
+}
+
+function mudouTipoQuestao() {
+  const tipo = document.getElementById("tipoQuestao").value;
+  document.getElementById("areaAltTexto").style.display = tipo === "multipla" ? "block" : "none";
+  document.getElementById("areaAltImagem").style.display = tipo === "multipla" ? "block" : "none";
+  document.getElementById("areaCorreta").style.display = tipo === "multipla" ? "block" : "none";
+}
+
+function mudouTipoAlternativa() {
+  const tipoAlt = document.getElementById("tipoAlternativa").value;
+  document.getElementById("areaAltTexto").style.display = tipoAlt === "texto" ? "block" : "none";
+  document.getElementById("areaAltImagem").style.display = tipoAlt === "imagem" ? "block" : "none";
+}
+
+function adicionarQuestao() {
+  const tipo = document.getElementById("tipoQuestao").value;
+  const tipoAlt = document.getElementById("tipoAlternativa").value;
+  const textoAntes = document.getElementById("textoAntes").value;
+  const pergunta = document.getElementById("pergunta").value.trim();
+  const imagensPergunta = document.getElementById("imagensPergunta").value.split("\n").map(i=>i.trim()).filter(i=>i);
+  const disc = document.getElementById("disciplinaProva").value;
+  const descritorSel = document.getElementById("descritorProva").value;
+  
+  if (!pergunta) { alert("Digite a pergunta"); return; }
+  
+  let alternativas = [], correta = null;
+  if (tipo === "multipla") {
+    if (tipoAlt === "texto") {
+      alternativas = document.getElementById("alternativasTexto").value.split("\n").map(a=>a.trim()).filter(a=>a);
+    } else {
+      alternativas = document.getElementById("alternativasImg").value.split("\n").map(a=>a.trim()).filter(a=>a);
+    }
+    if (alternativas.length < 2) { alert("Digite pelo menos 2 alternativas"); return; }
+    correta = parseInt(document.getElementById("correta").value);
+  }
+  
+  let descritorCod = "", descritorNome = "";
+  if (descritorSel) {
+    const p = descritorSel.split("|");
+    descritorCod = p[0];
+    descritorNome = p[1];
+  }
+  
+  questoesTemp.push({ tipo, tipoAlt, textoAntes, pergunta, imagens: imagensPergunta, alternativas, correta, disciplina: disc, descritor: descritorCod, descritorNome });
+  
+  document.getElementById("textoAntes").value = "";
+  document.getElementById("pergunta").value = "";
+  document.getElementById("imagensPergunta").value = "";
+  document.getElementById("alternativasTexto").value = "";
+  document.getElementById("alternativasImg").value = "";
+  renderQuestoes();
+}
+
+function renderQuestoes() {
+  const lista = document.getElementById("listaQuestoes");
+  const resumo = document.getElementById("resumoQuestoes");
+  
+  if (questoesTemp.length === 0) {
+    resumo.textContent = "Nenhuma questão adicionada ainda.";
+    lista.innerHTML = "";
+    return;
+  }
+  
+  const letras = ["A","B","C","D"];
+  resumo.textContent = questoesTemp.length + " questão(ões) adicionada(s)";
+  lista.innerHTML = questoesTemp.map((q,i) => {
+    let html = `<div class="questao-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-weight:600;">Questão ${i+1}</span>
+        <button class="btn btn-danger btn-sm" onclick="removerQuestao(${i})">✕</button>
+      </div>
+      ${q.descritor ? `<span class="badge badge-green">${q.descritor}</span> ` : ""}
+      ${q.imagens && q.imagens.length ? q.imagens.map(img=>`<img src="${img}" style="max-height:100px;margin:5px 0;">`).join("") : ""}
+      ${q.textoAntes ? `<p style="font-style:italic;font-size:13px;">${q.textoAntes}</p>` : ""}
+      <p><b>${q.pergunta}</b></p>`;
+    
+    if (q.alternativas && q.alternativas.length) {
+      html += `<div style="margin-top:10px;">`;
+      q.alternativas.forEach((alt, j) => {
+        if (q.tipoAlt === "imagem") {
+          html += `<div style="margin:5px 0;"><img src="${alt}" style="max-height:80px;"></div>`;
+        } else {
+          html += `<div>(${letras[j]}) ${alt}</div>`;
+        }
+      });
+      html += `</div>`;
+    }
+    
+    html += `</div>`;
+    return html;
+  }).join("");
+}
+
+function removerQuestao(i) {
+  questoesTemp.splice(i, 1);
+  renderQuestoes();
+}
+
+async function salvarProva() {
+  const nome = document.getElementById("nomeProva").value.trim();
+  const ano = document.getElementById("anoProva").value;
+  const disciplina = document.getElementById("disciplinaProva").value;
+  const tempo = document.getElementById("tempoProva").value;
+  const valor = document.getElementById("valorProva").value;
+  
+  if (!nome || !ano) { alert("Preencha nome e ano"); return; }
+  if (questoesTemp.length === 0) { alert("Adicione pelo menos uma questão"); return; }
+  
+  try {
+    await db.collection("simulados").add({
+      nome, ano, disciplina, tempo: tempo||null, valor: valor||8,
+      questoes: questoesTemp,
+      criadoPor: usuario.uid, criadoEm: new Date()
+    });
+    
+    alert("Prova salva!");
+    document.getElementById("nomeProva").value = "";
+    document.getElementById("anoProva").value = "";
+    document.getElementById("disciplinaProva").value = "";
+    document.getElementById("tempoProva").value = "";
+    document.getElementById("valorProva").value = "";
+    questoesTemp = [];
+    renderQuestoes();
+    trocarAba("banco");
+  } catch(e) { alert("Erro: "+e.message); }
+}
+
+async function abrirConfig() {
+  try {
+    const userDoc = await db.getDoc(db.collection("users").doc(usuario.uid));
+    const dados = userDoc.exists() ? userDoc.data() : {};
+    const cab = dados.cabecalho || {};
+    document.getElementById("cfgNomeEscola").value = cab.nomeEscola || "";
+    document.getElementById("cfgEndereco").value = cab.endereco || "";
+    document.getElementById("cfgNomeProfessor").value = cab.nomeProfessor || dados.nome || "";
+    document.getElementById("cfgTextoLivre").value = cab.textoLivre || "";
+    if (cab.logoUrl) document.getElementById("previewLogo").innerHTML = '<img src="'+cab.logoUrl+'" style="max-height:60px;">';
+    document.getElementById("modalConfig").classList.add("active");
+  } catch(e) { alert("Erro: "+e.message); }
+}
+
+function fecharConfig() {
+  document.getElementById("modalConfig").classList.remove("active");
+}
+
+function uploadLogo() {
+  const file = document.getElementById("inputLogo").files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById("previewLogo").innerHTML = '<img src="'+e.target.result+'" style="max-height:60px;">';
+    logoData = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function salvarConfig() {
+  try {
+    await db.updateDoc(db.collection("users").doc(usuario.uid), {
+      cabecalho: {
+        nomeEscola: document.getElementById("cfgNomeEscola").value.trim(),
+        endereco: document.getElementById("cfgEndereco").value.trim(),
+        logoUrl: logoData || "",
+        nomeProfessor: document.getElementById("cfgNomeProfessor").value.trim(),
+        textoLivre: document.getElementById("cfgTextoLivre").value.trim()
+      }
+    });
+    alert("Configurações salvas com sucesso!");
+    fecharConfig();
+  } catch(e) { alert("Erro: "+e.message); }
+}
+
+async function sair() {
+  await auth.signOut();
+  localStorage.removeItem("usuario");
+  window.location.href = "index.html";
+}
+
+carregarTurmas();
+mudouTipoAlternativa();
+</script>
+</body>
+</html>
