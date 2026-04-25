@@ -622,18 +622,18 @@ async function exportarPDF() {
     
     const letras = ["A","B","C","D","E"];
     let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${p.nome}</title><style>
-      .header-container { border: 2px solid #000; border-radius: 10px; padding: 16px; font-family: Arial, sans-serif; }
-      .top-row { display: flex; flex-direction: row; align-items: center; }
+      .header-container { border: 2px solid #000; border-radius: 12px; padding: 16px; font-family: Arial, sans-serif; }
+      .top-row { display: flex; align-items: center; }
       .logo { width: 160px; flex-shrink: 0; text-align: center; }
       .logo img { max-width: 100%; height: auto; max-height: 80px; }
-      .textos { flex: 1; text-align: center; padding: 0 10px; }
+      .textos { flex: 1; text-align: center; }
       .titulo { font-weight: bold; font-size: 16px; }
       .endereco { font-size: 13px; margin-top: 4px; }
-      .texto-livre { text-align: center; font-weight: bold; margin: 12px 0; font-size: 14px; }
-      .divisor { border-top: 1.5px solid #000; margin: 10px 0; }
-      .linha { display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; }
+      .linha { display: flex; justify-content: space-between; margin-top: 10px; }
       .esquerda { flex: 1; }
-      .direita { width: 150px; text-align: right; }
+      .direita { width: 180px; text-align: right; }
+      .linha-input { display: inline-block; border-bottom: 1px solid #000; width: 70%; margin-left: 8px; }
+      .titulo-prova { text-align: center; font-weight: bold; font-size: 16px; margin-top: 16px; }
       
       body{font-family:Arial;padding:40px;max-width:800px;margin:0 auto;}
       .q{margin:25px 0;page-break-inside:avoid;}
@@ -650,18 +650,20 @@ async function exportarPDF() {
           <div class="endereco">${cab.endereco || ""}</div>
         </div>
       </div>
-      <div class="texto-livre">${cab.textoLivre || ""}</div>
-      <div class="divisor"></div>
       <div class="form">
         <div class="linha">
-          <div class="esquerda">ALUNO(A): ____________________________</div>
+          <div class="esquerda">ALUNO(A): <span class="linha-input"></span></div>
           <div class="direita">ANO: ______</div>
         </div>
         <div class="linha">
-          <div class="esquerda">PROFESSOR(A): ________________________</div>
+          <div class="esquerda">PROFESSOR(A): <span class="linha-input"></span></div>
           <div class="direita">DATA: ___/___/___</div>
         </div>
       </div>
+    </div>
+
+    <div class="titulo-prova">
+      ${cab.textoLivre || ""}
     </div>`;
     
     const valorTotal = parseFloat(p.valor||8);
