@@ -638,7 +638,7 @@ async function gerarPDF() {
         .linha-input { display: inline-block; border-bottom: 1px solid #000; width: 70%; margin-left: 8px; }
         .titulo-prova { text-align: center; font-weight: bold; font-size: 16px; margin-top: 16px; }
         
-        #area-impressao { width: 190mm; margin: 0 auto; padding: 0; }
+        #area-impressao { width: 100%; margin: 0 auto; padding: 0; }
         
         .q{margin:25px 0;page-break-inside:avoid;}
         .alt{margin:5px 0;margin-left:20px;}
@@ -704,7 +704,7 @@ async function gerarPDF() {
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     
-    await html2pdf().set(opt).from(tempDiv.querySelector("#area-impressao")).save();
+    await html2pdf().set(opt).from(tempDiv).save();
     document.body.removeChild(tempDiv);
     
   } catch(e) { alert("Erro ao gerar PDF: "+e.message); }
