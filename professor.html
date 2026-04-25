@@ -523,7 +523,7 @@ async function atribuirProva() {
   const t = docT.data();
   const provas = t.provas || [];
   if (!provas.includes(pid)) provas.push(pid);
-  await db.update({db.collection("turmas").doc(turmaAtualId), { provas });
+  await db.collection("turmas").doc(turmaAtualId).update({ provas });
   document.getElementById("areaAtribuirProvas").style.display = "none";
   carregarDadosTurma();
 }
@@ -532,7 +532,7 @@ async function removerProva(pid) {
   const docT = await db.collection("turmas").doc(turmaAtualId).get();
   const t = docT.data();
   const provas = (t.provas || []).filter(p => p !== pid);
-  await db.update({db.collection("turmas").doc(turmaAtualId), { provas });
+  await db.collection("turmas").doc(turmaAtualId).update({ provas });
   carregarDadosTurma();
 }
 
@@ -832,7 +832,7 @@ function uploadLogo() {
 
 async function salvarConfig() {
   try {
-    await db.update({db.collection("users").doc(usuario.uid), {
+    await db.collection("users").doc(usuario.uid).update({
       cabecalho: {
         nomeEscola: document.getElementById("cfgNomeEscola").value.trim(),
         endereco: document.getElementById("cfgEndereco").value.trim(),
