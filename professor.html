@@ -625,6 +625,7 @@ async function gerarPDF() {
     
     let htmlContent = `
       <style>
+        * { box-sizing: border-box; }
         .header-container { border: 2px solid #000; border-radius: 12px; padding: 16px; font-family: Arial, sans-serif; }
         .top-row { display: flex; align-items: center; }
         .logo { width: 160px; flex-shrink: 0; text-align: center; }
@@ -638,7 +639,7 @@ async function gerarPDF() {
         .linha-input { display: inline-block; border-bottom: 1px solid #000; width: 70%; margin-left: 8px; }
         .titulo-prova { text-align: center; font-weight: bold; font-size: 16px; margin-top: 16px; }
         
-        #area-impressao { width: 100%; margin: 0 auto; padding: 0; }
+        #area-impressao { width: 190mm; margin: 0 auto; padding: 0; box-sizing: border-box; }
         
         .q{margin:25px 0;page-break-inside:avoid;}
         .alt{margin:5px 0;margin-left:20px;}
@@ -703,10 +704,10 @@ async function gerarPDF() {
     console.log("PDF HTML Content:", htmlContent);
     
     const opt = {
-      margin: [10, 10, 10, 10],
+      margin: 10,
       filename: 'prova.pdf',
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, windowWidth: 794 },
+      html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     
