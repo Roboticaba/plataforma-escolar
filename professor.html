@@ -503,7 +503,7 @@ async function removerAluno(index) {
 
 async function excluirTurma(id) {
   if (!confirm("Excluir turma?")) return;
-  await db.delete()db.collection("turmas").doc(id));
+  await db.collection("turmas").doc(id).delete();
   carregarTurmas();
 }
 
@@ -609,7 +609,7 @@ function fecharVerProva() {
 
 async function excluirProva() {
   if (!confirm("Excluir prova?")) return;
-  await db.delete()db.collection("simulados").doc(provaAtualId));
+  await db.collection("simulados").doc(provaAtualId).delete();
   fecharVerProva();
   filtrarProvas();
 }
@@ -854,6 +854,35 @@ async function sair() {
 
 carregarTurmas();
 mudouTipoAlternativa();
+
+window.trocarAba = trocarAba;
+window.criarTurma = criarTurma;
+window.abrirTurma = abrirTurma;
+window.fecharTurma = fecharTurma;
+window.trocarAbaTurma = trocarAbaTurma;
+window.adicionarAluno = adicionarAluno;
+window.removerAluno = removerAluno;
+window.excluirTurma = excluirTurma;
+window.mostrarAtribuirProvas = mostrarAtribuirProvas;
+window.atribuirProva = atribuirProva;
+window.removerProva = removerProva;
+window.ocultarAtribuirProvas = ocultarAtribuirProvas;
+window.filtrarProvas = filtrarProvas;
+window.verProva = verProva;
+window.fecharVerProva = fecharVerProva;
+window.excluirProva = excluirProva;
+window.exportarPDF = exportarPDF;
+window.atualizarDescritores = atualizarDescritores;
+window.mudouTipoQuestao = mudouTipoQuestao;
+window.mudouTipoAlternativa = mudouTipoAlternativa;
+window.adicionarQuestao = adicionarQuestao;
+window.removerQuestao = removerQuestao;
+window.salvarProva = salvarProva;
+window.abrirConfig = abrirConfig;
+window.fecharConfig = fecharConfig;
+window.uploadLogo = uploadLogo;
+window.salvarConfig = salvarConfig;
+window.sair = sair;
 </script>
 </body>
 </html>
