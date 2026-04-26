@@ -683,14 +683,13 @@ async function gerarPDF() {
 
       htmlContent += `<div class="q"><div><b>Questão ${i+1}</b>${q.descritor?" ("+q.descritor.split("|")[0]+")":""} <span class="valor-questao">(${valorPorQuestao.replace(".",",")} pontos)</span></div>`;
       
+      htmlContent+=`<div style="margin-bottom:10px;"><b>${processarImagens(q.pergunta)}</b></div>`;
       if(q.textoAntes) htmlContent+=`<div style="font-style:italic;margin-bottom:5px;white-space:pre-wrap;">${processarImagens(q.textoAntes)}</div>`;
       if(q.imagens && q.imagens.length) {
         htmlContent+=`<div style="display:flex; flex-wrap:wrap; gap:10px; margin:10px 0;">` + 
           q.imagens.map(img=>`<img src="${img}" style="max-height:150px; flex: 0 1 auto; object-fit: contain;">`).join("") +
           `</div>`;
       }
-      
-      htmlContent+=`<div style="margin-bottom:10px;"><b>${processarImagens(q.pergunta)}</b></div>`;
       
       if(q.alternativas && q.alternativas.length) {
         htmlContent+=q.alternativas.map((a,j)=>`<div class="alt">(${letras[j]}) ${processarImagens(a)}</div>`).join("");
@@ -746,12 +745,21 @@ function mudouTipoAlternativa() {
 }
 
 async function uploadFile(file) {
-  const storageRef = storage.ref('provas/' + Date.now() + '_' + file.name);
-  const snapshot = await storageRef.put(file);
-  return await snapshot.ref.getDownloadURL();
+  console.log("Iniciando upload de:", file.name);
+  try {
+    const storageRef = storage.ref('provas/' + Date.now() + '_' + file.name);
+    const snapshot = await storageRef.put(file);
+    const url = await snapshot.ref.getDownloadURL();
+    console.log("Upload concluído, URL:", url);
+    return url;
+  } catch (error) {
+    console.error("Erro no upload:", error);
+    throw error;
+  }
 }
 
 async function adicionarQuestao() {
+  console.log("Adicionando questão...");
   const tipo = document.getElementById("tipoQuestao").value;
   const tipoAlt = document.getElementById("tipoAlternativa").value;
   const textoAntes = document.getElementById("textoAntes").value;
@@ -766,6 +774,7 @@ async function adicionarQuestao() {
   if (!pergunta) { alert("Digite a pergunta"); return; }
   
   try {
+    console.log("Processando imagens da pergunta...");
     // Upload de imagens da pergunta
     const uploadedPergunta = await Promise.all(Array.from(filesPergunta).map(uploadFile));
     imagensPergunta = imagensPergunta.concat(uploadedPergunta);
@@ -778,6 +787,7 @@ async function adicionarQuestao() {
         const filesAlternativas = document.getElementById("uploadAlternativasImg").files;
         let linksAlternativas = document.getElementById("alternativasImg").value.split("\n").map(a=>a.trim()).filter(a=>a);
         
+        console.log("Processando imagens das alternativas...");
         const uploadedAlternativas = await Promise.all(Array.from(filesAlternativas).map(uploadFile));
         alternativas = linksAlternativas.concat(uploadedAlternativas);
       }
@@ -802,8 +812,10 @@ async function adicionarQuestao() {
     document.getElementById("alternativasImg").value = "";
     document.getElementById("uploadAlternativasImg").value = "";
     renderQuestoes();
+    console.log("Questão adicionada com sucesso!");
     alert("Questão adicionada!");
   } catch (e) {
+    console.error("Erro completo:", e);
     alert("Erro ao adicionar questão: " + e.message);
   }
 }
