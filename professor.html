@@ -74,8 +74,9 @@ body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f1f5f
 <main class="main">
   <div class="tab-content active" id="aba-turmas">
     <div class="page-title">Turmas</div>
-    <div style="margin-bottom: 20px;">
+    <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
       <button class="btn btn-primary" onclick="criarTurma()">➕ Criar Nova Turma</button>
+      <button class="btn btn-secondary" onclick="limparSenhasLegadas()">🧹 Limpar Senhas Legadas</button>
     </div>
     <div id="listaTurmas"></div>
   </div>
@@ -530,6 +531,43 @@ async function excluirTurma(id) {
   if (!confirm("Excluir turma?")) return;
   await db.collection("turmas").doc(id).delete();
   carregarTurmas();
+}
+
+// Função para limpar senhas em texto puro de alunos legados
+async function limparSenhasLegadas() {
+  if (!confirm("Isso vai remover todas as senhas em texto puro de alunos antigos. Continuar?")) return;
+  try {
+    const snapshot = await db.collection("turmas").where("criadoPor", "==", usuario.uid).get();
+    const batch = db.batch();
+    let totalSenhas = 0;
+    
+    snapshot.forEach(doc => {
+      const turma = doc.data();
+      if (turma.alunos && turma.alunos.some(a => a.senha)) {
+        const alunosLimpos = turma.alunos.map(a => {
+          if (a.senha) {
+            const { senha, ...rest } = a;
+            totalSenhas++;
+            return rest;
+          }
+          return a;
+        });
+        batch.update(doc.ref, { alunos: alunosLimpos });
+      }
+    });
+
+    if (totalSenhas === 0) {
+      alert("Nenhuma senha legada encontrada.");
+      return;
+    }
+
+    await batch.commit();
+    alert(`${totalSenhas} senha(s) legada(s) removida(s) com sucesso!`);
+    carregarDadosTurma();
+  } catch (err) {
+    console.error("Erro ao limpar senhas:", err);
+    alert("Erro ao limpar senhas: " + err.message);
+  }
 }
 
 async function mostrarAtribuirProvas() {

@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Funções auxiliares
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isProfessor() {
+      return isAuthenticated() && getUserData(request.auth.uid).role == "professor";
+    }
+
+    function isAluno() {
+      return isAuthenticated() && getUserData(request.auth.uid).role == "aluno";
+    }
+
+    // Regras para coleção users
+    match /users/{userId} {
+      allow read: if request.auth.uid == userId;
+      allow create: if isAuthenticated() && (
+        request.auth.uid == userId || // usuário cria próprio documento
+        (request.resource.data.role == "aluno" && isProfessor()) // professor cria aluno
+      );
+      allow update: if request.auth.uid == userId && request.resource.data.role == resource.data.role; // não permite alterar role
+    }
+
+    // Regras para coleção turmas
+    match /turmas/{turmaId} {
+      allow read: if isProfessor() && resource.data.criadoPor == request.auth.uid;
+      allow write: if isProfessor() && request.resource.data.criadoPor == request.auth.uid;
+      // Alunos podem ler suas próprias turmas
+      allow read: if isAluno() && resource.data.alunos.hasAny([{uid: request.auth.uid}]);
+    }
+
+    // Regras para coleção simulados
+    match /simulados/{simuladoId} {
+      allow read: if isProfessor() && resource.data.criadoPor == request.auth.uid;
+      allow write: if isProfessor() && request.resource.data.criadoPor == request.auth.uid;
+      // Alunos podem ler simulados atribuídos à sua turma
+      allow read: if isAluno() && 
+        exists(/databases/$(database)/documents/turmas/$(getUserData(request.auth.uid).turmaId)) &&
+        get(/databases/$(database)/documents/turmas/$(getUserData(request.auth.uid).turmaId)).data.provas.hasAny([simuladoId]);
+    }
+
+    // Regras para coleção respostas
+    match /respostas/{respostaId} {
+      allow create: if isAluno() && request.resource.data.alunoId == request.auth.uid;
+      allow read: if isProfessor() && exists(/databases/$(database)/documents/turmas/$(request.resource.data.turma)) && 
+        get(/databases/$(database)/documents/turmas/$(request.resource.data.turma)).data.criadoPor == request.auth.uid;
+      allow update, delete: if false; // não permite alteração/exclusão de respostas
+    }
+  }
+}
