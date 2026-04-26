@@ -685,10 +685,16 @@ async function gerarPDF() {
       const processarImagens = (texto) => texto.replace(/\[img\](.*?)\[\/img\]/g, '<img src="$1" style="max-height:100px;display:block;margin:5px 0;">');
 
       htmlContent += `<div class="q"><div><b>Questão ${i+1}</b>${q.descritor?" ("+q.descritor.split("|")[0]+")":""} <span class="valor-questao">(${valorPorQuestao.replace(".",",")} pontos)</span></div>`;
-      if(q.textoAntes) htmlContent+=`<div style="font-style:italic;">${processarImagens(q.textoAntes)}</div>`;
+      
+      if(q.textoAntes) htmlContent+=`<div style="font-style:italic;margin-bottom:5px;">${processarImagens(q.textoAntes)}</div>`;
       if(q.imagens && q.imagens.length) htmlContent+=q.imagens.map(img=>`<img src="${img}" style="max-height:150px;margin:10px 0;display:block;">`).join("");
-      htmlContent+=`<div><b>${processarImagens(q.pergunta)}</b></div>`;
-      if(q.alternativas) htmlContent+=q.alternativas.map((a,j)=>`<div class="alt">(${letras[j]}) ${processarImagens(a)}</div>`).join("");
+      htmlContent+=`<div style="margin-bottom:10px;"><b>${processarImagens(q.pergunta)}</b></div>`;
+      
+      if(q.alternativas && q.alternativas.length) {
+        htmlContent+=q.alternativas.map((a,j)=>`<div class="alt">(${letras[j]}) ${processarImagens(a)}</div>`).join("");
+      } else {
+        htmlContent+=`<div style="margin-top:15px; border: 1px solid #000; height: 60px;"></div>`;
+      }
       htmlContent+="</div>";
     });
     htmlContent += "</div>";
@@ -795,9 +801,11 @@ function renderQuestoes() {
         <button class="btn btn-danger btn-sm" onclick="removerQuestao(${i})">✕</button>
       </div>
       ${q.descritor ? `<span class="badge badge-green">${q.descritor}</span> ` : ""}
-      ${q.imagens && q.imagens.length ? q.imagens.map(img=>`<img src="${img}" style="max-height:100px;margin:5px 0;">`).join("") : ""}
-      ${q.textoAntes ? `<p style="font-style:italic;font-size:13px;">${q.textoAntes}</p>` : ""}
-      <p><b>${q.pergunta}</b></p>`;
+      
+      ${q.textoAntes ? `<p style="font-style:italic;font-size:13px;margin-bottom:5px;">${q.textoAntes}</p>` : ""}
+      ${q.imagens && q.imagens.length ? q.imagens.map(img=>`<img src="${img}" style="max-height:100px;margin:5px 0;display:block;">`).join("") : ""}
+      
+      <p style="margin-bottom:10px;"><b>${q.pergunta}</b></p>`;
     
     if (q.alternativas && q.alternativas.length) {
       html += `<div style="margin-top:10px;">`;
@@ -809,6 +817,8 @@ function renderQuestoes() {
         }
       });
       html += `</div>`;
+    } else {
+      html += `<div style="margin-top:10px; border: 1px dashed #ccc; padding: 10px;"><i>Campo de resposta escrita</i></div>`;
     }
     
     html += `</div>`;
