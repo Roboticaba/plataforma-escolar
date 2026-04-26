@@ -202,31 +202,24 @@ body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f1f5f
         </div>
       </div>
       <div class="form-group">
-        <label>Texto de Apoio (opcional)</label>
-        <textarea id="textoAntes" placeholder="Ex.: Observe a imagem..."></textarea>
-      </div>
-      <div class="form-group">
         <label>Pergunta</label>
         <textarea id="pergunta" placeholder="O que o aluno deve responder?"></textarea>
       </div>
       <div class="form-group">
-        <label>Imagens da Pergunta (links - um por linha)</label>
-        <textarea id="imagensPergunta" placeholder="https://exemplo.com/imagem1.png
-https://exemplo.com/imagem2.png"></textarea>
+        <label>Texto de Apoio (opcional)</label>
+        <textarea id="textoAntes" placeholder="Ex.: Observe a imagem..." style="white-space: pre-wrap;"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Imagens de Apoio (links - um por linha)</label>
+        <textarea id="imagensPergunta" placeholder="https://exemplo.com/imagem1.png"></textarea>
       </div>
       <div class="form-group" id="areaAltTexto">
         <label>Alternativas de Texto (uma por linha)</label>
-        <textarea id="alternativasTexto" placeholder="(A) Alternativa A
-(B) Alternativa B
-(C) Alternativa C
-(D) Alternativa D"></textarea>
+        <textarea id="alternativasTexto" placeholder="(A) Alternativa A"></textarea>
       </div>
       <div class="form-group" id="areaAltImagem" style="display:none;">
         <label>Links das Imagens das Alternativas (um por linha)</label>
-        <textarea id="alternativasImg" placeholder="https://exemplo.com/a.png
-https://exemplo.com/b.png
-https://exemplo.com/c.png
-https://exemplo.com/d.png"></textarea>
+        <textarea id="alternativasImg" placeholder="https://exemplo.com/a.png"></textarea>
       </div>
       <div class="form-group" id="areaCorreta">
         <label>Resposta Correta</label>
@@ -681,13 +674,18 @@ async function gerarPDF() {
     const valorPorQuestao = numQuestoes > 0 ? (valorTotal / numQuestoes).toFixed(2) : valorTotal.toFixed(2);
     
     (p.questoes||[]).forEach((q,i) => {
-      // 1. Processar imagens de shortcodes na pergunta e alternativas
+    // 1. Processar imagens de shortcodes na pergunta e alternativas
       const processarImagens = (texto) => texto.replace(/\[img\](.*?)\[\/img\]/g, '<img src="$1" style="max-height:100px;display:block;margin:5px 0;">');
 
       htmlContent += `<div class="q"><div><b>Questão ${i+1}</b>${q.descritor?" ("+q.descritor.split("|")[0]+")":""} <span class="valor-questao">(${valorPorQuestao.replace(".",",")} pontos)</span></div>`;
       
       if(q.textoAntes) htmlContent+=`<div style="font-style:italic;margin-bottom:5px;white-space:pre-wrap;">${processarImagens(q.textoAntes)}</div>`;
-      if(q.imagens && q.imagens.length) htmlContent+=q.imagens.map(img=>`<img src="${img}" style="max-height:150px;margin:10px 0;display:block;">`).join("");
+      if(q.imagens && q.imagens.length) {
+        htmlContent+=`<div style="display:flex; flex-wrap:wrap; gap:10px; margin:10px 0;">` + 
+          q.imagens.map(img=>`<img src="${img}" style="max-height:150px; flex: 0 1 auto; object-fit: contain;">`).join("") +
+          `</div>`;
+      }
+      
       htmlContent+=`<div style="margin-bottom:10px;"><b>${processarImagens(q.pergunta)}</b></div>`;
       
       if(q.alternativas && q.alternativas.length) {
@@ -803,7 +801,8 @@ function renderQuestoes() {
       ${q.descritor ? `<span class="badge badge-green">${q.descritor}</span> ` : ""}
       
       ${q.textoAntes ? `<p style="font-style:italic;font-size:13px;margin-bottom:5px;white-space:pre-wrap;">${q.textoAntes}</p>` : ""}
-      ${q.imagens && q.imagens.length ? q.imagens.map(img=>`<img src="${img}" style="max-height:100px;margin:5px 0;display:block;">`).join("") : ""}
+      
+      ${q.imagens && q.imagens.length ? `<div style="display:flex; flex-wrap:wrap; gap:5px; margin:5px 0;">` + q.imagens.map(img=>`<img src="${img}" style="max-height:100px; flex: 0 1 auto; object-fit: contain;">`).join("") + `</div>` : ""}
       
       <p style="margin-bottom:10px;"><b>${q.pergunta}</b></p>`;
     
