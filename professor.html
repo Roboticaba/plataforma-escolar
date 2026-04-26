@@ -360,6 +360,10 @@ let provaAtualId = null;
 let questoesTemp = [];
 let logoData = "";
 
+// Inicializa app secundário para criação de usuários sem deslogar o professor
+const secondaryApp = firebase.initializeApp(firebaseConfig, 'secondary');
+const secondaryAuth = secondaryApp.auth();
+
 const descritoresPortugues = {
   "1": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D05",n:"Interpretar com gráfico"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D14",n:"Efeito de pontuação"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}],
   "2": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D05",n:"Interpretar com gráfico"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D14",n:"Efeito de pontuação"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}],
@@ -451,6 +455,7 @@ async function carregarDadosTurma() {
   listaAl.innerHTML = t.alunos && t.alunos.length ? t.alunos.map((a,i) => `
     <div class="list-item">
       <div style="font-weight:600;">${a.nome}</div>
+      ${a.email ? `<div style="font-size:0.85rem;color:#64748b;">${a.email}</div>` : ""}
       <button class="btn btn-danger btn-sm" onclick="removerAluno(${i})">✕</button>
     </div>
   `).join("") : "<p style='color:#64748b;'>Nenhum aluno</p>";
@@ -472,16 +477,35 @@ async function adicionarAluno() {
   const nome = document.getElementById("nomeAluno").value.trim();
   const senha = document.getElementById("senhaAluno").value.trim();
   if (!nome || !senha) { alert("Preencha nome e senha"); return; }
-  
-  const docT = await db.collection("turmas").doc(turmaAtualId).get();
-  const t = docT.data();
-  const alunos = t.alunos || [];
-  alunos.push({ nome, senha });
-  await db.collection("turmas").doc(turmaAtualId).update({ alunos });
-  
-  document.getElementById("nomeAluno").value = "";
-  document.getElementById("senhaAluno").value = "";
-  carregarDadosTurma();
+
+  const email = `${nome.toLowerCase().replace(/\s+/g, '.')}.aluno.${turmaAtualId}@plataforma.app`;
+
+  try {
+    const cred = await secondaryAuth.createUserWithEmailAndPassword(email, senha);
+    const uid = cred.user.uid;
+
+    await db.collection("users").doc(uid).set({
+      nome,
+      role: "aluno",
+      turmaId: turmaAtualId,
+      ativo: true,
+      email
+    });
+
+    await db.collection("turmas").doc(turmaAtualId).update({
+      alunos: firebase.firestore.FieldValue.arrayUnion({ uid, nome, email })
+    });
+
+    document.getElementById("nomeAluno").value = "";
+    document.getElementById("senhaAluno").value = "";
+    carregarDadosTurma();
+    alert(`Aluno criado! Email: ${email}`);
+  } catch (err) {
+    console.error("Erro ao criar aluno:", err);
+    alert(`Erro: ${err.message}`);
+  } finally {
+    await secondaryAuth.signOut();
+  }
 }
 
 async function removerAluno(index) {
@@ -489,8 +513,16 @@ async function removerAluno(index) {
   const docT = await db.collection("turmas").doc(turmaAtualId).get();
   const t = docT.data();
   const alunos = t.alunos || [];
-  alunos.splice(index, 1);
-  await db.collection("turmas").doc(turmaAtualId).update({ alunos });
+  const alunoToRemove = alunos[index];
+  if (!alunoToRemove) return;
+
+  const updatedAlunos = alunos.filter((_, i) => i !== index);
+  await db.collection("turmas").doc(turmaAtualId).update({ alunos: updatedAlunos });
+
+  if (alunoToRemove.uid) {
+    await db.collection("users").doc(alunoToRemove.uid).delete();
+  }
+
   carregarDadosTurma();
 }
 
