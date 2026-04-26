@@ -640,7 +640,7 @@ async function gerarPDF() {
         .linha-input { display: inline-block; border-bottom: 1px solid #000; width: 60%; margin-left: 8px; }
         .titulo-prova { text-align: center; font-weight: bold; font-size: 16px; margin-top: 16px; width: 100%; }
         
-        #area-impressao { width: 180mm; margin: 0 auto; padding: 0; box-sizing: border-box; }
+        #area-impressao { width: 100%; margin: 0 auto; padding: 0; box-sizing: border-box; }
         
         .q{margin:25px 0;page-break-inside:avoid; width: 100%;}
         .alt{margin:5px 0;margin-left:20px;}
@@ -701,7 +701,7 @@ async function gerarPDF() {
     
     // Gerar PDF sem container de debug, direto do HTML
     const opt = {
-      margin: 10,
+      margin: [10, 10, 10, 10],
       filename: 'prova.pdf',
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
