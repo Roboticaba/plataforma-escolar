@@ -991,11 +991,15 @@ function uploadLogo() {
 
 async function salvarConfig() {
   try {
+    // Busca configurações existentes para preservar logo se não houver upload novo
+    const userDoc = await db.collection("users").doc(usuario.uid).get();
+    const existingCabecalho = userDoc.exists ? userDoc.data().cabecalho || {} : {};
+
     await db.collection("users").doc(usuario.uid).update({
       cabecalho: {
         nomeEscola: document.getElementById("cfgNomeEscola").value.trim(),
         endereco: document.getElementById("cfgEndereco").value.trim(),
-        logoUrl: logoData || "",
+        logoUrl: logoData || existingCabecalho.logoUrl || "",
         nomeProfessor: document.getElementById("cfgNomeProfessor").value.trim(),
         textoLivre: document.getElementById("cfgTextoLivre").value.trim()
       }

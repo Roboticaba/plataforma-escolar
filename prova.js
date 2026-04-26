@@ -96,6 +96,12 @@ function atualizarBarra() {
 }
 
 async function enviar() {
+  // Valida se todas as questões foram respondidas
+  if (!prova || Object.keys(respostas).length < prova.questoes.length) {
+    alert("Responda todas as questões antes de enviar!");
+    return;
+  }
+
   clearInterval(timer);
 
   try {

@@ -125,14 +125,12 @@ async function carregarProvas() {
   try {
     const turmaDoc = await db.collection("turmas").doc(usuario.turmaId).get();
     const provasTurma = turmaDoc.data()?.provas || [];
-    const respostasSnap = await db.collection("respostas").get();
+    const respostasSnap = await db.collection("respostas").where("alunoId", "==", usuario.uid).get();
     
     const respostasAluno = {};
     respostasSnap.forEach(r => {
       const data = r.data();
-      if (data.alunoId === usuario.uid) {
-        respostasAluno[data.provaId] = data;
-      }
+      respostasAluno[data.provaId] = data;
     });
 
     let temDisponivel = false;
@@ -194,19 +192,26 @@ async function carregarRanking() {
   if (!usuario.turmaId) return;
 
   try {
-    const respostasSnap = await db.collection("respostas").get();
-    const rankings = [];
+    // Consulta apenas respostas da turma do aluno (otimização)
+    const respostasSnap = await db.collection("respostas").where("turmaId", "==", usuario.turmaId).get();
+    const alunosMap = new Map(); // Agrupa por alunoId para evitar duplicatas
 
     respostasSnap.forEach(r => {
       const data = r.data();
-      if (data.turmaId === usuario.turmaId && data.correcao && data.correcao.notaFinal !== undefined) {
-        rankings.push({
-          nome: data.aluno || "Aluno",
-          nota: data.correcao.notaFinal,
-          alunoId: data.alunoId
-        });
+      if (data.correcao && data.correcao.notaFinal !== undefined) {
+        const existing = alunosMap.get(data.alunoId);
+        // Mantém a maior nota para cada aluno
+        if (!existing || data.correcao.notaFinal > existing.nota) {
+          alunosMap.set(data.alunoId, {
+            nome: data.aluno || "Aluno",
+            nota: data.correcao.notaFinal,
+            alunoId: data.alunoId
+          });
+        }
       }
     });
+
+    const rankings = Array.from(alunosMap.values());
 
     rankings.sort((a, b) => b.nota - a.nota);
 
