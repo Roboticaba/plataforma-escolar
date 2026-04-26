@@ -210,8 +210,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f1f5f
         <textarea id="textoAntes" placeholder="Ex.: Observe a imagem..." style="white-space: pre-wrap;"></textarea>
       </div>
       <div class="form-group">
-        <label>Imagens de Apoio (links ou upload)</label>
-        <textarea id="imagensPergunta" placeholder="https://exemplo.com/imagem1.png"></textarea>
+        <label>Imagens de Apoio (upload)</label>
         <input type="file" id="uploadImagensPergunta" multiple accept="image/*" style="margin-top:5px;">
       </div>
       <div class="form-group" id="areaAltTexto">
@@ -219,8 +218,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f1f5f
         <textarea id="alternativasTexto" placeholder="(A) Alternativa A"></textarea>
       </div>
       <div class="form-group" id="areaAltImagem" style="display:none;">
-        <label>Imagens das Alternativas (links ou upload)</label>
-        <textarea id="alternativasImg" placeholder="https://exemplo.com/a.png"></textarea>
+        <label>Imagens das Alternativas (upload)</label>
         <input type="file" id="uploadAlternativasImg" multiple accept="image/*" style="margin-top:5px;">
       </div>
       <div class="form-group" id="areaCorreta">
@@ -765,7 +763,7 @@ async function adicionarQuestao() {
   const pergunta = document.getElementById("pergunta").value.trim();
   
   const filesPergunta = document.getElementById("uploadImagensPergunta").files;
-  let imagensPergunta = document.getElementById("imagensPergunta").value.split("\n").map(i=>i.trim()).filter(i=>i);
+  let imagensPergunta = [];
   
   const disc = document.getElementById("disciplinaProva").value;
   const descritorSel = document.getElementById("descritorProva").value;
@@ -773,9 +771,10 @@ async function adicionarQuestao() {
   if (!pergunta) { alert("Digite a pergunta"); return; }
   
   try {
+    console.log("Processando imagens da pergunta...");
     // Upload de imagens da pergunta
     const uploadedPergunta = await Promise.all(Array.from(filesPergunta).map(uploadFileToCloudinary));
-    imagensPergunta = imagensPergunta.concat(uploadedPergunta);
+    imagensPergunta = uploadedPergunta;
 
     let alternativas = [], correta = null;
     if (tipo === "multipla") {
@@ -783,10 +782,9 @@ async function adicionarQuestao() {
         alternativas = document.getElementById("alternativasTexto").value.split("\n").map(a=>a.trim()).filter(a=>a);
       } else {
         const filesAlternativas = document.getElementById("uploadAlternativasImg").files;
-        let linksAlternativas = document.getElementById("alternativasImg").value.split("\n").map(a=>a.trim()).filter(a=>a);
         
-        const uploadedAlternativas = await Promise.all(Array.from(filesAlternativas).map(uploadFileToCloudinary));
-        alternativas = linksAlternativas.concat(uploadedAlternativas);
+        console.log("Processando imagens das alternativas...");
+        alternativas = await Promise.all(Array.from(filesAlternativas).map(uploadFileToCloudinary));
       }
       if (alternativas.length < 2) { alert("Digite pelo menos 2 alternativas"); return; }
       correta = parseInt(document.getElementById("correta").value);
@@ -803,10 +801,8 @@ async function adicionarQuestao() {
     
     document.getElementById("textoAntes").value = "";
     document.getElementById("pergunta").value = "";
-    document.getElementById("imagensPergunta").value = "";
     document.getElementById("uploadImagensPergunta").value = "";
     document.getElementById("alternativasTexto").value = "";
-    document.getElementById("alternativasImg").value = "";
     document.getElementById("uploadAlternativasImg").value = "";
     renderQuestoes();
     alert("Questão adicionada!");
