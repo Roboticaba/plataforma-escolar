@@ -681,29 +681,19 @@ async function gerarPDF() {
     const valorPorQuestao = numQuestoes > 0 ? (valorTotal / numQuestoes).toFixed(2) : valorTotal.toFixed(2);
     
     (p.questoes||[]).forEach((q,i) => {
+      // 1. Processar imagens de shortcodes na pergunta e alternativas
+      const processarImagens = (texto) => texto.replace(/\[img\](.*?)\[\/img\]/g, '<img src="$1" style="max-height:100px;display:block;margin:5px 0;">');
+
       htmlContent += `<div class="q"><div><b>Questão ${i+1}</b>${q.descritor?" ("+q.descritor.split("|")[0]+")":""} <span class="valor-questao">(${valorPorQuestao.replace(".",",")} pontos)</span></div>`;
-      if(q.textoAntes) htmlContent+=`<div style="font-style:italic;">${q.textoAntes}</div>`;
+      if(q.textoAntes) htmlContent+=`<div style="font-style:italic;">${processarImagens(q.textoAntes)}</div>`;
       if(q.imagens && q.imagens.length) htmlContent+=q.imagens.map(img=>`<img src="${img}" style="max-height:150px;margin:10px 0;display:block;">`).join("");
-      htmlContent+=`<div><b>${q.pergunta}</b></div>`;
-      if(q.alternativas) htmlContent+=q.alternativas.map((a,j)=>`<div class="alt">(${letras[j]}) ${a}</div>`).join("");
+      htmlContent+=`<div><b>${processarImagens(q.pergunta)}</b></div>`;
+      if(q.alternativas) htmlContent+=q.alternativas.map((a,j)=>`<div class="alt">(${letras[j]}) ${processarImagens(a)}</div>`).join("");
       htmlContent+="</div>";
     });
     htmlContent += "</div>";
     
-    let debugContainer = document.getElementById('debug-container');
-    if (!debugContainer) {
-        debugContainer = document.createElement('div');
-        debugContainer.id = 'debug-container';
-        debugContainer.style.border = "2px solid red";
-        debugContainer.style.margin = "20px";
-        debugContainer.style.padding = "20px";
-        debugContainer.style.width = "210mm";
-        document.body.appendChild(debugContainer);
-    }
-    debugContainer.innerHTML = htmlContent;
-    
-    console.log("PDF HTML Content:", htmlContent);
-    
+    // Gerar PDF sem container de debug, direto do HTML
     const opt = {
       margin: 10,
       filename: 'prova.pdf',
@@ -712,7 +702,7 @@ async function gerarPDF() {
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     
-    await html2pdf().set(opt).from(debugContainer).save();
+    await html2pdf().set(opt).from(htmlContent).save();
     
   } catch(e) { alert("Erro ao gerar PDF: "+e.message); }
 }
