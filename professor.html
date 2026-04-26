@@ -3,56 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Painel do Professor</title>
-<style>
-* { box-sizing: border-box; }
-body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f1f5f9; color: #1e293b; min-height: 100vh; }
-.header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; }
-.logo { font-size: 22px; font-weight: bold; color: #3b82f6; margin: 0; }
-.header-actions { display: flex; gap: 10px; align-items: center; }
-.user-name { color: #64748b; font-size: 14px; margin-right: 10px; }
-.tabs { background: white; display: flex; padding: 0 30px; border-bottom: 1px solid #e2e8f0; }
-.tab { padding: 15px 25px; cursor: pointer; border: none; background: none; font-size: 15px; color: #64748b; font-weight: 500; border-bottom: 3px solid transparent; transition: all 0.2s; }
-.tab:hover { color: #3b82f6; }
-.tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
-.main { padding: 30px; max-width: 1200px; margin: 0 auto; }
-.tab-content { display: none; }
-.tab-content.active { display: block; }
-.page-title { font-size: 24px; font-weight: bold; color: #1e293b; margin-bottom: 20px; }
-.card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-.btn { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
-.btn-primary { background: #3b82f6; color: white; }
-.btn-primary:hover { background: #2563eb; }
-.btn-secondary { background: #64748b; color: white; }
-.btn-success { background: #10b981; color: white; }
-.btn-danger { background: #ef4444; color: white; }
-.btn-outline { background: white; border: 1px solid #cbd5e1; color: #374151; }
-.btn-sm { padding: 6px 12px; font-size: 13px; }
-.form-group { margin-bottom: 15px; }
-.form-group label { display: block; font-weight: 600; color: #374151; margin-bottom: 6px; font-size: 14px; }
-.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: white; }
-.form-row { display: flex; gap: 15px; }
-.form-col { flex: 1; }
-.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-.badge-blue { background: #dbeafe; color: #1d4ed8; }
-.badge-purple { background: #ede9fe; color: #7c3aed; }
-.badge-green { background: #d1fae5; color: #059669; }
-.list-item { padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-.prova-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; cursor:pointer; }
-.prova-card-title { font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 10px; }
-.prova-card-meta { display: flex; gap: 8px; flex-wrap: wrap; }
-.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-.modal-overlay.active { display: flex; }
-.modal { background: white; border-radius: 16px; padding: 30px; width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.modal-title { font-size: 20px; font-weight: 600; color: #1e293b; }
-.modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b; }
-.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
-.etapa { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-.etapa-title { font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 15px; }
-.questao-card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 10px; }
-.sair-btn { background: #ef4444; color: white; padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; }
-.empty-state { text-align: center; padding: 50px 20px; color: #64748b; }
-</style>
+<link rel="stylesheet" href="professor-styles.css">
 </head>
 <body>
 
