@@ -686,7 +686,7 @@ async function gerarPDF() {
 
       htmlContent += `<div class="q"><div><b>Questão ${i+1}</b>${q.descritor?" ("+q.descritor.split("|")[0]+")":""} <span class="valor-questao">(${valorPorQuestao.replace(".",",")} pontos)</span></div>`;
       
-      if(q.textoAntes) htmlContent+=`<div style="font-style:italic;margin-bottom:5px;">${processarImagens(q.textoAntes)}</div>`;
+      if(q.textoAntes) htmlContent+=`<div style="font-style:italic;margin-bottom:5px;white-space:pre-wrap;">${processarImagens(q.textoAntes)}</div>`;
       if(q.imagens && q.imagens.length) htmlContent+=q.imagens.map(img=>`<img src="${img}" style="max-height:150px;margin:10px 0;display:block;">`).join("");
       htmlContent+=`<div style="margin-bottom:10px;"><b>${processarImagens(q.pergunta)}</b></div>`;
       
@@ -793,7 +793,7 @@ function renderQuestoes() {
   }
   
   const letras = ["A","B","C","D"];
-  resumo.textContent = questoesTemp.length + " questão(ões) adicionada(s)";
+      resumo.textContent = questoesTemp.length + " questão(ões) adicionada(s)";
   lista.innerHTML = questoesTemp.map((q,i) => {
     let html = `<div class="questao-card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -802,7 +802,7 @@ function renderQuestoes() {
       </div>
       ${q.descritor ? `<span class="badge badge-green">${q.descritor}</span> ` : ""}
       
-      ${q.textoAntes ? `<p style="font-style:italic;font-size:13px;margin-bottom:5px;">${q.textoAntes}</p>` : ""}
+      ${q.textoAntes ? `<p style="font-style:italic;font-size:13px;margin-bottom:5px;white-space:pre-wrap;">${q.textoAntes}</p>` : ""}
       ${q.imagens && q.imagens.length ? q.imagens.map(img=>`<img src="${img}" style="max-height:100px;margin:5px 0;display:block;">`).join("") : ""}
       
       <p style="margin-bottom:10px;"><b>${q.pergunta}</b></p>`;
