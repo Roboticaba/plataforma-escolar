@@ -210,18 +210,16 @@ body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f1f5f
         <textarea id="textoAntes" placeholder="Ex.: Observe a imagem..." style="white-space: pre-wrap;"></textarea>
       </div>
       <div class="form-group">
-        <label>Imagens de Apoio (links ou upload)</label>
+        <label>Imagens de Apoio (links - um por linha)</label>
         <textarea id="imagensPergunta" placeholder="https://exemplo.com/imagem1.png"></textarea>
-        <input type="file" id="uploadImagensPergunta" multiple accept="image/*" style="margin-top:5px;">
       </div>
       <div class="form-group" id="areaAltTexto">
         <label>Alternativas de Texto (uma por linha)</label>
         <textarea id="alternativasTexto" placeholder="(A) Alternativa A"></textarea>
       </div>
       <div class="form-group" id="areaAltImagem" style="display:none;">
-        <label>Imagens das Alternativas (links ou upload)</label>
+        <label>Links das Imagens das Alternativas (um por linha)</label>
         <textarea id="alternativasImg" placeholder="https://exemplo.com/a.png"></textarea>
-        <input type="file" id="uploadAlternativasImg" multiple accept="image/*" style="margin-top:5px;">
       </div>
       <div class="form-group" id="areaCorreta">
         <label>Resposta Correta</label>
@@ -334,7 +332,6 @@ body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f1f5f
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script>
@@ -350,7 +347,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
-const storage = firebase.storage();
 
 let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
 if (!usuario || usuario.role !== "professor") {
@@ -744,80 +740,43 @@ function mudouTipoAlternativa() {
   document.getElementById("areaAltImagem").style.display = tipoAlt === "imagem" ? "block" : "none";
 }
 
-async function uploadFile(file) {
-  console.log("Iniciando upload de:", file.name);
-  try {
-    const storageRef = storage.ref('provas/' + Date.now() + '_' + file.name);
-    const snapshot = await storageRef.put(file);
-    const url = await snapshot.ref.getDownloadURL();
-    console.log("Upload concluído, URL:", url);
-    return url;
-  } catch (error) {
-    console.error("Erro no upload:", error);
-    throw error;
-  }
-}
-
-async function adicionarQuestao() {
-  console.log("Adicionando questão...");
+function adicionarQuestao() {
   const tipo = document.getElementById("tipoQuestao").value;
   const tipoAlt = document.getElementById("tipoAlternativa").value;
   const textoAntes = document.getElementById("textoAntes").value;
   const pergunta = document.getElementById("pergunta").value.trim();
-  
-  const filesPergunta = document.getElementById("uploadImagensPergunta").files;
-  let imagensPergunta = document.getElementById("imagensPergunta").value.split("\n").map(i=>i.trim()).filter(i=>i);
-  
+  const imagensPergunta = document.getElementById("imagensPergunta").value.split("\n").map(i=>i.trim()).filter(i=>i);
   const disc = document.getElementById("disciplinaProva").value;
   const descritorSel = document.getElementById("descritorProva").value;
   
   if (!pergunta) { alert("Digite a pergunta"); return; }
   
-  try {
-    console.log("Processando imagens da pergunta...");
-    // Upload de imagens da pergunta
-    const uploadedPergunta = await Promise.all(Array.from(filesPergunta).map(uploadFile));
-    imagensPergunta = imagensPergunta.concat(uploadedPergunta);
-
-    let alternativas = [], correta = null;
-    if (tipo === "multipla") {
-      if (tipoAlt === "texto") {
-        alternativas = document.getElementById("alternativasTexto").value.split("\n").map(a=>a.trim()).filter(a=>a);
-      } else {
-        const filesAlternativas = document.getElementById("uploadAlternativasImg").files;
-        let linksAlternativas = document.getElementById("alternativasImg").value.split("\n").map(a=>a.trim()).filter(a=>a);
-        
-        console.log("Processando imagens das alternativas...");
-        const uploadedAlternativas = await Promise.all(Array.from(filesAlternativas).map(uploadFile));
-        alternativas = linksAlternativas.concat(uploadedAlternativas);
-      }
-      if (alternativas.length < 2) { alert("Digite pelo menos 2 alternativas"); return; }
-      correta = parseInt(document.getElementById("correta").value);
+  let alternativas = [], correta = null;
+  if (tipo === "multipla") {
+    if (tipoAlt === "texto") {
+      alternativas = document.getElementById("alternativasTexto").value.split("\n").map(a=>a.trim()).filter(a=>a);
+    } else {
+      alternativas = document.getElementById("alternativasImg").value.split("\n").map(a=>a.trim()).filter(a=>a);
     }
-    
-    let descritorCod = "", descritorNome = "";
-    if (descritorSel) {
-      const p = descritorSel.split("|");
-      descritorCod = p[0];
-      descritorNome = p[1];
-    }
-    
-    questoesTemp.push({ tipo, tipoAlt, textoAntes, pergunta, imagens: imagensPergunta, alternativas, correta, disciplina: disc, descritor: descritorCod, descritorNome });
-    
-    document.getElementById("textoAntes").value = "";
-    document.getElementById("pergunta").value = "";
-    document.getElementById("imagensPergunta").value = "";
-    document.getElementById("uploadImagensPergunta").value = "";
-    document.getElementById("alternativasTexto").value = "";
-    document.getElementById("alternativasImg").value = "";
-    document.getElementById("uploadAlternativasImg").value = "";
-    renderQuestoes();
-    console.log("Questão adicionada com sucesso!");
-    alert("Questão adicionada!");
-  } catch (e) {
-    console.error("Erro completo:", e);
-    alert("Erro ao adicionar questão: " + e.message);
+    if (alternativas.length < 2) { alert("Digite pelo menos 2 alternativas"); return; }
+    correta = parseInt(document.getElementById("correta").value);
   }
+  
+  let descritorCod = "", descritorNome = "";
+  if (descritorSel) {
+    const p = descritorSel.split("|");
+    descritorCod = p[0];
+    descritorNome = p[1];
+  }
+  
+  questoesTemp.push({ tipo, tipoAlt, textoAntes, pergunta, imagens: imagensPergunta, alternativas, correta, disciplina: disc, descritor: descritorCod, descritorNome });
+  
+  document.getElementById("textoAntes").value = "";
+  document.getElementById("pergunta").value = "";
+  document.getElementById("imagensPergunta").value = "";
+  document.getElementById("alternativasTexto").value = "";
+  document.getElementById("alternativasImg").value = "";
+  renderQuestoes();
 }
 
 function renderQuestoes() {
