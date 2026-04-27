@@ -182,11 +182,11 @@ function gerarPDF() {
   
   htmlContent += '<div style="border:2px solid #333;border-radius:8px;padding:10px 12px;margin-bottom:12px;">';
   
-  htmlContent += '<div style="display:flex;align-items:center;margin-bottom:8px;">';
+  htmlContent += '<div style="display:flex;align-items:flex-start;margin-bottom:8px;">';
   if (config && config.logoUrl) {
     htmlContent += '<img src="' + config.logoUrl + '" style="width:120px;height:auto;flex-shrink:0;margin-right:12px;">';
   }
-  htmlContent += '<div style="flex:1;max-width:100%;text-align:center;word-break:break-word;">';
+  htmlContent += '<div style="flex:1;max-width:100%;word-break:break-word;">';
   if (config && config.nomeEscola) {
     htmlContent += '<div style="font-size:14px;font-weight:bold;">' + config.nomeEscola + '</div>';
   }
@@ -196,24 +196,31 @@ function gerarPDF() {
   htmlContent += '</div>';
   htmlContent += '</div>';
   
-  htmlContent += '<div style="display:flex;align-items:center;margin-bottom:4px;">';
+  htmlContent += '<div style="border-top:1px solid #333;padding-top:6px;">';
+  
+  htmlContent += '<div style="display:flex;align-items:center;margin-bottom:3px;">';
   htmlContent += '<span style="font-size:11px;white-space:nowrap;">ALUNO(A):</span>';
-  htmlContent += '<div style="flex:1;border-bottom:1px solid #333;margin:0 8px;"></div>';
-  htmlContent += '<span style="font-size:11px;white-space:nowrap;">ANO: ' + (provaData.ano || "?") + 'º</span>';
+  htmlContent += '<div style="flex:1;border-bottom:1px solid #333;margin:0 6px;"></div>';
+  htmlContent += '<span style="font-size:11px;white-space:nowrap;">TURMA:</span>';
+  htmlContent += '<div style="width:25px;border-bottom:1px solid #333;margin:0 4px;"></div>';
   htmlContent += '</div>';
   
   var nomeProfessor = (config && config.nomeProfessor) ? config.nomeProfessor : "";
-  htmlContent += '<div style="display:flex;align-items:center;">';
+  htmlContent += '<div style="display:flex;align-items:center;margin-bottom:3px;">';
   htmlContent += '<span style="font-size:11px;white-space:nowrap;">PROFESSOR(A):</span>';
   if (nomeProfessor) {
-    htmlContent += '<span style="font-size:11px;margin:0 8px;border-bottom:1px solid #333;padding-bottom:2px;white-space:nowrap;">' + nomeProfessor + '</span>';
+    htmlContent += '<span style="font-size:11px;border-bottom:1px solid #333;padding:0 4px;white-space:nowrap;margin:0 6px;">' + nomeProfessor + '</span>';
   } else {
-    htmlContent += '<div style="flex:1;border-bottom:1px solid #333;margin:0 8px;"></div>';
+    htmlContent += '<div style="flex:1;border-bottom:1px solid #333;margin:0 6px;"></div>';
   }
-  htmlContent += '<span style="font-size:11px;white-space:nowrap;">DATA:</span>';
-  htmlContent += '<div style="width:55px;border-bottom:1px solid #333;margin:0 4px;"></div>';
   htmlContent += '</div>';
   
+  htmlContent += '<div style="display:flex;align-items:center;">';
+  htmlContent += '<span style="font-size:11px;white-space:nowrap;">DATA:</span>';
+  htmlContent += '<span style="font-size:11px;border-bottom:1px solid #333;padding:0 4px;margin-left:4px;">___/___/______</span>';
+  htmlContent += '</div>';
+  
+  htmlContent += '</div>';
   htmlContent += '</div>';
   
   if (config && config.textoLivre) {
