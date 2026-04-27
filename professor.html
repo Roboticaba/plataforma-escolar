@@ -17,13 +17,13 @@
 </header>
 
 <nav class="tabs">
-  <button class="tab active" onclick="trocarAba('turmas')" id="tab-turmas">📚 Turmas</button>
-  <button class="tab" onclick="trocarAba('banco')" id="tab-banco">📋 Banco de Provas</button>
-  <button class="tab" onclick="trocarAba('criar')" id="tab-criar">➕ Criar Prova</button>
+  <button class="tab active" data-tab="turmas" onclick="trocarAbaTurmas()">📚 Turmas</button>
+  <button class="tab" data-tab="banco" onclick="trocarAbaBanco()">📋 Banco de Provas</button>
+  <button class="tab" data-tab="criar" onclick="trocarAbaCriar()">➕ Criar Prova</button>
 </nav>
 
 <main class="main">
-  <div class="tab-content active" id="aba-turmas" style="display: block;">
+  <div id="section-turmas">
     <div class="page-title">Turmas</div>
     <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
       <button class="btn btn-primary" onclick="criarTurma()">➕ Criar Nova Turma</button>
@@ -32,7 +32,7 @@
     <div id="listaTurmas"></div>
   </div>
 
-  <div class="tab-content" id="aba-banco" style="display: none;">
+  <div class="tab-content" id="section-banco" style="display: none;">
     <div class="page-title">Banco de Provas</div>
     <div class="card" style="margin-bottom: 20px;">
       <div class="form-row">
@@ -71,7 +71,7 @@
     <div id="listaProvas"></div>
   </div>
 
-  <div class="tab-content" id="aba-criar" style="display: none;">
+  <div class="tab-content" id="section-criar" style="display: none;">
     <div class="page-title">Criar Nova Prova</div>
     
     <div class="etapa">

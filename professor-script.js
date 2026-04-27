@@ -19,18 +19,9 @@ if (!usuario || usuario.role !== "professor") {
 document.getElementById("nomeProfessor").textContent = usuario.nome || "Professor";
 
 document.addEventListener("DOMContentLoaded", function() {
-  var abas = document.querySelectorAll(".tab-content");
-  for (var i = 0; i < abas.length; i++) {
-    abas[i].classList.remove("active");
-    abas[i].style.display = "none";
-    abas[i].style.visibility = "hidden";
-  }
-  var abaTurmas = document.getElementById("aba-turmas");
-  if (abaTurmas) {
-    abaTurmas.classList.add("active");
-    abaTurmas.style.display = "block";
-    abaTurmas.style.visibility = "visible";
-  }
+  document.getElementById("section-turmas").style.display = "block";
+  document.getElementById("section-banco").style.display = "none";
+  document.getElementById("section-criar").style.display = "none";
   carregarTurmas();
 });
 
@@ -59,48 +50,36 @@ const descritoresMatematica = {
   "5": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"Perímetro"},{c:"D12",n:"Área"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D19",n:"Problema"},{c:"D23",n:"Dinheiro"},{c:"D24",n:"Fração"},{c:"D26",n:"Porcentagem"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}]
 };
 
-function trocarAba(aba) {
-  console.log("Trocando para aba:", aba);
-  try {
-    var tabIds = ["turmas", "banco", "criar"];
-    for (var i = 0; i < tabIds.length; i++) {
-      var content = document.getElementById("aba-" + tabIds[i]);
-      var btn = document.getElementById("tab-" + tabIds[i]);
-      console.log("Tab", tabIds[i], "- content:", !!content, "display:", content ? content.style.display : "N/A");
-      if (content) {
-        if (tabIds[i] === aba) {
-          content.classList.add("active");
-          content.style.display = "block";
-          content.style.visibility = "visible";
-        } else {
-          content.classList.remove("active");
-          content.style.display = "none";
-          content.style.visibility = "hidden";
-        }
-      }
-      if (btn) {
-        if (tabIds[i] === aba) {
-          btn.classList.add("active");
-        } else {
-          btn.classList.remove("active");
-        }
-      }
-    }
-    
-    if (aba === "turmas") carregarTurmas();
-    if (aba === "banco") filtrarProvas();
-    if (aba === "criar") {
-      document.getElementById("nomeProva").value = "";
-      document.getElementById("disciplinaProva").value = "";
-      document.getElementById("anoProva").value = "";
-      document.getElementById("resumoQuestoes").textContent = "Nenhuma questão adicionada ainda.";
-      document.getElementById("listaQuestoes").innerHTML = "";
-      questoesTemp = [];
-    }
-  } catch(e) {
-    console.error("Erro ao trocar aba:", e);
-    alert("Erro ao trocar aba: " + e.message);
-  }
+function trocarAbaTurmas() {
+  document.getElementById("section-turmas").style.display = "block";
+  document.getElementById("section-banco").style.display = "none";
+  document.getElementById("section-criar").style.display = "none";
+  document.querySelectorAll(".tab").forEach(function(b) { b.classList.remove("active"); });
+  document.querySelector("[data-tab='turmas']").classList.add("active");
+  carregarTurmas();
+}
+
+function trocarAbaBanco() {
+  document.getElementById("section-turmas").style.display = "none";
+  document.getElementById("section-banco").style.display = "block";
+  document.getElementById("section-criar").style.display = "none";
+  document.querySelectorAll(".tab").forEach(function(b) { b.classList.remove("active"); });
+  document.querySelector("[data-tab='banco']").classList.add("active");
+  filtrarProvas();
+}
+
+function trocarAbaCriar() {
+  document.getElementById("section-turmas").style.display = "none";
+  document.getElementById("section-banco").style.display = "none";
+  document.getElementById("section-criar").style.display = "block";
+  document.querySelectorAll(".tab").forEach(function(b) { b.classList.remove("active"); });
+  document.querySelector("[data-tab='criar']").classList.add("active");
+  document.getElementById("nomeProva").value = "";
+  document.getElementById("disciplinaProva").value = "";
+  document.getElementById("anoProva").value = "";
+  document.getElementById("resumoQuestoes").textContent = "Nenhuma questão adicionada ainda.";
+  document.getElementById("listaQuestoes").innerHTML = "";
+  questoesTemp = [];
 }
 
 async function criarTurma() {
