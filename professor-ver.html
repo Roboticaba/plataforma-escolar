@@ -180,42 +180,34 @@ function gerarPDF() {
   
   var htmlContent = '<div style="font-family:Arial,Helvetica,sans-serif;width:210mm;min-height:297mm;padding:12mm 15mm;box-sizing:border-box;">';
   
-htmlContent += '<div style="border:2px solid #333;border-radius:8px;padding:10px 12px;margin-bottom:12px;">';
-  
-  htmlContent += '<div style="display:flex;align-items:stretch;">';
+htmlContent += '<div style="border:2px solid #333;border-radius:8px;padding:10px;margin-bottom:12px;">';
+  htmlContent += '<div style="display:flex;">';
   if (config && config.logoUrl) {
-    htmlContent += '<div style="flex-shrink:0;margin-right:10px;"><img src="' + config.logoUrl + '" style="width:100px;height:auto;display:block;"></div>';
+    htmlContent += '<div style="width:100px;flex-shrink:0;margin-right:10px;"><img src="' + config.logoUrl + '" style="width:100px;height:auto;"></div>';
   }
-  htmlContent += '<div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;">';
-  htmlContent += '<div style="text-align:center;">';
-  if (config && config.nomeEscola) {
-    htmlContent += '<div style="font-size:14px;font-weight:bold;">' + config.nomeEscola + '</div>';
-  }
-  if (config && config.endereco) {
-    htmlContent += '<div style="font-size:10px;color:#555;margin-top:2px;">' + config.endereco + '</div>';
-  }
+  htmlContent += '<div style="flex:1;">';
+  htmlContent += '<div style="text-align:center;font-size:14px;font-weight:bold;">' + (config && config.nomeEscola ? config.nomeEscola : "") + '</div>';
+  htmlContent += '<div style="text-align:center;font-size:10px;color:#555;margin-top:2px;">' + (config && config.endereco ? config.endereco : "") + '</div>';
   htmlContent += '</div>';
-  htmlContent += '<div style="margin-top:6px;">';
-  htmlContent += '<div style="display:flex;align-items:center;margin-bottom:4px;">';
-  htmlContent += '<span style="font-size:11px;white-space:nowrap;">ALUNO(A):</span>';
-  htmlContent += '<div style="flex:1;border-bottom:1px solid #333;margin:0 6px;"></div>';
-  htmlContent += '<span style="font-size:11px;white-space:nowrap;">TURMA:</span>';
-  htmlContent += '<div style="width:30px;border-bottom:1px solid #333;margin:0 4px;"></div>';
   htmlContent += '</div>';
-  var nomeProfessor = (config && config.nomeProfessor) ? config.nomeProfessor : "";
-  htmlContent += '<div style="display:flex;align-items:center;margin-bottom:4px;">';
-  htmlContent += '<span style="font-size:11px;white-space:nowrap;">PROFESSOR(A):</span>';
-  if (nomeProfessor) {
-    htmlContent += '<span style="font-size:11px;border-bottom:1px solid #333;padding:0 4px;white-space:nowrap;margin:0 6px;">' + nomeProfessor + '</span>';
+  htmlContent += '<div style="margin-top:8px;">';
+  htmlContent += '<div style="display:flex;align-items:center;font-size:11px;">';
+  htmlContent += '<span>ALUNO(A):</span><div style="flex:1;border-bottom:1px solid #333;margin:0 6px;"></div>';
+  htmlContent += '<span>TURMA:</span><div style="width:30px;border-bottom:1px solid #333;margin:0 4px;"></div>';
+  htmlContent += '</div>';
+  var nomeProf = (config && config.nomeProfessor) ? config.nomeProfessor : "";
+  htmlContent += '<div style="display:flex;align-items:center;font-size:11px;margin-top:4px;">';
+  htmlContent += '<span>PROFESSOR(A):</span>';
+  if (nomeProf) {
+    htmlContent += '<span style="border-bottom:1px solid #333;margin:0 6px;padding:0 4px;white-space:nowrap;">' + nomeProf + '</span>';
   } else {
     htmlContent += '<div style="flex:1;border-bottom:1px solid #333;margin:0 6px;"></div>';
   }
   htmlContent += '</div>';
-  htmlContent += '<div style="display:flex;align-items:center;">';
-  htmlContent += '<span style="font-size:11px;white-space:nowrap;">DATA:</span>';
-  htmlContent += '<span style="font-size:11px;border-bottom:1px solid #333;padding:0 4px;margin-left:4px;">___/___/______</span>';
+  htmlContent += '<div style="display:flex;align-items:center;font-size:11px;margin-top:4px;">';
+  htmlContent += '<span>DATA:</span><span style="border-bottom:1px solid #333;margin-left:4px;padding:0 4px;">___/___/______</span>';
   htmlContent += '</div>';
-  htmlContent += '</div>';
+htmlContent += '</div>';
   htmlContent += '</div>';
   
   if (config && config.textoLivre) {
