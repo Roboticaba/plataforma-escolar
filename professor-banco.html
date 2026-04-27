@@ -66,6 +66,9 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 
 let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+if (!usuario || usuario.role !== "professor") {
+  window.location.href = "index.html";
+}
 let provaAtualId = null;
 
 async function filtrarProvas() {
