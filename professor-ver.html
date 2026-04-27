@@ -180,29 +180,30 @@ function gerarPDF() {
   
   var htmlContent = '<div style="font-family:Arial,Helvetica,sans-serif;width:210mm;min-height:297mm;padding:12mm 15mm;box-sizing:border-box;">';
   
-  htmlContent += '<div style="border:2px solid #333;border-radius:8px;padding:10px 12px;margin-bottom:12px;">';
+htmlContent += '<div style="border:2px solid #333;border-radius:8px;padding:10px 12px;margin-bottom:12px;">';
   
-  htmlContent += '<div style="display:flex;align-items:flex-start;">';
+  htmlContent += '<div style="display:flex;align-items:stretch;">';
   if (config && config.logoUrl) {
     htmlContent += '<div style="flex-shrink:0;margin-right:10px;"><img src="' + config.logoUrl + '" style="width:100px;height:auto;display:block;"></div>';
   }
-  htmlContent += '<div style="flex:1;">';
+  htmlContent += '<div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;">';
+  htmlContent += '<div style="text-align:center;">';
   if (config && config.nomeEscola) {
-    htmlContent += '<div style="font-size:14px;font-weight:bold;text-align:center;">' + config.nomeEscola + '</div>';
+    htmlContent += '<div style="font-size:14px;font-weight:bold;">' + config.nomeEscola + '</div>';
   }
   if (config && config.endereco) {
-    htmlContent += '<div style="font-size:10px;color:#555;margin-top:2px;text-align:center;">' + config.endereco + '</div>';
+    htmlContent += '<div style="font-size:10px;color:#555;margin-top:2px;">' + config.endereco + '</div>';
   }
-  
-  htmlContent += '<div style="display:flex;align-items:center;margin-top:6px;">';
+  htmlContent += '</div>';
+  htmlContent += '<div style="margin-top:6px;">';
+  htmlContent += '<div style="display:flex;align-items:center;margin-bottom:4px;">';
   htmlContent += '<span style="font-size:11px;white-space:nowrap;">ALUNO(A):</span>';
   htmlContent += '<div style="flex:1;border-bottom:1px solid #333;margin:0 6px;"></div>';
   htmlContent += '<span style="font-size:11px;white-space:nowrap;">TURMA:</span>';
   htmlContent += '<div style="width:30px;border-bottom:1px solid #333;margin:0 4px;"></div>';
   htmlContent += '</div>';
-  
   var nomeProfessor = (config && config.nomeProfessor) ? config.nomeProfessor : "";
-  htmlContent += '<div style="display:flex;align-items:center;margin-top:6px;">';
+  htmlContent += '<div style="display:flex;align-items:center;margin-bottom:4px;">';
   htmlContent += '<span style="font-size:11px;white-space:nowrap;">PROFESSOR(A):</span>';
   if (nomeProfessor) {
     htmlContent += '<span style="font-size:11px;border-bottom:1px solid #333;padding:0 4px;white-space:nowrap;margin:0 6px;">' + nomeProfessor + '</span>';
@@ -210,10 +211,10 @@ function gerarPDF() {
     htmlContent += '<div style="flex:1;border-bottom:1px solid #333;margin:0 6px;"></div>';
   }
   htmlContent += '</div>';
-  
-htmlContent += '<div style="display:flex;align-items:center;margin-top:6px;">';
+  htmlContent += '<div style="display:flex;align-items:center;">';
   htmlContent += '<span style="font-size:11px;white-space:nowrap;">DATA:</span>';
   htmlContent += '<span style="font-size:11px;border-bottom:1px solid #333;padding:0 4px;margin-left:4px;">___/___/______</span>';
+  htmlContent += '</div>';
   htmlContent += '</div>';
   htmlContent += '</div>';
   
