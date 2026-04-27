@@ -22,6 +22,7 @@ let turmaAtualId = null;
 let provaAtualId = null;
 let questoesTemp = [];
 let logoData = "";
+let ultimaSugestaoDescritor = null;
 
 // Inicializa app secundário para criação de usuários sem deslogar o professor
 const secondaryApp = firebase.initializeApp(firebaseConfig, 'secondary');
