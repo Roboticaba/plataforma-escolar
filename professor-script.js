@@ -516,7 +516,7 @@ function classifyDescriptorAutomatically(textoQuestao, disc, ano) {
 }
 
 function sugerirDescritorAtual() {
-  const textoQuestao = document.getElementById("enunciadoProva").value;
+  const textoQuestao = document.getElementById("pergunta").value;
   const disc = document.getElementById("disciplinaProva").value;
   const ano = document.getElementById("anoProva").value;
   if (!textoQuestao) { alert("Digite o enunciado primeiro"); return; }
