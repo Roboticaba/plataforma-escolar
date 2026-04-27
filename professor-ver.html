@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+Ôªø<!DOCTYPE html>
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
@@ -40,7 +40,7 @@ async function carregarProva() {
   if (!id) {
     document.getElementById("loading").style.display = "none";
     document.getElementById("error").style.display = "block";
-    document.getElementById("error").textContent = "ID da prova n„o informado";
+    document.getElementById("error").textContent = "ID da prova n√£o informado";
     return;
   }
   
@@ -59,7 +59,7 @@ async function carregarProva() {
     if (provaData.criadoPor !== usuario.uid) {
       document.getElementById("loading").style.display = "none";
       document.getElementById("error").style.display = "block";
-      document.getElementById("error").textContent = "VocÍ n„o tem permiss„o para ver esta prova";
+      document.getElementById("error").textContent = "Voc√™ n√£o tem permiss√£o para ver esta prova";
       return;
     }
     
@@ -68,7 +68,7 @@ async function carregarProva() {
     
     document.getElementById("prova-nome").textContent = provaData.nome || "Prova sem nome";
     document.getElementById("prova-disciplina").textContent = provaData.disciplina || "Sem disciplina";
-    document.getElementById("prova-ano").textContent = (provaData.ano || "?") + "∫ Ano";
+    document.getElementById("prova-ano").textContent = (provaData.ano || "?") + "¬∫ Ano";
     document.getElementById("prova-tempo").textContent = (provaData.tempo || 60) + " min";
     document.getElementById("prova-valor").textContent = (provaData.valor || 10) + " pontos";
     
@@ -80,7 +80,7 @@ async function carregarProva() {
     
     questoes.forEach(function(q, i) {
       var html = "<div class=""questao-card"">";
-      html += "<div class=""questao-numero"">Quest„o " + (i + 1) + "</div>";
+      html += "<div class=""questao-numero"">Quest√£o " + (i + 1) + "</div>";
       
       if (q.descritor) {
         var descritorTexto = q.descritor;
@@ -108,7 +108,7 @@ async function carregarProva() {
     });
     
     if (questoes.length === 0) {
-      listaQuestoes.innerHTML = "<div style=""color:#64748b;text-align:center;padding:30px;"">Nenhuma quest„o adicionada nesta prova.</div>";
+      listaQuestoes.innerHTML = "<div style=""color:#64748b;text-align:center;padding:30px;"">Nenhuma quest√£o adicionada nesta prova.</div>";
     }
   } catch (e) {
     document.getElementById("loading").style.display = "none";
@@ -202,13 +202,13 @@ function gerarPDF() {
 }
 
 async function excluirProva() {
-  if (!confirm("Tem certeza que deseja excluir esta prova? Esta aÁ„o n„o pode ser desfeita.")) {
+  if (!confirm("Tem certeza que deseja excluir esta prova? Esta a√ß√£o n√£o pode ser desfeita.")) {
     return;
   }
   
   try {
     await db.collection("simulados").doc(provaAtualId).delete();
-    alert("Prova excluÌda com sucesso!");
+    alert("Prova exclu√≠da com sucesso!");
     window.location.href = "professor.html";
   } catch (e) {
     alert("Erro ao excluir: " + e.message);
@@ -246,7 +246,7 @@ body { padding: 20px; }
   <a href="professor.html" class="voltar-btn">? Voltar</a>
   
   <div id="loading" class="loading">Carregando prova...</div>
-  <div id="error" class="error" style="display:none;">Prova n„o encontrada</div>
+  <div id="error" class="error" style="display:none;">Prova n√£o encontrada</div>
   
   <div id="prova-content" style="display:none;">
     <div class="prova-header">
