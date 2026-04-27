@@ -20,8 +20,15 @@ document.getElementById("nomeProfessor").textContent = usuario.nome || "Professo
 
 document.addEventListener("DOMContentLoaded", function() {
   var abas = document.querySelectorAll(".tab-content");
-  abas.forEach(function(aba) { aba.classList.remove("active"); });
-  document.getElementById("aba-turmas").classList.add("active");
+  for (var i = 0; i < abas.length; i++) {
+    abas[i].classList.remove("active");
+    abas[i].style.display = "none";
+  }
+  var abaTurmas = document.getElementById("aba-turmas");
+  if (abaTurmas) {
+    abaTurmas.classList.add("active");
+    abaTurmas.style.display = "block";
+  }
 });
 
 let turmaAtualId = null;
@@ -51,14 +58,27 @@ const descritoresMatematica = {
 
 function trocarAba(aba) {
   try {
-    var tabs = document.querySelectorAll(".tab");
-    for (var i = 0; i < tabs.length; i++) { tabs[i].classList.remove("active"); }
-    var contents = document.querySelectorAll(".tab-content");
-    for (var j = 0; j < contents.length; j++) { contents[j].classList.remove("active"); }
-    var tabBtn = document.getElementById("tab-" + aba);
-    var tabContent = document.getElementById("aba-" + aba);
-    if (tabBtn) tabBtn.classList.add("active");
-    if (tabContent) tabContent.classList.add("active");
+    var tabIds = ["turmas", "banco", "criar"];
+    for (var i = 0; i < tabIds.length; i++) {
+      var content = document.getElementById("aba-" + tabIds[i]);
+      var btn = document.getElementById("tab-" + tabIds[i]);
+      if (content) {
+        if (tabIds[i] === aba) {
+          content.classList.add("active");
+          content.style.display = "block";
+        } else {
+          content.classList.remove("active");
+          content.style.display = "none";
+        }
+      }
+      if (btn) {
+        if (tabIds[i] === aba) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      }
+    }
     
     if (aba === "turmas") carregarTurmas();
     if (aba === "banco") filtrarProvas();
