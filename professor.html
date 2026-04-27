@@ -123,15 +123,6 @@
           </div>
         </div>
       </div>
-      <div class="form-group" id="areaDescritor" style="display:none;">
-        <label>Descritor (opcional)</label>
-        <select id="descritorProva">
-          <option value="">Selecione</option>
-        </select>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;">
-          <button type="button" class="btn btn-outline btn-sm" onclick="sugerirDescritorAtual()">Sugerir descritor</button>
-          <span id="statusDescritor" style="font-size:13px;color:#64748b;">A sugestão automática usa ano, disciplina e texto da questão.</span>
-        </div>
       </div>
     </div>
 
@@ -160,6 +151,16 @@
       <div class="form-group">
         <label>Pergunta</label>
         <textarea id="pergunta" placeholder="O que o aluno deve responder?"></textarea>
+      </div>
+      <div class="form-group" id="areaDescritorQuestao" style="display:none;">
+        <label>Descritor (opcional)</label>
+        <select id="descritorQuestao">
+          <option value="">Selecione</option>
+        </select>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="sugerirDescritorQuestao()">Sugerir descritor</button>
+          <span id="statusDescritor" style="font-size:13px;color:#64748b;">Useano e disciplina da prova.</span>
+        </div>
       </div>
       <div class="form-group">
         <label>Texto de Apoio (opcional)</label>

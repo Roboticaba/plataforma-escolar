@@ -447,16 +447,25 @@ function atualizarDescritores() {
   const disc = document.getElementById("disciplinaProva").value;
   const ano = document.getElementById("anoProva").value;
   const select = document.getElementById("descritorProva");
+  const selectQ = document.getElementById("descritorQuestao");
   const area = document.getElementById("areaDescritor");
+  const areaQ = document.getElementById("areaDescritorQuestao");
   
   select.innerHTML = "<option value=''>Selecione</option>";
+  if (selectQ) selectQ.innerHTML = "<option value=''>Selecione</option>";
   
   if ((disc === "portugues" || disc === "matematica") && ano) {
-    area.style.display = "block";
+    if (area) area.style.display = "block";
+    if (areaQ) areaQ.style.display = "block";
     const lista = disc === "portugues" ? descritoresPortugues[ano] : descritoresMatematica[ano];
-    if (lista) lista.forEach(d => { select.innerHTML += `<option value="${d.c}|${d.n}">${d.c} - ${d.n}</option>`; });
+    if (lista) {
+      const options = lista.map(d => `<option value="${d.c}|${d.n}">${d.c} - ${d.n}</option>`).join("");
+      select.innerHTML += options;
+      if (selectQ) selectQ.innerHTML += options;
+    }
   } else {
-    area.style.display = "none";
+    if (area) area.style.display = "none";
+    if (areaQ) areaQ.style.display = "none";
   }
 }
 
@@ -515,7 +524,7 @@ function classifyDescriptorAutomatically(textoQuestao, disc, ano) {
   return bestScore > 0 ? bestMatch : null;
 }
 
-function sugerirDescritorAtual() {
+function sugerirDescritorQuestao() {
   const textoQuestao = document.getElementById("pergunta").value;
   const disc = document.getElementById("disciplinaProva").value;
   const ano = document.getElementById("anoProva").value;
@@ -523,7 +532,7 @@ function sugerirDescritorAtual() {
   if (!disc || !ano) { alert("Selecione disciplina e ano primeiro"); return; }
   const resultado = classifyDescriptorAutomatically(textoQuestao, disc, ano);
   if (resultado) {
-    document.getElementById("descritorProva").value = resultado.c + "|" + resultado.n;
+    document.getElementById("descritorQuestao").value = resultado.c + "|" + resultado.n;
     ultimaSugestaoDescritor = resultado;
     alert("Descritor sugerido: " + resultado.c + " - " + resultado.n);
   } else {
@@ -570,7 +579,7 @@ async function adicionarQuestao() {
   let imagensPergunta = [];
   
   const disc = document.getElementById("disciplinaProva").value;
-  const descritorSel = document.getElementById("descritorProva").value;
+  const descritorSel = document.getElementById("descritorQuestao").value;
   
   if (!pergunta) { alert("Digite a pergunta"); return; }
   
@@ -605,6 +614,7 @@ async function adicionarQuestao() {
     
     document.getElementById("textoAntes").value = "";
     document.getElementById("pergunta").value = "";
+    document.getElementById("descritorQuestao").value = "";
     document.getElementById("uploadImagensPergunta").value = "";
     document.getElementById("alternativasTexto").value = "";
     document.getElementById("uploadAlternativasImg").value = "";
