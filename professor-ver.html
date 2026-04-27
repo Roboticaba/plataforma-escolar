@@ -1,4 +1,4 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
@@ -40,7 +40,7 @@ async function carregarProva() {
   if (!id) {
     document.getElementById("loading").style.display = "none";
     document.getElementById("error").style.display = "block";
-    document.getElementById("error").textContent = "ID da prova n√£o informado";
+    document.getElementById("error").textContent = "ID da prova n„o informado";
     return;
   }
   
@@ -59,7 +59,7 @@ async function carregarProva() {
     if (provaData.criadoPor !== usuario.uid) {
       document.getElementById("loading").style.display = "none";
       document.getElementById("error").style.display = "block";
-      document.getElementById("error").textContent = "Voc√™ n√£o tem permiss√£o para ver esta prova";
+      document.getElementById("error").textContent = "VocÍ n„o tem permiss„o para ver esta prova";
       return;
     }
     
@@ -68,7 +68,7 @@ async function carregarProva() {
     
     document.getElementById("prova-nome").textContent = provaData.nome || "Prova sem nome";
     document.getElementById("prova-disciplina").textContent = provaData.disciplina || "Sem disciplina";
-    document.getElementById("prova-ano").textContent = (provaData.ano || "?") + "¬∫ Ano";
+    document.getElementById("prova-ano").textContent = (provaData.ano || "?") + "∫ Ano";
     document.getElementById("prova-tempo").textContent = (provaData.tempo || 60) + " min";
     document.getElementById("prova-valor").textContent = (provaData.valor || 10) + " pontos";
     
@@ -80,7 +80,7 @@ async function carregarProva() {
     
     questoes.forEach(function(q, i) {
       var html = "<div class=""questao-card"">";
-      html += "<div class=""questao-numero"">Quest√£o " + (i + 1) + "</div>";
+      html += "<div class=""questao-numero"">Quest„o " + (i + 1) + "</div>";
       
       if (q.descritor) {
         var descritorTexto = q.descritor;
@@ -108,7 +108,7 @@ async function carregarProva() {
     });
     
     if (questoes.length === 0) {
-      listaQuestoes.innerHTML = "<div style=""color:#64748b;text-align:center;padding:30px;"">Nenhuma quest√£o adicionada nesta prova.</div>";
+      listaQuestoes.innerHTML = "<div style=""color:#64748b;text-align:center;padding:30px;"">Nenhuma quest„o adicionada nesta prova.</div>";
     }
   } catch (e) {
     document.getElementById("loading").style.display = "none";
@@ -127,32 +127,41 @@ function gerarPDF() {
   var htmlContent = "<div style=""font-family:Arial,Helvetica,sans-serif;width:210mm;min-height:297mm;padding:12mm 15mm;box-sizing:border-box;"">";
   
   htmlContent += "<div style=""border:2px solid #333;border-radius:8px;padding:10px;margin-bottom:12px;"">";
-  htmlContent += "<div style=""display:flex;"">";
+  htmlContent += "<table style=""width:100%;border-collapse:collapse;"">";
+  htmlContent += "<tr>";
   if (config && config.logoUrl) {
-    htmlContent += "<div style=""width:100px;flex-shrink:0;margin-right:10px;""><img src=""" + config.logoUrl + """ style=""width:100px;height:auto;""></div>";
+    htmlContent += "<td style=""width:100px;vertical-align:middle;""><img src=""" + config.logoUrl + """ style=""width:100px;height:auto;""></td>";
   }
-  htmlContent += "<div style=""flex:1;"">";
-  htmlContent += "<div style=""text-align:center;font-size:14px;font-weight:bold;"">" + (config && config.nomeEscola ? config.nomeEscola : "") + "</div>";
-  htmlContent += "<div style=""text-align:center;font-size:10px;color:#555;margin-top:2px;"">" + (config && config.endereco ? config.endereco : "") + "</div>";
-  htmlContent += "</div>";
-  htmlContent += "</div>";
-  htmlContent += "<div style=""margin-top:8px;"">";
-  htmlContent += "<div style=""display:flex;align-items:flex-end;font-size:11px;"">";
-  htmlContent += "<span>Aluno(a)</span><div style=""flex:1;border-bottom:1px solid #333;margin-left:4px;""></div>";
-  htmlContent += "<span>Turma</span><div style=""width:60px;border-bottom:1px solid #333;margin-left:4px;""></div>";
+  htmlContent += "<td style=""text-align:center;"">";
+  htmlContent += "<div style=""font-size:14px;font-weight:bold;"">" + (config && config.nomeEscola ? config.nomeEscola : "") + "</div>";
+  htmlContent += "<div style=""font-size:10px;color:#555;margin-top:2px;"">" + (config && config.endereco ? config.endereco : "") + "</div>";
+  htmlContent += "</td>";
+  htmlContent += "</tr>";
+  htmlContent += "</table>";
   htmlContent += "</div>";
   
+  htmlContent += "<table style=""width:100%;font-size:11px;margin-top:8px;border-collapse:collapse;"">";
+  htmlContent += "<tr>";
+  htmlContent += "<td>Aluno(a)</td>";
+  htmlContent += "<td style=""border-bottom:1px solid #333;""></td>";
+  htmlContent += "<td style=""padding-left:10px;"">Turma</td>";
+  htmlContent += "<td style=""width:60px;border-bottom:1px solid #333;""></td>";
+  htmlContent += "</tr>";
+  htmlContent += "</table>";
+  
   var nomeProf = (config && config.nomeProfessor) ? config.nomeProfessor : "";
-  htmlContent += "<div style=""display:flex;align-items:flex-end;font-size:11px;margin-top:4px;flex-wrap:nowrap;white-space:nowrap;"">";
-  htmlContent += "<span style=""white-space:nowrap;"">Professor(a)</span>";
+  htmlContent += "<table style=""width:100%;font-size:11px;margin-top:4px;border-collapse:collapse;"">";
+  htmlContent += "<tr>";
+  htmlContent += "<td style=""white-space:nowrap;"">Professor(a)</td>";
   if (nomeProf) {
-    htmlContent += "<span style=""margin-left:4px;white-space:nowrap;"">" + nomeProf + "</span><div style=""flex:1;min-width:50px;border-bottom:1px solid #333;margin-left:8px;""></div>";
+    htmlContent += "<td style=""white-space:nowrap;"">" + nomeProf + "</td><td style=""border-bottom:1px solid #333;""></td>";
   } else {
-    htmlContent += "<div style=""flex:1;min-width:150px;border-bottom:1px solid #333;margin-left:4px;""></div>";
+    htmlContent += "<td colspan=""2"" style=""border-bottom:1px solid #333;""></td>";
   }
-  htmlContent += "<span style=""margin-left:12px;white-space:nowrap;"">Data:</span><span style=""border-bottom:1px solid #333;margin-left:4px;padding:0 2px;display:inline-block;width:70px;"">___/___/______</span>";
-  htmlContent += "</div>";
-  htmlContent += "</div>";
+  htmlContent += "<td style=""white-space:nowrap;padding-left:10px;"">Data:</td>";
+  htmlContent += "<td style=""border-bottom:1px solid #333;width:70px;"">___/___/______</td>";
+  htmlContent += "</tr>";
+  htmlContent += "</table>";
   
   if (config && config.textoLivre) {
     htmlContent += "<div style=""background:#f0f0f0;padding:8px;margin-bottom:12px;font-size:11px;text-align:center;border-radius:4px;"">" + config.textoLivre + "</div>";
@@ -202,13 +211,13 @@ function gerarPDF() {
 }
 
 async function excluirProva() {
-  if (!confirm("Tem certeza que deseja excluir esta prova? Esta a√ß√£o n√£o pode ser desfeita.")) {
+  if (!confirm("Tem certeza que deseja excluir esta prova? Esta aÁ„o n„o pode ser desfeita.")) {
     return;
   }
   
   try {
     await db.collection("simulados").doc(provaAtualId).delete();
-    alert("Prova exclu√≠da com sucesso!");
+    alert("Prova excluÌda com sucesso!");
     window.location.href = "professor.html";
   } catch (e) {
     alert("Erro ao excluir: " + e.message);
@@ -246,7 +255,7 @@ body { padding: 20px; }
   <a href="professor.html" class="voltar-btn">? Voltar</a>
   
   <div id="loading" class="loading">Carregando prova...</div>
-  <div id="error" class="error" style="display:none;">Prova n√£o encontrada</div>
+  <div id="error" class="error" style="display:none;">Prova n„o encontrada</div>
   
   <div id="prova-content" style="display:none;">
     <div class="prova-header">
