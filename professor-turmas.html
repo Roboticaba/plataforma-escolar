@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Turmas</title>
+<link rel="stylesheet" href="professor-styles.css">
+</head>
+<body style="background:#f1f5f9;">
+
+<div style="padding:20px;">
+  <div class="page-title">Turmas</div>
+  <div style="margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="btn btn-primary" onclick="criarTurma()">➕ Criar Nova Turma</button>
+    <button class="btn btn-secondary" onclick="limparSenhasLegadas()">🧹 Limpar Senhas Legadas</button>
+  </div>
+  <div id="listaTurmas"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
+  authDomain: "plataforma-escolar-71635.firebaseapp.com",
+  projectId: "plataforma-escolar-71635",
+  storageBucket: "plataforma-escolar-71635.firebasestorage.app",
+  messagingSenderId: "194897243209",
+  appId: "1:194897243209:web:ff339bee22bced4098e398"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+let turmaAtualId = null;
+
+async function criarTurma() {
+  const nome = prompt("Nome da turma:");
+  if (!nome) return;
+  try {
+    await db.collection("turmas").add({ nome, alunos: [], provas: [], criadoPor: usuario.uid });
+    carregarTurmas();
+  } catch (e) { alert("Erro: " + e.message); }
+}
+
+async function carregarTurmas() {
+  const lista = document.getElementById("listaTurmas");
+  lista.innerHTML = "<p>Carregando...</p>";
+  try {
+    const snap = await db.collection("turmas").where("criadoPor", "==", usuario.uid).get();
+    if (snap.empty) {
+      lista.innerHTML = '<div class="card"><p style="color:#64748b;">Nenhuma turma. Crie sua primeira turma.</p></div>';
+      return;
+    }
+    lista.innerHTML = "";
+    snap.forEach(doc => {
+      const t = doc.data();
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:600;font-size:18px;">' + t.nome + '</div><div style="font-size:13px;color:#64748b;">' + (t.alunos||[]).length + ' alunos</div></div><div style="display:flex;gap:8px;"><button class="btn btn-primary btn-sm" onclick="abrirTurma(\'' + doc.id + '\', \'' + t.nome + '\')">Gerenciar</button><button class="btn btn-danger btn-sm" onclick="excluirTurma(\'' + doc.id + '\')">Excluir</button></div></div>';
+      lista.appendChild(div);
+    });
+  } catch (e) { lista.innerHTML = "<p>Erro: "+e.message+"</p>"; }
+}
+
+function abrirTurma(id, nome) {
+  turmaAtualId = id;
+  document.getElementById("tituloTurma").textContent = nome;
+  document.getElementById("modalTurma").classList.add("active");
+  carregarDadosTurma();
+}
+
+function fecharTurma() {
+  document.getElementById("modalTurma").classList.remove("active");
+  turmaAtualId = null;
+}
+
+async function carregarDadosTurma() {
+  if (!turmaAtualId) return;
+  const doc = await db.collection("turmas").doc(turmaAtualId).get();
+  const t = doc.data();
+  document.getElementById("listaAlunosTurma").innerHTML = "";
+  if (t.alunos) {
+    t.alunos.forEach(function(a, i) {
+      document.getElementById("listaAlunosTurma").innerHTML += '<div style="padding:10px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;"><span>' + a.nome + '</span><button class="btn btn-danger btn-sm" style="padding:4px 8px;" onclick="removerAluno(' + i + ')">✕</button></div>';
+    });
+  }
+}
+
+async function adicionarAlunoTurma() {
+  const nome = document.getElementById("nomeAlunoinput").value;
+  const senha = document.getElementById("senhaAlunoinput").value;
+  if (!nome || !senha) { alert("Preencha nome e senha"); return; }
+  const doc = await db.collection("turmas").doc(turmaAtualId).get();
+  const t = doc.data();
+  const alunos = t.alunos || [];
+  alunos.push({ nome: nome, senha: senha });
+  await db.collection("turmas").doc(turmaAtualId).update({ alunos: alunos });
+  document.getElementById("nomeAlunoinput").value = "";
+  document.getElementById("senhaAlunoinput").value = "";
+  carregarDadosTurma();
+}
+
+async function removerAluno(index) {
+  if (!confirm("Remover aluno?")) return;
+  const doc = await db.collection("turmas").doc(turmaAtualId).get();
+  const t = doc.data();
+  t.alunos.splice(index, 1);
+  await db.collection("turmas").doc(turmaAtualId).update({ alunos: t.alunos });
+  carregarDadosTurma();
+}
+
+async function excluirTurma(id) {
+  if (!confirm("Excluir turma?")) return;
+  await db.collection("turmas").doc(id).delete();
+  carregarTurmas();
+}
+
+async function limparSenhasLegadas() {
+  if (!confirm("Vai limpar todas as senhas dos alunos. Continuar?")) return;
+  const snap = await db.collection("turmas").where("criadoPor", "==", usuario.uid).get();
+  let total = 0;
+  snap.forEach(async function(doc) {
+    const t = doc.data();
+    if (t.alunos && t.alunos.length > 0) {
+      t.alunos.forEach(function(a) { a.senha = ""; });
+      await db.collection("turmas").doc(doc.id).update({ alunos: t.alunos });
+      total += t.alunos.length;
+    }
+  });
+  alert("Limpei " + total + " senhas.");
+}
+
+carregarTurmas();
+</script>
+
+<div class="modal-overlay" id="modalTurma" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="tituloTurma">Turma</h3>
+      <button class="modal-close" onclick="fecharTurma()">&times;</button>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:15px;">
+      <input id="nomeAlunoinput" placeholder="Nome do aluno" style="flex:2;padding:8px;">
+      <input id="senhaAlunoinput" placeholder="Senha" style="flex:1;padding:8px;">
+      <button class="btn btn-primary" onclick="adicionarAlunoTurma()">➕</button>
+    </div>
+    <div id="listaAlunosTurma"></div>
+  </div>
+</div>
+
+</body>
+</html>

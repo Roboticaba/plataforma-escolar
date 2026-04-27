@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <title>Painel do Professor</title>
 <link rel="stylesheet" href="professor-styles.css">
+<style>
+.tab-frame { width: 100%; height: calc(100vh - 130px); border: none; }
+</style>
 </head>
 <body>
 
@@ -17,188 +20,121 @@
 </header>
 
 <nav class="tabs">
-  <button class="tab active" data-tab="turmas" onclick="trocarAbaTurmas()">📚 Turmas</button>
-  <button class="tab" data-tab="banco" onclick="trocarAbaBanco()">📋 Banco de Provas</button>
-  <button class="tab" data-tab="criar" onclick="trocarAbaCriar()">➕ Criar Prova</button>
+  <button class="tab active" id="tab-turmas" onclick="mostrarTurmas()">📚 Turmas</button>
+  <button class="tab" id="tab-banco" onclick="mostrarBanco()">📋 Banco de Provas</button>
+  <button class="tab" id="tab-criar" onclick="mostrarCriar()">➕ Criar Prova</button>
 </nav>
 
 <main class="main">
-  <div id="section-turmas" style="display: block;">
-    <div class="page-title">Turmas</div>
-    <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-      <button class="btn btn-primary" onclick="criarTurma()">➕ Criar Nova Turma</button>
-      <button class="btn btn-secondary" onclick="limparSenhasLegadas()">🧹 Limpar Senhas Legadas</button>
-    </div>
-    <div id="listaTurmas"></div>
-  </div>
-
-  <div id="section-banco" style="display: none;">
-    <div class="page-title">Banco de Provas</div>
-    <div class="card" style="margin-bottom: 20px;">
-      <div class="form-row">
-        <div class="form-col">
-          <div class="form-group">
-            <label>Filtrar por Ano</label>
-            <select id="filtroAno" onchange="filtrarProvas()">
-              <option value="">Todos</option>
-              <option value="1">1º Ano</option>
-              <option value="2">2º Ano</option>
-              <option value="3">3º Ano</option>
-              <option value="4">4º Ano</option>
-              <option value="5">5º Ano</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-col">
-          <div class="form-group">
-            <label>Filtrar por Disciplina</label>
-            <select id="filtroDisciplina" onchange="filtrarProvas()">
-              <option value="">Todas</option>
-              <option value="portugues">Português</option>
-              <option value="matematica">Matemática</option>
-              <option value="ciencias">Ciências</option>
-              <option value="historia">História</option>
-              <option value="geografia">Geografia</option>
-              <option value="arte">Arte</option>
-              <option value="edfisica">Ed. Física</option>
-              <option value="ingles">Inglês</option>
-              <option value="robotica">Robótica</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div id="listaProvas"></div>
-  </div>
-
-  <div id="section-criar" style="display: none;">
-    <div class="page-title">Criar Nova Prova</div>
-    
-    <div class="etapa">
-      <div class="etapa-title">1. Dados da Prova</div>
-      <div class="form-group">
-        <label>Nome da Prova</label>
-        <input id="nomeProva" placeholder="Ex.: Avaliação de Matemática - 3º Bimestre">
-      </div>
-      <div class="form-row">
-        <div class="form-col">
-          <div class="form-group">
-            <label>Ano</label>
-            <select id="anoProva" onchange="atualizarDescritores()">
-              <option value="">Selecione</option>
-              <option value="1">1º Ano</option>
-              <option value="2">2º Ano</option>
-              <option value="3">3º Ano</option>
-              <option value="4">4º Ano</option>
-              <option value="5">5º Ano</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-col">
-          <div class="form-group">
-            <label>Disciplina</label>
-            <select id="disciplinaProva" onchange="atualizarDescritores()">
-              <option value="portugues">Português</option>
-              <option value="matematica">Matemática</option>
-              <option value="ciencias">Ciências</option>
-              <option value="historia">História</option>
-              <option value="geografia">Geografia</option>
-              <option value="arte">Arte</option>
-              <option value="edfisica">Ed. Física</option>
-              <option value="ingles">Inglês</option>
-              <option value="robotica">Robótica</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-col">
-          <div class="form-group">
-            <label>Tempo (minutos)</label>
-            <input id="tempoProva" type="number" placeholder="Ex.: 60">
-          </div>
-        </div>
-        <div class="form-col">
-          <div class="form-group">
-            <label>Valor da Prova</label>
-            <input id="valorProva" type="number" step="0.1" placeholder="Ex.: 8,0">
-          </div>
-        </div>
-      </div>
-      </div>
-    </div>
-
-    <div class="etapa">
-      <div class="etapa-title">2. Adicionar Questão</div>
-      <div class="form-row">
-        <div class="form-col">
-          <div class="form-group">
-            <label>Tipo de Questão</label>
-            <select id="tipoQuestao" onchange="mudouTipoQuestao()">
-              <option value="multipla">Múltipla Escolha</option>
-              <option value="texto">Resposta Escrita</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-col">
-          <div class="form-group">
-            <label>Alternativas</label>
-            <select id="tipoAlternativa" onchange="mudouTipoAlternativa()">
-              <option value="texto">Texto</option>
-              <option value="imagem">Imagem</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Pergunta</label>
-        <textarea id="pergunta" placeholder="O que o aluno deve responder?"></textarea>
-      </div>
-      <div class="form-group" id="areaDescritorQuestao" style="display:none;">
-        <label>Descritor (opcional)</label>
-        <select id="descritorQuestao">
-          <option value="">Selecione</option>
-        </select>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;">
-          <button type="button" class="btn btn-outline btn-sm" onclick="sugerirDescritorQuestao()">Sugerir descritor</button>
-          <span id="statusDescritor" style="font-size:13px;color:#64748b;">Useano e disciplina da prova.</span>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Texto de Apoio (opcional)</label>
-        <textarea id="textoAntes" placeholder="Ex.: Observe a imagem..." style="white-space: pre-wrap;"></textarea>
-      </div>
-      <div class="form-group">
-        <label>Imagens de Apoio (upload)</label>
-        <input type="file" id="uploadImagensPergunta" multiple accept="image/*" style="margin-top:5px;">
-      </div>
-      <div class="form-group" id="areaAltTexto">
-        <label>Alternativas de Texto (uma por linha)</label>
-        <textarea id="alternativasTexto" placeholder="(A) Alternativa A"></textarea>
-      </div>
-      <div class="form-group" id="areaAltImagem" style="display:none;">
-        <label>Imagens das Alternativas (upload)</label>
-        <input type="file" id="uploadAlternativasImg" multiple accept="image/*" style="margin-top:5px;">
-      </div>
-      <div class="form-group" id="areaCorreta">
-        <label>Resposta Correta</label>
-        <select id="correta">
-          <option value="0">(A)</option>
-          <option value="1">(B)</option>
-          <option value="2">(C)</option>
-          <option value="3">(D)</option>
-        </select>
-      </div>
-      <button class="btn btn-success" onclick="adicionarQuestao()">➕ Adicionar Questão</button>
-    </div>
-
-    <div class="etapa">
-      <div class="etapa-title">3. Questões Adicionadas</div>
-      <p id="resumoQuestoes" style="color:#64748b;margin-bottom:15px;">Nenhuma questão adicionada ainda.</p>
-      <div id="listaQuestoes"></div>
-    </div>
-
-    <button class="btn btn-success" style="width:100%;padding:15px;font-size:16px;" onclick="salvarProva()">💾 Salvar Prova</button>
-  </div>
+  <iframe id="frame-turmas" class="tab-frame" src="professor-turmas.html"></iframe>
+  <iframe id="frame-banco" class="tab-frame" src="professor-banco.html" style="display:none;"></iframe>
+  <iframe id="frame-criar" class="tab-frame" src="professor-criar.html" style="display:none;"></iframe>
 </main>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="professor-script.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
+  authDomain: "plataforma-escolar-71635.firebaseapp.com",
+  projectId: "plataforma-escolar-71635",
+  storageBucket: "plataforma-escolar-71635.firebasestorage.app",
+  messagingSenderId: "194897243209",
+  appId: "1:194897243209:web:ff339bee22bced4098e398"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+if (!usuario || usuario.role !== "professor") {
+  window.location.href = "index.html";
+}
+
+document.getElementById("nomeProfessor").textContent = usuario.nome || "Professor";
+
+function mostrarTurmas() {
+  document.getElementById("tab-turmas").classList.add("active");
+  document.getElementById("tab-banco").classList.remove("active");
+  document.getElementById("tab-criar").classList.remove("active");
+  document.getElementById("frame-turmas").style.display = "block";
+  document.getElementById("frame-banco").style.display = "none";
+  document.getElementById("frame-criar").style.display = "none";
+}
+
+function mostrarBanco() {
+  document.getElementById("tab-turmas").classList.remove("active");
+  document.getElementById("tab-banco").classList.add("active");
+  document.getElementById("tab-criar").classList.remove("active");
+  document.getElementById("frame-turmas").style.display = "none";
+  document.getElementById("frame-banco").style.display = "block";
+  document.getElementById("frame-criar").style.display = "none";
+}
+
+function mostrarCriar() {
+  document.getElementById("tab-turmas").classList.remove("active");
+  document.getElementById("tab-banco").classList.remove("active");
+  document.getElementById("tab-criar").classList.add("active");
+  document.getElementById("frame-turmas").style.display = "none";
+  document.getElementById("frame-banco").style.display = "none";
+  document.getElementById("frame-criar").style.display = "block";
+}
+
+function abrirConfig() {
+  document.getElementById("modalConfig").classList.add("active");
+}
+
+function fecharConfig() {
+  document.getElementById("modalConfig").classList.remove("active");
+}
+
+function salvarConfig() {
+  const config = {
+    nomeEscola: document.getElementById("cfgNomeEscola").value,
+    endereco: document.getElementById("cfgEndereco").value,
+    logoUrl: logoData,
+    nomeProfessor: document.getElementById("cfgNomeProfessor").value,
+    textoLivre: document.getElementById("cfgTextoLivre").value
+  };
+  localStorage.setItem("configProfessor", JSON.stringify(config));
+  alert("Configurações salvas!");
+  fecharConfig();
+}
+
+async function carregarConfig() {
+  const config = JSON.parse(localStorage.getItem("configProfessor") || "null");
+  if (config) {
+    document.getElementById("cfgNomeEscola").value = config.nomeEscola || "";
+    document.getElementById("cfgEndereco").value = config.endereco || "";
+    document.getElementById("cfgNomeProfessor").value = config.nomeProfessor || "";
+    document.getElementById("cfgTextoLivre").value = config.textoLivre || "";
+    if (config.logoUrl) {
+      document.getElementById("previewLogo").innerHTML = '<img src="' + config.logoUrl + '" style="max-height:80px;">';
+    }
+  }
+}
+
+function uploadLogo() {
+  const file = document.getElementById("inputLogo").files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    logoData = e.target.result;
+    document.getElementById("previewLogo").innerHTML = '<img src="' + logoData + '" style="max-height:80px;">';
+  };
+  reader.readAsDataURL(file);
+}
+
+function sair() {
+  localStorage.removeItem("usuario");
+  window.location.href = "index.html";
+}
+
+carregarConfig();
+</script>
 
 <div class="modal-overlay" id="modalConfig">
   <div class="modal">
@@ -237,59 +173,5 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="modalTurma">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title" id="tituloTurmaModal">Turma</h3>
-      <button class="modal-close" onclick="fecharTurma()">&times;</button>
-    </div>
-    <div style="display:flex;gap:10px;margin-bottom:15px;">
-      <button class="btn btn-outline btn-sm" onclick="trocarAbaTurma('alunos')" id="aba-alunos">📋 Alunos</button>
-      <button class="btn btn-outline btn-sm" onclick="trocarAbaTurma('provas')" id="aba-provas">📝 Provas</button>
-    </div>
-    <div class="turma-conteudo active" id="conteudo-alunos">
-      <div class="form-row" style="margin-bottom:15px;">
-        <input id="nomeAluno" placeholder="Nome do aluno" style="flex:2;">
-        <input id="senhaAluno" placeholder="Senha" style="flex:1;">
-        <button class="btn btn-primary" onclick="adicionarAluno()">➕ Adicionar</button>
-      </div>
-      <div id="listaAlunos"></div>
-    </div>
-    <div class="turma-conteudo" id="conteudo-provas">
-      <div style="margin-bottom:15px;">
-        <button class="btn btn-primary btn-sm" onclick="mostrarAtribuirProvas()">➕ Atribuir Prova</button>
-      </div>
-      <div id="provasAtribuidas"></div>
-      <div id="areaAtribuirProvas" style="display:none;margin-top:15px;padding:15px;background:#f8fafc;border-radius:8px;">
-        <div class="form-group">
-          <label>Selecione uma prova:</label>
-          <select id="selectProvaAtribuir"></select>
-        </div>
-        <button class="btn btn-success btn-sm" onclick="atribuirProva()">Atribuir</button>
-        <button class="btn btn-secondary btn-sm" onclick="ocultarAtribuirProvas()">Cancelar</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modalVerProva">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title" id="tituloVerProva">Prova</h3>
-      <button class="modal-close" onclick="fecharVerProva()">&times;</button>
-    </div>
-    <div id="conteudoVerProva"></div>
-    <div class="modal-actions">
-      <button class="btn btn-success" onclick="gerarPDF()">📄 Baixar PDF</button>
-      <button class="btn btn-danger" onclick="excluirProva()">🗑️ Excluir</button>
-    </div>
-  </div>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="professor-script.js"></script>
 </body>
 </html>

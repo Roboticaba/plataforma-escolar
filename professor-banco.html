@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Banco de Provas</title>
+<link rel="stylesheet" href="professor-styles.css">
+</head>
+<body style="background:#f1f5f9;">
+
+<div style="padding:20px;">
+  <div class="page-title">Banco de Provas</div>
+  
+  <div class="card" style="margin-bottom:20px;">
+    <div class="form-row">
+      <div class="form-col">
+        <div class="form-group">
+          <label>Filtrar por Ano</label>
+          <select id="filtroAno" onchange="filtrarProvas()">
+            <option value="">Todos</option>
+            <option value="1">1º Ano</option>
+            <option value="2">2º Ano</option>
+            <option value="3">3º Ano</option>
+            <option value="4">4º Ano</option>
+            <option value="5">5º Ano</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-col">
+        <div class="form-group">
+          <label>Filtrar por Disciplina</label>
+          <select id="filtroDisciplina" onchange="filtrarProvas()">
+            <option value="">Todas</option>
+            <option value="portugues">Português</option>
+            <option value="matematica">Matemática</option>
+            <option value="ciencias">Ciências</option>
+            <option value="historia">História</option>
+            <option value="geografia">Geografia</option>
+            <option value="arte">Arte</option>
+            <option value="edfisica">Ed. Física</option>
+            <option value="ingles">Inglês</option>
+            <option value="robotica">Robótica</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div id="listaProvas"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
+  authDomain: "plataforma-escolar-71635.firebaseapp.com",
+  projectId: "plataforma-escolar-71635",
+  storageBucket: "plataforma-escolar-71635.firebasestorage.app",
+  messagingSenderId: "194897243209",
+  appId: "1:194897243209:web:ff339bee22bced4098e398"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+let provaAtualId = null;
+
+async function filtrarProvas() {
+  const ano = document.getElementById("filtroAno").value;
+  const disc = document.getElementById("filtroDisciplina").value;
+  const lista = document.getElementById("listaProvas");
+  lista.innerHTML = "<p>Carregando...</p>";
+  
+  try {
+    var ref = db.collection("simulados").where("criadoPor", "==", usuario.uid);
+    const snap = await ref.get();
+    
+    if (snap.empty) {
+      lista.innerHTML = '<div class="card"><p style="color:#64748b;">Nenhuma prova criada.</p></div>';
+      return;
+    }
+    
+    var provas = [];
+    snap.forEach(doc => {
+      const p = doc.data();
+      if ((!ano || p.ano === ano) && (!disc || p.disciplina === disc)) {
+        provas.push({ id: doc.id, data: p });
+      }
+    });
+    
+    if (provas.length === 0) {
+      lista.innerHTML = '<div class="card"><p style="color:#64748b;">Nenhuma prova encontrada com esses filtros.</p></div>';
+      return;
+    }
+    
+    lista.innerHTML = "";
+    provas.forEach(function(prova) {
+      const p = prova.data;
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:600;font-size:16px;">' + (p.nome || "Sem nome") + '</div><div style="font-size:13px;color:#64748b;">' + (p.disciplina || "") + ' - ' + (p.ano || "") + 'º ano - ' + ((p.questoes||[]).length || 0) + ' questões</div></div><div style="display:flex;gap:8px;"><button class="btn btn-primary btn-sm" onclick="verProva(\'' + prova.id + '\')">Ver</button><button class="btn btn-danger btn-sm" onclick="excluirProva(\'' + prova.id + '\')">Excluir</button></div></div>';
+      lista.appendChild(div);
+    });
+  } catch (e) {
+    lista.innerHTML = "<p>Erro: "+e.message+"</p>";
+  }
+}
+
+function verProva(id) {
+  provaAtualId = id;
+  window.parent.location.href = "professor.html?ver=" + id;
+}
+
+async function excluirProva(id) {
+  if (!confirm("Excluir prova?")) return;
+  await db.collection("simulados").doc(id).delete();
+  filtrarProvas();
+}
+
+filtrarProvas();
+</script>
+
+</body>
+</html>

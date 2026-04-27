@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Criar Prova</title>
+<link rel="stylesheet" href="professor-styles.css">
+</head>
+<body style="background:#f1f5f9;">
+
+<div style="padding:20px;">
+  <div class="page-title">Criar Nova Prova</div>
+  
+  <div class="etapa">
+    <div class="etapa-title">1. Dados da Prova</div>
+    <div class="form-group">
+      <label>Nome da Prova</label>
+      <input id="nomeProva" placeholder="Ex.: Avaliação de Matemática - 3º Bimestre">
+    </div>
+    <div class="form-row">
+      <div class="form-col">
+        <div class="form-group">
+          <label>Ano</label>
+          <select id="anoProva" onchange="atualizarDescritores()">
+            <option value="">Selecione</option>
+            <option value="1">1º Ano</option>
+            <option value="2">2º Ano</option>
+            <option value="3">3º Ano</option>
+            <option value="4">4º Ano</option>
+            <option value="5">5º Ano</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-col">
+        <div class="form-group">
+          <label>Disciplina</label>
+          <select id="disciplinaProva" onchange="atualizarDescritores()">
+            <option value="">Selecione</option>
+            <option value="portugues">Português</option>
+            <option value="matematica">Matemática</option>
+            <option value="ciencias">Ciências</option>
+            <option value="historia">História</option>
+            <option value="geografia">Geografia</option>
+            <option value="arte">Arte</option>
+            <option value="edfisica">Ed. Física</option>
+            <option value="ingles">Inglês</option>
+            <option value="robotica">Robótica</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-col">
+        <div class="form-group">
+          <label>Tempo (min)</label>
+          <input id="tempoProva" type="number" placeholder="Ex.: 60">
+        </div>
+      </div>
+      <div class="form-col">
+        <div class="form-group">
+          <label>Valor</label>
+          <input id="valorProva" type="number" step="0.1" placeholder="Ex.: 8,0">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="etapa">
+    <div class="etapa-title">2. Adicionar Questão</div>
+    <div class="form-row">
+      <div class="form-col">
+        <div class="form-group">
+          <label>Tipo de Questão</label>
+          <select id="tipoQuestao" onchange="mudouTipoQuestao()">
+            <option value="multipla">Múltipla Escolha</option>
+            <option value="texto">Resposta Escrita</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-col">
+        <div class="form-group">
+          <label>Alternativas</label>
+          <select id="tipoAlternativa" onchange="mudouTipoAlternativa()">
+            <option value="texto">Texto</option>
+            <option value="imagem">Imagem</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Pergunta</label>
+      <textarea id="pergunta" placeholder="O que o aluno deve responder?" style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Texto de Apoio (opcional)</label>
+      <textarea id="textoAntes" placeholder="Ex.: Observe a imagem..." style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;white-space:pre-wrap;"></textarea>
+    </div>
+    <div class="form-group" id="areaAltTexto">
+      <label>Alternativas de Texto (uma por linha)</label>
+      <textarea id="alternativasTexto" placeholder="(A) Alternativa A" style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;"></textarea>
+    </div>
+    <div class="form-group" id="areaAltImagem" style="display:none;">
+      <label>Imagens das Alternativas</label>
+      <input type="file" id="uploadAlternativasImg" multiple accept="image/*">
+    </div>
+    <div class="form-group" id="areaCorreta">
+      <label>Resposta Correta</label>
+      <select id="correta">
+        <option value="0">(A)</option>
+        <option value="1">(B)</option>
+        <option value="2">(C)</option>
+        <option value="3">(D)</option>
+      </select>
+    </div>
+    <button class="btn btn-success" onclick="adicionarQuestao()">➕ Adicionar Questão</button>
+  </div>
+
+  <div class="etapa">
+    <div class="etapa-title">3. Questões Adicionadas</div>
+    <p id="resumoQuestoes" style="color:#64748b;margin-bottom:15px;">Nenhuma questão adicionada ainda.</p>
+    <div id="listaQuestoes"></div>
+  </div>
+
+  <button class="btn btn-success" style="width:100%;padding:15px;font-size:16px;" onclick="salvarProva()">💾 Salvar Prova</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
+  authDomain: "plataforma-escolar-71635.firebaseapp.com",
+  projectId: "plataforma-escolar-71635",
+  storageBucket: "plataforma-escolar-71635.firebasestorage.app",
+  messagingSenderId: "194897243209",
+  appId: "1:194897243209:web:ff339bee22bced4098e398"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+let questoesTemp = [];
+let logoData = "";
+
+const descritoresPortugues = {
+  "1": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}],
+  "2": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}],
+  "3": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}],
+  "4": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}],
+  "5": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}]
+};
+
+const descritoresMatematica = {
+  "1": [{c:"D01",n:"Ler números"},{c:"D02",n:"Ordenar"},{c:"D03",n:"Figuras"},{c:"D07",n:"Unidades"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}],
+  "2": [{c:"D01",n:"Ler números"},{c:"D02",n:"Ordenar"},{c:"D03",n:"Figuras"},{c:"D07",n:"Unidades"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}],
+  "3": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"Perímetro"},{c:"D12",n:"Área"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D19",n:"Problema"},{c:"D24",n:"Fração"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}],
+  "4": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"Perímetro"},{c:"D12",n:"Área"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D19",n:"Problema"},{c:"D24",n:"Fração"},{c:"D26",n:"Porcentagem"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}],
+  "5": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"Perímetro"},{c:"D12",n:"Área"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D19",n:"Problema"},{c:"D24",n:"Fração"},{c:"D26",n:"Porcentagem"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}]
+};
+
+function atualizarDescritores() {
+  // placeholder - descritores não são mais usados na questão
+}
+
+function mudouTipoQuestao() {
+  const tipo = document.getElementById("tipoQuestao").value;
+  document.getElementById("areaAltTexto").style.display = tipo === "multipla" ? "block" : "none";
+  document.getElementById("areaAltImagem").style.display = tipo === "multipla" ? "block" : "none";
+  document.getElementById("areaCorreta").style.display = tipo === "multipla" ? "block" : "none";
+}
+
+function mudouTipoAlternativa() {
+  const tipoAlt = document.getElementById("tipoAlternativa").value;
+  document.getElementById("areaAltTexto").style.display = tipoAlt === "texto" ? "block" : "none";
+  document.getElementById("areaAltImagem").style.display = tipoAlt === "imagem" ? "block" : "none";
+}
+
+function uploadFileToCloudinary(file) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var dataUrl = e.target.result;
+      var base64 = dataUrl.split(",")[1];
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "https://api.cloudinary.com/v1_1/dflo5rpxy/image/upload");
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          var res = JSON.parse(xhr.responseText);
+          resolve(res.secure_url);
+        } else {
+          reject(new Error("Upload failed"));
+        }
+      };
+      xhr.onerror = function() { reject(new Error("Upload failed")); };
+      xhr.send("file=" + encodeURIComponent(base64) + "&upload_preset=alunos_upload");
+    };
+    reader.onerror = function() { reject(new Error("Read failed")); };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function adicionarQuestao() {
+  const tipo = document.getElementById("tipoQuestao").value;
+  const tipoAlt = document.getElementById("tipoAlternativa").value;
+  const textoAntes = document.getElementById("textoAntes").value;
+  const pergunta = document.getElementById("pergunta").value.trim();
+  const disc = document.getElementById("disciplinaProva").value;
+  
+  if (!pergunta) { alert("Digite a pergunta"); return; }
+  
+  try {
+    var alternativas = [];
+    var correta = null;
+    if (tipo === "multipla") {
+      if (tipoAlt === "texto") {
+        var linhas = document.getElementById("alternativasTexto").value.split("\n");
+        alternativas = linhas.map(function(l) { return l.trim(); }).filter(function(l) { return l; });
+      }
+      if (alternativas.length < 2) { alert("Digite pelo menos 2 alternativas"); return; }
+      correta = parseInt(document.getElementById("correta").value);
+    }
+    
+    questoesTemp.push({ tipo: tipo, tipoAlt: tipoAlt, textoAntes: textoAntes, pergunta: pergunta, alternativas: alternativas, correta: correta, disciplina: disc });
+    
+    document.getElementById("textoAntes").value = "";
+    document.getElementById("pergunta").value = "";
+    document.getElementById("alternativasTexto").value = "";
+    renderQuestoes();
+    alert("Questão adicionada!");
+  } catch (e) {
+    alert("Erro ao adicionar questão: " + e.message);
+  }
+}
+
+function renderQuestoes() {
+  var lista = document.getElementById("listaQuestoes");
+  var resumo = document.getElementById("resumoQuestoes");
+  
+  if (questoesTemp.length === 0) {
+    resumo.textContent = "Nenhuma questão adicionada ainda.";
+    lista.innerHTML = "";
+    return;
+  }
+  
+  var letras = ["A","B","C","D"];
+  resumo.textContent = questoesTemp.length + " questão(ões) adicionada(s)";
+  lista.innerHTML = "";
+  questoesTemp.forEach(function(q, i) {
+    var html = '<div style="background:white;border-radius:8px;padding:15px;margin-bottom:10px;border:1px solid #e2e8f0;">';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:10px;"><span style="font-weight:600;">Questão ' + (i+1) + '</span><button onclick="removerQuestao(' + i + ')" style="background:#ef4444;color:white;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;">✕</button></div>';
+    html += '<div style="font-size:14px;">' + q.pergunta + '</div>';
+    if (q.alternativas && q.alternativas.length > 0) {
+      html += '<div style="margin-top:10px;font-size:13px;">';
+      q.alternativas.forEach(function(alt, j) {
+        html += '<div' + (j === q.correta ? ' style="color:#10b981;font-weight:600;"' : '') + '>(' + letras[j] + ') ' + alt + '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+    lista.innerHTML += html;
+  });
+}
+
+function removerQuestao(index) {
+  questoesTemp.splice(index, 1);
+  renderQuestoes();
+}
+
+async function salvarProva() {
+  var nome = document.getElementById("nomeProva").value.trim();
+  var ano = document.getElementById("anoProva").value;
+  var disc = document.getElementById("disciplinaProva").value;
+  var tempo = parseInt(document.getElementById("tempoProva").value) || 60;
+  var valor = parseFloat(document.getElementById("valorProva").value.replace(",", ".")) || 10;
+  
+  if (!nome || !ano || !disc) { alert("Preencha nome, ano e disciplina"); return; }
+  if (questoesTemp.length === 0) { alert("Adicione pelo menos uma questão"); return; }
+  
+  try {
+    await db.collection("simulados").add({
+      nome: nome,
+      ano: ano,
+      disciplina: disc,
+      tempo: tempo,
+      valor: valor,
+      questoes: questoesTemp,
+      criadoPor: usuario.uid,
+      criadoEm: new Date()
+    });
+    alert("Prova salva com sucesso!");
+    window.location.reload();
+  } catch (e) {
+    alert("Erro ao salvar: " + e.message);
+  }
+}
+
+renderQuestoes();
+</script>
+
+</body>
+</html>
