@@ -50,6 +50,11 @@ function trocarAba(aba) {
   document.getElementById("aba-" + aba).classList.add("active");
   if (aba === "turmas") carregarTurmas();
   if (aba === "banco") filtrarProvas();
+  if (aba === "criar") {
+    document.getElementById("nomeProva").value = "";
+    document.getElementById("disciplinaProva").value = "";
+    document.getElementById("anoProva").value = "";
+  }
 }
 
 async function criarTurma() {
