@@ -460,6 +460,77 @@ function atualizarDescritores() {
   }
 }
 
+const DESCRIPTOR_HINTS = {
+  "portugues": {
+    "D01": ["localizar", "encontrar", "informação explícita", "quem", "quando", "onde", "quanto", "número", "data", "nome", "fato"],
+    "D03": ["inferir", "significado implícito", "deduzir", "sentido oculto", "não diz", "mas sugere", "indica que"],
+    "D04": ["inferir", "informação", "conclusão", "possível", "provável", "pode ser", "seria"],
+    "D05": ["gráfico", "tabela", "infográfico", "interpretar dados", " Леаchart", "imagem"],
+    "D08": ["causa", "consequência", "porque", "resultado", "por isso", "então", "assim", "consequentemente"],
+    "D10": ["linguagem", "marcas linguísticas", "registro", "formal", "informal", "termo", "vocábulo", "palavra"],
+    "D14": ["pontuação", "ponto final", "vírgula", "exclamação", "interrogação", "efeito", "entonação"],
+    "D15": ["comparar", "diferença", "semelhança", "contraste", "igual", "diferente", "ambos"],
+    "D23": ["gênero", "tipo de texto", "texto narrativo", "dissertativo", "argumentativo", "jornal", "reportagem"]
+  },
+  "matematica": {
+    "D01": ["ler", "número", "escrever", "numeral", "quantidade"],
+    "D02": ["ordenar", "sequência", "crescente", "decrescente", "maior", "menor"],
+    "D03": ["figura", "forma", "geométrica", "desenho", "quadrado", "círculo"],
+    "D05": ["medida", "comprimento", "altura", "largura", "metro", "centímetro"],
+    "D07": ["unidade", "medida", "quilo", "litro", "metro", "grama"],
+    "D10": ["dinheiro", "real", "centavo", "custo", "valor", "preço", "troco"],
+    "D11": ["perímetro", "contorno", "bordas", "volta"],
+    "D12": ["área", "superfície", "tamanho", "metro quadrado"],
+    "D17": ["adição", "soma", "subtração", "menos", "mais", "calcular"],
+    "D18": ["multiplicação", "vezes", "produto", "duas vezes", "três vezes"],
+    "D19": ["problema", "situação", "resolver", "cálculo"],
+    "D23": ["dinheiro", "real", "centavo", "compra", "venda"],
+    "D24": ["fração", "meio", "metade", "terço", "quarto", "parte"],
+    "D26": ["porcentagem", "por cento", "desconto", "aumento", "%"],
+    "D27": ["tabela", "dados", "organizar", "linha", "coluna"],
+    "D28": ["gráfico", "coluna", "barra", "linha", "interpretar"]
+  }
+};
+
+function classifyDescriptorAutomatically(textoQuestao, disc, ano) {
+  if (!textoQuestao || !disc) return null;
+  const texto = textoQuestao.toLowerCase();
+  const hints = DESCRIPTOR_HINTS[disc];
+  if (!hints) return null;
+  let bestMatch = null;
+  let bestScore = 0;
+  const descritoresAno = disc === "portugues" ? descritoresPortugues[ano] : descritoresMatematica[ano];
+  if (!descritoresAno) return null;
+  for (const d of descritoresAno) {
+    const keywords = hints[d.c] || [];
+    let score = 0;
+    for (const kw of keywords) {
+      if (texto.includes(kw.toLowerCase())) score++;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = d;
+    }
+  }
+  return bestScore > 0 ? bestMatch : null;
+}
+
+function sugerirDescritorAtual() {
+  const textoQuestao = document.getElementById("enunciadoProva").value;
+  const disc = document.getElementById("disciplinaProva").value;
+  const ano = document.getElementById("anoProva").value;
+  if (!textoQuestao) { alert("Digite o enunciado primeiro"); return; }
+  if (!disc || !ano) { alert("Selecione disciplina e ano primeiro"); return; }
+  const resultado = classifyDescriptorAutomatically(textoQuestao, disc, ano);
+  if (resultado) {
+    document.getElementById("descritorProva").value = resultado.c + "|" + resultado.n;
+    ultimaSugestaoDescritor = resultado;
+    alert("Descritor sugerido: " + resultado.c + " - " + resultado.n);
+  } else {
+    alert("Nenhum descritor encontrado para este conteúdo");
+  }
+}
+
 function mudouTipoQuestao() {
   const tipo = document.getElementById("tipoQuestao").value;
   document.getElementById("areaAltTexto").style.display = tipo === "multipla" ? "block" : "none";
