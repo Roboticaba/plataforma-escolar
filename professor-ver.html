@@ -79,31 +79,31 @@ async function carregarProva() {
     var letras = ["A", "B", "C", "D"];
     
     questoes.forEach(function(q, i) {
-      var html = "<div class=""questao-card"">";
-      html += "<div class=""questao-numero"">Quest�o " + (i + 1) + "</div>";
+      var html = '<div class="questao-card">';
+      html += '<div class="questao-numero">Questão ' + (i + 1) + '</div>';
       
       if (q.descritor) {
         var descritorTexto = q.descritor;
-        if (q.descritorNome) descritorTexto += " - " + q.descritorNome;
-        html += "<span class=""descritor-badge"">" + descritorTexto + "</span>";
+        if (q.descritorNome) descritorTexto += ' - ' + q.descritorNome;
+        html += '<span class="descritor-badge">' + descritorTexto + '</span>';
       }
       
       if (q.textoAntes) {
-        html += "<div style=""background:#f8fafc;padding:10px;border-radius:6px;margin:10px 0;font-size:14px;"">" + q.textoAntes + "</div>";
+        html += '<div style="background:#f8fafc;padding:10px;border-radius:6px;margin:10px 0;font-size:14px;">' + q.textoAntes + '</div>';
       }
       
-      html += "<div class=""questao-texto"">" + q.pergunta + "</div>";
+      html += '<div class="questao-texto">' + q.pergunta + '</div>';
       
       if (q.alternativas && q.alternativas.length > 0) {
         q.alternativas.forEach(function(alt, j) {
-          var classe = (j === q.correta) ? "alternativa correta" : "alternativa";
-          html += "<div class=""" + classe + """>(" + letras[j] + ") " + alt + "</div>";
+          var classe = (j === q.correta) ? 'alternativa correta' : 'alternativa';
+          html += '<div class="' + classe + '">(' + letras[j] + ') ' + alt + '</div>';
         });
-      } else if (q.tipo === "texto") {
-        html += "<div class=""alternativa"" style=""font-style:italic;color:#64748b;"">Resposta escrita pelo aluno</div>";
+      } else if (q.tipo === 'texto') {
+        html += '<div class="alternativa" style="font-style:italic;color:#64748b;">Resposta escrita pelo aluno</div>';
       }
       
-      html += "</div>";
+      html += '</div>';
       listaQuestoes.innerHTML += html;
     });
     
