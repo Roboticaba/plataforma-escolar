@@ -88,6 +88,16 @@
       <label>Pergunta</label>
       <textarea id="pergunta" placeholder="O que o aluno deve responder?" style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;"></textarea>
     </div>
+    <div class="form-group" id="areaDescritorQuestao" style="display:none;">
+      <label>Descritor (opcional)</label>
+      <select id="descritorQuestao">
+        <option value="">Selecione</option>
+      </select>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="sugerirDescritorQuestao()">🔮 Sugerir descritor</button>
+        <span id="statusDescritor" style="font-size:13px;color:#64748b;">Selecione disciplina e ano para ver os descritores.</span>
+      </div>
+    </div>
     <div class="form-group">
       <label>Texto de Apoio (opcional)</label>
       <textarea id="textoAntes" placeholder="Ex.: Observe a imagem..." style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;white-space:pre-wrap;"></textarea>
@@ -160,7 +170,99 @@ const descritoresMatematica = {
 };
 
 function atualizarDescritores() {
-  // placeholder - descritores não são mais usados na questão
+  var disc = document.getElementById("disciplinaProva").value;
+  var ano = document.getElementById("anoProva").value;
+  var selectQ = document.getElementById("descritorQuestao");
+  var areaQ = document.getElementById("areaDescritorQuestao");
+  var status = document.getElementById("statusDescritor");
+  
+  if (!selectQ) return;
+  selectQ.innerHTML = "<option value=''>Selecione</option>";
+  
+  if ((disc === "portugues" || disc === "matematica") && ano) {
+    areaQ.style.display = "block";
+    status.textContent = "Descritores do " + ano + "º ano - " + (disc === "portugues" ? "Português" : "Matemática");
+    var lista = disc === "portugues" ? descritoresPortugues[ano] : descritoresMatematica[ano];
+    if (lista) {
+      lista.forEach(function(d) {
+        selectQ.innerHTML += "<option value='" + d.c + "|" + d.n + "'>" + d.c + " - " + d.n + "</option>";
+      });
+    }
+  } else {
+    areaQ.style.display = "none";
+    if (status) status.textContent = "Selecione disciplina e ano para ver os descritores.";
+  }
+}
+
+const DESCRIPTOR_HINTS = {
+  "portugues": {
+    "D01": ["localizar", "encontrar", "informação explícita", "quem", "quando", "onde", "quanto", "número", "data", "nome", "fato"],
+    "D03": ["inferir", "significado implícito", "deduzir", "sentido oculto", "não diz", "mas sugere", "indica que"],
+    "D04": ["inferir", "informação", "conclusão", "possível", "provável", "pode ser", "seria"],
+    "D05": ["gráfico", "tabela", "infográfico", "interpretar dados"],
+    "D08": ["causa", "consequência", "porque", "resultado", "por isso", "então", "assim", "consequentemente"],
+    "D10": ["linguagem", "marcas linguísticas", "registro", "formal", "informal", "termo", "vocábulo", "palavra"],
+    "D14": ["pontuação", "ponto final", "vírgula", "exclamação", "interrogação", "efeito", "entonação"],
+    "D15": ["comparar", "diferença", "semelhança", "contraste", "igual", "diferente", "ambos"],
+    "D23": ["gênero", "tipo de texto", "texto narrativo", "dissertativo", "argumentativo", "jornal", "reportagem"]
+  },
+  "matematica": {
+    "D01": ["ler", "número", "escrever", "numeral", "quantidade"],
+    "D02": ["ordenar", "sequência", "crescente", "decrescente", "maior", "menor"],
+    "D03": ["figura", "forma", "geométrica", "desenho", "quadrado", "círculo"],
+    "D05": ["medida", "comprimento", "altura", "largura", "metro", "centímetro"],
+    "D07": ["unidade", "medida", "quilo", "litro", "metro", "grama"],
+    "D10": ["dinheiro", "real", "centavo", "custo", "valor", "preço", "troco"],
+    "D11": ["perímetro", "contorno", "bordas", "volta"],
+    "D12": ["área", "superfície", "tamanho", "metro quadrado"],
+    "D17": ["adição", "soma", "subtração", "menos", "mais", "calcular"],
+    "D18": ["multiplicação", "vezes", "produto", "duas vezes", "três vezes"],
+    "D19": ["problema", "situação", "resolver", "cálculo"],
+    "D23": ["dinheiro", "real", "centavo", "compra", "venda"],
+    "D24": ["fração", "meio", "metade", "terço", "quarto", "parte"],
+    "D26": ["porcentagem", "por cento", "desconto", "aumento", "%"],
+    "D27": ["tabela", "dados", "organizar", "linha", "coluna"],
+    "D28": ["gráfico", "coluna", "barra", "linha", "interpretar"]
+  }
+};
+
+function classifyDescriptorAutomatically(textoQuestao, disc, ano) {
+  if (!textoQuestao || !disc) return null;
+  var texto = textoQuestao.toLowerCase();
+  var hints = DESCRIPTOR_HINTS[disc];
+  if (!hints) return null;
+  var bestMatch = null;
+  var bestScore = 0;
+  var descritoresAno = disc === "portugues" ? descritoresPortugues[ano] : descritoresMatematica[ano];
+  if (!descritoresAno) return null;
+  for (var i = 0; i < descritoresAno.length; i++) {
+    var d = descritoresAno[i];
+    var keywords = hints[d.c] || [];
+    var score = 0;
+    for (var j = 0; j < keywords.length; j++) {
+      if (texto.indexOf(keywords[j].toLowerCase()) !== -1) score++;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = d;
+    }
+  }
+  return bestScore > 0 ? bestMatch : null;
+}
+
+function sugerirDescritorQuestao() {
+  var textoQuestao = document.getElementById("pergunta").value;
+  var disc = document.getElementById("disciplinaProva").value;
+  var ano = document.getElementById("anoProva").value;
+  if (!textoQuestao) { alert("Digite a pergunta primeiro"); return; }
+  if (!disc || !ano) { alert("Selecione disciplina e ano primeiro"); return; }
+  var resultado = classifyDescriptorAutomatically(textoQuestao, disc, ano);
+  if (resultado) {
+    document.getElementById("descritorQuestao").value = resultado.c + "|" + resultado.n;
+    alert("Sugestão: " + resultado.c + " - " + resultado.n);
+  } else {
+    alert("Nenhum descritor encontrado para este conteúdo. Você pode selecionar manualmente.");
+  }
 }
 
 function mudouTipoQuestao() {
