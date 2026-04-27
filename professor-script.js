@@ -18,6 +18,12 @@ if (!usuario || usuario.role !== "professor") {
 
 document.getElementById("nomeProfessor").textContent = usuario.nome || "Professor";
 
+document.addEventListener("DOMContentLoaded", function() {
+  var abas = document.querySelectorAll(".tab-content");
+  abas.forEach(function(aba) { aba.classList.remove("active"); });
+  document.getElementById("aba-turmas").classList.add("active");
+});
+
 let turmaAtualId = null;
 let provaAtualId = null;
 let questoesTemp = [];
@@ -44,16 +50,25 @@ const descritoresMatematica = {
 };
 
 function trocarAba(aba) {
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
-  document.getElementById("tab-" + aba).classList.add("active");
-  document.getElementById("aba-" + aba).classList.add("active");
-  if (aba === "turmas") carregarTurmas();
-  if (aba === "banco") filtrarProvas();
-  if (aba === "criar") {
-    document.getElementById("nomeProva").value = "";
-    document.getElementById("disciplinaProva").value = "";
-    document.getElementById("anoProva").value = "";
+  try {
+    var tabs = document.querySelectorAll(".tab");
+    for (var i = 0; i < tabs.length; i++) { tabs[i].classList.remove("active"); }
+    var contents = document.querySelectorAll(".tab-content");
+    for (var j = 0; j < contents.length; j++) { contents[j].classList.remove("active"); }
+    var tabBtn = document.getElementById("tab-" + aba);
+    var tabContent = document.getElementById("aba-" + aba);
+    if (tabBtn) tabBtn.classList.add("active");
+    if (tabContent) tabContent.classList.add("active");
+    if (aba === "turmas") carregarTurmas();
+    if (aba === "banco") filtrarProvas();
+    if (aba === "criar") {
+      document.getElementById("nomeProva").value = "";
+      document.getElementById("disciplinaProva").value = "";
+      document.getElementById("anoProva").value = "";
+    }
+  } catch(e) {
+    console.error("Erro ao trocar aba:", e);
+    alert("Erro ao trocar aba: " + e.message);
   }
 }
 
