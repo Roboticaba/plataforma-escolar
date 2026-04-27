@@ -23,12 +23,15 @@ document.addEventListener("DOMContentLoaded", function() {
   for (var i = 0; i < abas.length; i++) {
     abas[i].classList.remove("active");
     abas[i].style.display = "none";
+    abas[i].style.visibility = "hidden";
   }
   var abaTurmas = document.getElementById("aba-turmas");
   if (abaTurmas) {
     abaTurmas.classList.add("active");
     abaTurmas.style.display = "block";
+    abaTurmas.style.visibility = "visible";
   }
+  carregarTurmas();
 });
 
 let turmaAtualId = null;
@@ -66,9 +69,11 @@ function trocarAba(aba) {
         if (tabIds[i] === aba) {
           content.classList.add("active");
           content.style.display = "block";
+          content.style.visibility = "visible";
         } else {
           content.classList.remove("active");
           content.style.display = "none";
+          content.style.visibility = "hidden";
         }
       }
       if (btn) {
