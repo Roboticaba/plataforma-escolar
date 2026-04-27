@@ -31,29 +31,11 @@
   <iframe id="frame-criar" class="tab-frame" src="professor-criar.html" style="display:none;"></iframe>
 </main>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="professor-script.js"></script>
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
-  authDomain: "plataforma-escolar-71635.firebaseapp.com",
-  projectId: "plataforma-escolar-71635",
-  storageBucket: "plataforma-escolar-71635.firebasestorage.app",
-  messagingSenderId: "194897243209",
-  appId: "1:194897243209:web:ff339bee22bced4098e398"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const auth = firebase.auth();
-
 let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
 if (!usuario || usuario.role !== "professor") {
   window.location.href = "index.html";
 }
-
 document.getElementById("nomeProfessor").textContent = usuario.nome || "Professor";
 
 function mostrarTurmas() {
@@ -83,8 +65,14 @@ function mostrarCriar() {
   document.getElementById("frame-criar").style.display = "block";
 }
 
+function sair() {
+  localStorage.removeItem("usuario");
+  window.location.href = "index.html";
+}
+
 function abrirConfig() {
   document.getElementById("modalConfig").classList.add("active");
+  carregarConfig();
 }
 
 function fecharConfig() {
@@ -92,7 +80,7 @@ function fecharConfig() {
 }
 
 function salvarConfig() {
-  const config = {
+  var config = {
     nomeEscola: document.getElementById("cfgNomeEscola").value,
     endereco: document.getElementById("cfgEndereco").value,
     logoUrl: logoData,
@@ -104,8 +92,8 @@ function salvarConfig() {
   fecharConfig();
 }
 
-async function carregarConfig() {
-  const config = JSON.parse(localStorage.getItem("configProfessor") || "null");
+function carregarConfig() {
+  var config = JSON.parse(localStorage.getItem("configProfessor") || "null");
   if (config) {
     document.getElementById("cfgNomeEscola").value = config.nomeEscola || "";
     document.getElementById("cfgEndereco").value = config.endereco || "";
@@ -118,9 +106,9 @@ async function carregarConfig() {
 }
 
 function uploadLogo() {
-  const file = document.getElementById("inputLogo").files[0];
+  var file = document.getElementById("inputLogo").files[0];
   if (!file) return;
-  const reader = new FileReader();
+  var reader = new FileReader();
   reader.onload = function(e) {
     logoData = e.target.result;
     document.getElementById("previewLogo").innerHTML = '<img src="' + logoData + '" style="max-height:80px;">';
@@ -128,12 +116,7 @@ function uploadLogo() {
   reader.readAsDataURL(file);
 }
 
-function sair() {
-  localStorage.removeItem("usuario");
-  window.location.href = "index.html";
-}
-
-carregarConfig();
+var logoData = "";
 </script>
 
 <div class="modal-overlay" id="modalConfig">
