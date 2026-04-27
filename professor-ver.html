@@ -180,13 +180,15 @@ function gerarPDF() {
   
   var htmlContent = '<div style="font-family:Arial,Helvetica,sans-serif;width:210mm;min-height:297mm;padding:12mm 15mm;box-sizing:border-box;">';
   
-  htmlContent += '<div style="border:2px solid #333;border-radius:8px;padding:12px 15px;margin-bottom:12px;display:flex;align-items:center;">';
+  htmlContent += '<div style="border:2px solid #333;border-radius:8px;padding:10px 12px;margin-bottom:12px;">';
+  
+  htmlContent += '<div style="display:flex;align-items:center;margin-bottom:8px;">';
   if (config && config.logoUrl) {
-    htmlContent += '<img src="' + config.logoUrl + '" style="width:130px;height:auto;flex-shrink:0;margin-right:15px;">';
+    htmlContent += '<img src="' + config.logoUrl + '" style="width:120px;height:auto;flex-shrink:0;margin-right:12px;">';
   }
-  htmlContent += '<div style="flex:1;text-align:center;">';
+  htmlContent += '<div style="flex:1;max-width:100%;text-align:center;word-break:break-word;">';
   if (config && config.nomeEscola) {
-    htmlContent += '<div style="font-size:15px;font-weight:bold;">' + config.nomeEscola + '</div>';
+    htmlContent += '<div style="font-size:14px;font-weight:bold;">' + config.nomeEscola + '</div>';
   }
   if (config && config.endereco) {
     htmlContent += '<div style="font-size:10px;color:#555;margin-top:2px;">' + config.endereco + '</div>';
@@ -194,20 +196,21 @@ function gerarPDF() {
   htmlContent += '</div>';
   htmlContent += '</div>';
   
-  htmlContent += '<div style="border:1px solid #ccc;border-radius:4px;padding:8px 12px;margin-bottom:12px;">';
-  htmlContent += '<div style="display:flex;align-items:center;margin-bottom:6px;">';
-  htmlContent += '<span style="font-size:11px;margin-right:5px;white-space:nowrap;">ALUNO(A):</span>';
-  htmlContent += '<div style="flex:1;height:1px;background:#333;"></div>';
-  htmlContent += '<span style="font-size:11px;margin-left:15px;margin-right:5px;white-space:nowrap;">ANO:</span>';
-  htmlContent += '<div style="width:30px;height:1px;background:#333;"></div>';
-  htmlContent += '<span style="font-size:11px;margin-left:5px;">' + (provaData.ano || "?") + 'º</span>';
+  htmlContent += '<div style="border-top:1px solid #333;margin:6px 0;"></div>';
+  
+  htmlContent += '<div style="display:flex;align-items:center;margin-bottom:4px;">';
+  htmlContent += '<span style="font-size:11px;white-space:nowrap;">ALUNO(A):</span>';
+  htmlContent += '<div style="flex:1;height:1px;background:#333;margin:0 8px;"></div>';
+  htmlContent += '<span style="font-size:11px;white-space:nowrap;">ANO: ' + (provaData.ano || "?") + 'º</span>';
   htmlContent += '</div>';
+  
   htmlContent += '<div style="display:flex;align-items:center;">';
-  htmlContent += '<span style="font-size:11px;margin-right:5px;white-space:nowrap;">PROFESSOR(A):</span>';
-  htmlContent += '<div style="flex:1;height:1px;background:#333;"></div>';
-  htmlContent += '<span style="font-size:11px;margin-left:15px;margin-right:5px;white-space:nowrap;">DATA:</span>';
-  htmlContent += '<div style="width:60px;height:1px;background:#333;"></div>';
+  htmlContent += '<span style="font-size:11px;white-space:nowrap;">PROFESSOR(A):</span>';
+  htmlContent += '<div style="flex:1;height:1px;background:#333;margin:0 8px;"></div>';
+  htmlContent += '<span style="font-size:11px;white-space:nowrap;">DATA:</span>';
+  htmlContent += '<div style="width:55px;height:1px;background:#333;margin:0 4px;"></div>';
   htmlContent += '</div>';
+  
   htmlContent += '</div>';
   
   if (config && config.textoLivre) {
