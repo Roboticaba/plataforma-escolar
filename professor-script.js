@@ -446,26 +446,20 @@ async function gerarPDF() {
 function atualizarDescritores() {
   const disc = document.getElementById("disciplinaProva").value;
   const ano = document.getElementById("anoProva").value;
-  const select = document.getElementById("descritorProva");
   const selectQ = document.getElementById("descritorQuestao");
-  const area = document.getElementById("areaDescritor");
   const areaQ = document.getElementById("areaDescritorQuestao");
   
-  select.innerHTML = "<option value=''>Selecione</option>";
-  if (selectQ) selectQ.innerHTML = "<option value=''>Selecione</option>";
+  if (!selectQ) return;
+  selectQ.innerHTML = "<option value=''>Selecione</option>";
   
   if ((disc === "portugues" || disc === "matematica") && ano) {
-    if (area) area.style.display = "block";
-    if (areaQ) areaQ.style.display = "block";
+    areaQ.style.display = "block";
     const lista = disc === "portugues" ? descritoresPortugues[ano] : descritoresMatematica[ano];
     if (lista) {
-      const options = lista.map(d => `<option value="${d.c}|${d.n}">${d.c} - ${d.n}</option>`).join("");
-      select.innerHTML += options;
-      if (selectQ) selectQ.innerHTML += options;
+      lista.forEach(d => { selectQ.innerHTML += `<option value="${d.c}|${d.n}">${d.c} - ${d.n}</option>`; });
     }
   } else {
-    if (area) area.style.display = "none";
-    if (areaQ) areaQ.style.display = "none";
+    areaQ.style.display = "none";
   }
 }
 
