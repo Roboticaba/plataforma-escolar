@@ -198,19 +198,20 @@ function gerarPDF() {
   
   htmlContent += '<div style="display:flex;align-items:center;margin-bottom:4px;">';
   htmlContent += '<span style="font-size:11px;white-space:nowrap;">ALUNO(A):</span>';
-  htmlContent += '<div style="flex:1;height:1px;background:#333;margin:0 8px;"></div>';
+  htmlContent += '<div style="flex:1;border-bottom:1px solid #333;margin:0 8px;"></div>';
   htmlContent += '<span style="font-size:11px;white-space:nowrap;">ANO: ' + (provaData.ano || "?") + 'º</span>';
   htmlContent += '</div>';
   
   var nomeProfessor = (config && config.nomeProfessor) ? config.nomeProfessor : "";
   htmlContent += '<div style="display:flex;align-items:center;">';
-  htmlContent += '<span style="font-size:11px;white-space:nowrap;position:relative;">PROFESSOR(A):<div style="position:absolute;left:75px;top:-5px;height:1px;width:calc(100% - 75px);background:#333;"></div>';
+  htmlContent += '<span style="font-size:11px;white-space:nowrap;">PROFESSOR(A):</span>';
   if (nomeProfessor) {
-    htmlContent += '<span style="position:absolute;left:80px;top:-7px;background:#fff;padding:0 4px;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + nomeProfessor + '</span>';
+    htmlContent += '<span style="font-size:11px;margin:0 8px;border-bottom:1px solid #333;padding-bottom:2px;white-space:nowrap;">' + nomeProfessor + '</span>';
+  } else {
+    htmlContent += '<div style="flex:1;border-bottom:1px solid #333;margin:0 8px;"></div>';
   }
-  htmlContent += '</span>';
-  htmlContent += '<span style="font-size:11px;white-space:nowrap;margin-left:auto;">DATA:</span>';
-  htmlContent += '<div style="width:55px;height:1px;background:#333;margin:0 4px;"></div>';
+  htmlContent += '<span style="font-size:11px;white-space:nowrap;">DATA:</span>';
+  htmlContent += '<div style="width:55px;border-bottom:1px solid #333;margin:0 4px;"></div>';
   htmlContent += '</div>';
   
   htmlContent += '</div>';
