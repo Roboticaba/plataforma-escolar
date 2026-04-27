@@ -178,45 +178,116 @@ function gerarPDF() {
   var questoes = provaData.questoes || [];
   var valorPorQuestao = ((provaData.valor || 10) / Math.max(questoes.length, 1)).toFixed(1);
   
-  var htmlContent = '<div style="font-family:Arial,Helvetica,sans-serif;width:210mm;min-height:297mm;padding:15mm;box-sizing:border-box;">';
+  var htmlContent = '<div style="font-family:Arial,Helvetica,sans-serif;width:210mm;min-height:297mm;padding:12mm 15mm;box-sizing:border-box;">';
   
-  htmlContent += '<div style="margin-bottom:15px;">';
-  htmlContent += '<div style="display:flex;align-items:center;margin-bottom:10px;">';
+  htmlContent += '<div style="border:2px solid #333;border-radius:8px;padding:12px 15px;margin-bottom:12px;display:flex;align-items:center;">';
   if (config && config.logoUrl) {
-    htmlContent += '<img src="' + config.logoUrl + '" style="max-height:50px;margin-right:15px;">';
+    htmlContent += '<img src="' + config.logoUrl + '" style="width:130px;height:auto;flex-shrink:0;margin-right:15px;">';
   }
-  htmlContent += '<div>';
+  htmlContent += '<div style="flex:1;text-align:center;">';
   if (config && config.nomeEscola) {
-    htmlContent += '<div style="font-size:16px;font-weight:bold;">' + config.nomeEscola + '</div>';
+    htmlContent += '<div style="font-size:15px;font-weight:bold;">' + config.nomeEscola + '</div>';
   }
   if (config && config.endereco) {
-    htmlContent += '<div style="font-size:10px;color:#555;">' + config.endereco + '</div>';
+    htmlContent += '<div style="font-size:10px;color:#555;margin-top:2px;">' + config.endereco + '</div>';
   }
   htmlContent += '</div>';
   htmlContent += '</div>';
-  htmlContent += '<div style="border-bottom:2px solid #333;margin-bottom:10px;"></div>';
-  htmlContent += '<div style="display:flex;justify-content:space-between;font-size:11px;">';
-  htmlContent += '<div>ALUNO(A): _______________________________</div>';
-  htmlContent += '<div>ANO: ' + (provaData.ano || "?") + 'º</div>';
+  
+  htmlContent += '<div style="border:1px solid #ccc;border-radius:4px;padding:8px 12px;margin-bottom:12px;">';
+  htmlContent += '<div style="display:flex;align-items:center;margin-bottom:6px;">';
+  htmlContent += '<span style="font-size:11px;margin-right:5px;white-space:nowrap;">ALUNO(A):</span>';
+  htmlContent += '<div style="flex:1;height:1px;background:#333;"></div>';
+  htmlContent += '<span style="font-size:11px;margin-left:15px;margin-right:5px;white-space:nowrap;">ANO:</span>';
+  htmlContent += '<div style="width:30px;height:1px;background:#333;"></div>';
+  htmlContent += '<span style="font-size:11px;margin-left:5px;">' + (provaData.ano || "?") + 'º</span>';
   htmlContent += '</div>';
-  htmlContent += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-top:3px;">';
-  htmlContent += '<div>PROFESSOR(A): ' + (config && config.nomeProfessor ? config.nomeProfessor : "_______________________________") + '</div>';
-  htmlContent += '<div>DATA: ___/___/_____</div>';
+  htmlContent += '<div style="display:flex;align-items:center;">';
+  htmlContent += '<span style="font-size:11px;margin-right:5px;white-space:nowrap;">PROFESSOR(A):</span>';
+  htmlContent += '<div style="flex:1;height:1px;background:#333;"></div>';
+  htmlContent += '<span style="font-size:11px;margin-left:15px;margin-right:5px;white-space:nowrap;">DATA:</span>';
+  htmlContent += '<div style="width:60px;height:1px;background:#333;"></div>';
   htmlContent += '</div>';
   htmlContent += '</div>';
   
   if (config && config.textoLivre) {
-    htmlContent += '<div style="background:#f5f5f5;padding:8px;margin-bottom:15px;font-size:11px;text-align:center;border-radius:4px;">' + config.textoLivre + '</div>';
+    htmlContent += '<div style="background:#f0f0f0;padding:8px;margin-bottom:12px;font-size:11px;text-align:center;border-radius:4px;">' + config.textoLivre + '</div>';
   }
   
   htmlContent += '<div style="text-align:center;margin-bottom:15px;">';
-  htmlContent += '<div style="font-size:16px;font-weight:bold;">' + (provaData.nome || "Prova") + '</div>';
-  htmlContent += '<div style="font-size:11px;color:#555;margin-top:3px;">' + (provaData.disciplina || "") + ' | ' + (provaData.tempo || 60) + ' min | Valor Total: ' + (provaData.valor || 10) + ' pts</div>';
+  htmlContent += '<div style="font-size:18px;font-weight:bold;margin-bottom:3px;">' + (provaData.nome || "Prova") + '</div>';
+  htmlContent += '<div style="font-size:11px;color:#555;">' + (provaData.disciplina || "") + ' | ' + (provaData.tempo || 60) + ' min | Valor Total: ' + (provaData.valor || 10) + ' pontos</div>';
   htmlContent += '</div>';
   
   questoes.forEach(function(q, i) {
-    htmlContent += '<div style="margin-bottom:18px;page-break-inside:avoid;">';
-    htmlContent += '<p style="font-weight:bold;margin:0 0 6px 0;font-size:12px;">' + (i + 1) + ') ' + q.pergunta + ' <span style="font-weight:normal;color:#666;">(' + valorPorQuestao + ' pts)</span></p>';
+    htmlContent += '<div style="margin-bottom:16px;page-break-inside:avoid;">';
+    htmlContent += '<p style="font-weight:bold;margin:0 0 5px 0;font-size:12px;">' + (i + 1) + ') ' + q.pergunta + ' <span style="font-weight:normal;color:#666;">(' + valorPorQuestao + ' pts)</span></p>';
+    
+    if (q.textoAntes) {
+      htmlContent += '<div style="background:#fafafa;padding:6px;margin-bottom:6px;font-size:11px;border-left:3px solid #ccc;">' + q.textoAntes + '</div>';
+    }
+    
+    if (q.alternativas && q.alternativas.length > 0) {
+      q.alternativas.forEach(function(alt, j) {
+        htmlContent += '<div style="margin:3px 0;font-size:11px;padding-left:15px;">&#9675; ' + alt + '</div>';
+      });
+    } else if (q.tipo === "texto") {
+      htmlContent += '<div style="border-bottom:1px solid #999;min-height:20px;margin-top:8px;"></div>';
+    }
+    
+    htmlContent += '</div>';
+  });
+  
+  htmlContent += '</div>';
+  
+  var container = document.getElementById("pdf-content");
+  container.innerHTML = htmlContent;
+  container.style.display = "block";
+  
+  var opt = {
+    margin: 0,
+    filename: (provaData.nome || "prova").replace(/[^a-zA-Z0-9]/g, "_") + ".pdf",
+    image: { type: "jpeg", quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+  };
+  
+  html2pdf().set(opt).from(container).save().then(function() {
+    container.style.display = "none";
+  });
+}
+  htmlContent += '<div style="flex:1;text-align:center;">';
+  if (config && config.nomeEscola) {
+    htmlContent += '<div style="font-size:14px;font-weight:bold;">' + config.nomeEscola + '</div>';
+  }
+  if (config && config.endereco) {
+    htmlContent += '<div style="font-size:10px;color:#555;margin-top:2px;">' + config.endereco + '</div>';
+  }
+  htmlContent += '</div>';
+  htmlContent += '</div>';
+  htmlContent += '<div style="border-top:1px solid #333;margin:8px 0;"></div>';
+  htmlContent += '<div style="display:flex;font-size:11px;">';
+  htmlContent += '<div style="display:flex;align-items:center;margin-right:20px;">ALUNO(A): <div style="flex:1;border-bottom:1px solid #333;margin-left:8px;min-width:180px;"></div></div>';
+  htmlContent += '<div style="display:flex;align-items:center;margin-left:auto;">ANO: <div style="width:35px;border-bottom:1px solid #333;margin-left:5px;text-align:center;">' + (provaData.ano || "?") + 'º</div></div>';
+  htmlContent += '</div>';
+  htmlContent += '<div style="display:flex;font-size:11px;margin-top:6px;">';
+  htmlContent += '<div style="display:flex;align-items:center;margin-right:20px;">PROFESSOR(A): <div style="flex:1;border-bottom:1px solid #333;margin-left:8px;min-width:150px;"></div></div>';
+  htmlContent += '<div style="display:flex;align-items:center;margin-left:auto;">DATA: <div style="width:65px;border-bottom:1px solid #333;margin-left:5px;"></div></div>';
+  htmlContent += '</div>';
+  htmlContent += '</div>';
+  
+  if (config && config.textoLivre) {
+    htmlContent += '<div style="background:#f0f0f0;padding:8px;margin-bottom:12px;font-size:11px;text-align:center;border-radius:4px;">' + config.textoLivre + '</div>';
+  }
+  
+  htmlContent += '<div style="text-align:center;margin-bottom:15px;">';
+  htmlContent += '<div style="font-size:18px;font-weight:bold;margin-bottom:3px;">' + (provaData.nome || "Prova") + '</div>';
+  htmlContent += '<div style="font-size:11px;color:#555;">' + (provaData.disciplina || "") + ' | ' + (provaData.tempo || 60) + ' min | Valor Total: ' + (provaData.valor || 10) + ' pontos</div>';
+  htmlContent += '</div>';
+  
+  questoes.forEach(function(q, i) {
+    htmlContent += '<div style="margin-bottom:16px;page-break-inside:avoid;">';
+    htmlContent += '<p style="font-weight:bold;margin:0 0 5px 0;font-size:12px;">' + (i + 1) + ') ' + q.pergunta + ' <span style="font-weight:normal;color:#666;">(' + valorPorQuestao + ' pts)</span></p>';
     
     if (q.textoAntes) {
       htmlContent += '<div style="background:#fafafa;padding:6px;margin-bottom:6px;font-size:11px;border-left:3px solid #ccc;">' + q.textoAntes + '</div>';
