@@ -59,12 +59,16 @@ function trocarAba(aba) {
     var tabContent = document.getElementById("aba-" + aba);
     if (tabBtn) tabBtn.classList.add("active");
     if (tabContent) tabContent.classList.add("active");
+    
     if (aba === "turmas") carregarTurmas();
     if (aba === "banco") filtrarProvas();
     if (aba === "criar") {
       document.getElementById("nomeProva").value = "";
       document.getElementById("disciplinaProva").value = "";
       document.getElementById("anoProva").value = "";
+      document.getElementById("resumoQuestoes").textContent = "Nenhuma questão adicionada ainda.";
+      document.getElementById("listaQuestoes").innerHTML = "";
+      questoesTemp = [];
     }
   } catch(e) {
     console.error("Erro ao trocar aba:", e);
