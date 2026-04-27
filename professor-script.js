@@ -60,11 +60,13 @@ const descritoresMatematica = {
 };
 
 function trocarAba(aba) {
+  console.log("Trocando para aba:", aba);
   try {
     var tabIds = ["turmas", "banco", "criar"];
     for (var i = 0; i < tabIds.length; i++) {
       var content = document.getElementById("aba-" + tabIds[i]);
       var btn = document.getElementById("tab-" + tabIds[i]);
+      console.log("Tab", tabIds[i], "- content:", !!content, "display:", content ? content.style.display : "N/A");
       if (content) {
         if (tabIds[i] === aba) {
           content.classList.add("active");
