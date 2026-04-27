@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Ver Prova</title>
+<link rel="stylesheet" href="professor-styles.css">
+<style>
+body { padding: 20px; }
+.prova-container { max-width: 800px; margin: 0 auto; }
+.prova-header { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+.prova-header h2 { margin: 0 0 10px 0; color: #1e293b; }
+.prova-meta { display: flex; gap: 20px; flex-wrap: wrap; color: #64748b; font-size: 14px; }
+.questao-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+.questao-numero { font-weight: 600; color: #3b82f6; margin-bottom: 10px; }
+.questao-texto { font-size: 15px; line-height: 1.6; margin-bottom: 15px; }
+.alternativa { padding: 8px 12px; margin: 5px 0; background: #f8fafc; border-radius: 6px; font-size: 14px; }
+.alternativa.correta { background: #d1fae5; color: #065f46; font-weight: 500; }
+.descritor-badge { display: inline-block; background: #dbeafe; color: #1d4ed8; padding: 3px 10px; border-radius: 20px; font-size: 12px; margin-top: 10px; }
+.voltar-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #64748b; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; text-decoration: none; margin-bottom: 20px; }
+.voltar-btn:hover { background: #475569; }
+.btn-pdf { background: #3b82f6; }
+.btn-pdf:hover { background: #2563eb; }
+.btn-excluir { background: #ef4444; }
+.btn-excluir:hover { background: #dc2626; }
+.acao-buttons { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+.loading { text-align: center; padding: 50px; color: #64748b; }
+.error { text-align: center; padding: 50px; color: #ef4444; }
+</style>
+</head>
+<body>
+
+<div class="prova-container">
+  <a href="professor.html" class="voltar-btn">← Voltar</a>
+  
+  <div id="loading" class="loading">Carregando prova...</div>
+  <div id="error" class="error" style="display:none;">Prova não encontrada</div>
+  
+  <div id="prova-content" style="display:none;">
+    <div class="prova-header">
+      <h2 id="prova-nome">Nome da Prova</h2>
+      <div class="prova-meta">
+        <span id="prova-disciplina">Disciplina</span>
+        <span id="prova-ano">Ano</span>
+        <span id="prova-tempo">Tempo</span>
+        <span id="prova-valor">Valor</span>
+      </div>
+    </div>
+    
+    <div id="lista-questoes"></div>
+    
+    <div class="acao-buttons">
+      <button class="btn btn-primary" onclick="gerarPDF()">📄 Gerar PDF</button>
+      <button class="btn btn-danger" onclick="excluirProva()">🗑️ Excluir Prova</button>
+    </div>
+  </div>
+</div>
+
+<div id="pdf-content" style="display:none;"></div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
+  authDomain: "plataforma-escolar-71635.firebaseapp.com",
+  projectId: "plataforma-escolar-71635",
+  storageBucket: "plataforma-escolar-71635.firebasestorage.app",
+  messagingSenderId: "194897243209",
+  appId: "1:194897243209:web:ff339bee22bced4098e398"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+if (!usuario || usuario.role !== "professor") {
+  window.location.href = "index.html";
+}
+
+let provaAtualId = null;
+let provaData = null;
+
+function getQueryParam(param) {
+  var urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get(param);
+}
+
+async function carregarProva() {
+  var id = getQueryParam("id");
+  if (!id) {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("error").style.display = "block";
+    document.getElementById("error").textContent = "ID da prova não informado";
+    return;
+  }
+  
+  provaAtualId = id;
+  
+  try {
+    var doc = await db.collection("simulados").doc(id).get();
+    if (!doc.exists) {
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("error").style.display = "block";
+      return;
+    }
+    
+    provaData = doc.data();
+    
+    if (provaData.criadoPor !== usuario.uid) {
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("error").style.display = "block";
+      document.getElementById("error").textContent = "Você não tem permissão para ver esta prova";
+      return;
+    }
+    
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("prova-content").style.display = "block";
+    
+    document.getElementById("prova-nome").textContent = provaData.nome || "Prova sem nome";
+    document.getElementById("prova-disciplina").textContent = provaData.disciplina || "Sem disciplina";
+    document.getElementById("prova-ano").textContent = (provaData.ano || "?") + "º Ano";
+    document.getElementById("prova-tempo").textContent = (provaData.tempo || 60) + " min";
+    document.getElementById("prova-valor").textContent = (provaData.valor || 10) + " pontos";
+    
+    var questoes = provaData.questoes || [];
+    var listaQuestoes = document.getElementById("lista-questoes");
+    listaQuestoes.innerHTML = "";
+    
+    var letras = ["A", "B", "C", "D"];
+    
+    questoes.forEach(function(q, i) {
+      var html = '<div class="questao-card">';
+      html += '<div class="questao-numero">Questão ' + (i + 1) + '</div>';
+      
+      if (q.descritor) {
+        var descritorTexto = q.descritor;
+        if (q.descritorNome) descritorTexto += " - " + q.descritorNome;
+        html += '<span class="descritor-badge">' + descritorTexto + '</span>';
+      }
+      
+      if (q.textoAntes) {
+        html += '<div style="background:#f8fafc;padding:10px;border-radius:6px;margin:10px 0;font-size:14px;">' + q.textoAntes + '</div>';
+      }
+      
+      html += '<div class="questao-texto">' + q.pergunta + '</div>';
+      
+      if (q.alternativas && q.alternativas.length > 0) {
+        q.alternativas.forEach(function(alt, j) {
+          var classe = (j === q.correta) ? "alternativa correta" : "alternativa";
+          html += '<div class="' + classe + '">(' + letras[j] + ') ' + alt + '</div>';
+        });
+      } else if (q.tipo === "texto") {
+        html += '<div class="alternativa" style="font-style:italic;color:#64748b;">Resposta escrita pelo aluno</div>';
+      }
+      
+      html += '</div>';
+      listaQuestoes.innerHTML += html;
+    });
+    
+    if (questoes.length === 0) {
+      listaQuestoes.innerHTML = '<div style="color:#64748b;text-align:center;padding:30px;">Nenhuma questão adicionada nesta prova.</div>';
+    }
+    
+  } catch (e) {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("error").style.display = "block";
+    document.getElementById("error").textContent = "Erro ao carregar: " + e.message;
+  }
+}
+
+function gerarPDF() {
+  var config = JSON.parse(localStorage.getItem("configProfessor") || "null");
+  
+  var htmlContent = '<div style="font-family:Arial,sans-serif;padding:20px;">';
+  
+  if (config) {
+    htmlContent += '<div style="text-align:center;margin-bottom:20px;">';
+    if (config.logoUrl) {
+      htmlContent += '<img src="' + config.logoUrl + '" style="max-height:80px;margin-bottom:10px;">';
+    }
+    if (config.nomeEscola) {
+      htmlContent += '<div style="font-size:18px;font-weight:bold;">' + config.nomeEscola + '</div>';
+    }
+    if (config.endereco) {
+      htmlContent += '<div style="font-size:12px;color:#666;">' + config.endereco + '</div>';
+    }
+    htmlContent += '</div>';
+  }
+  
+  htmlContent += '<div style="text-align:center;border-bottom:2px solid #333;padding-bottom:15px;margin-bottom:20px;">';
+  htmlContent += '<h1 style="margin:0;">' + (provaData.nome || "Prova") + '</h1>';
+  htmlContent += '<p style="margin:5px 0;">' + (provaData.disciplina || "") + ' - ' + (provaData.ano || "") + 'º Ano</p>';
+  htmlContent += '<p style="margin:5px 0;">Tempo: ' + (provaData.tempo || 60) + ' minutos | Valor: ' + (provaData.valor || 10) + ' pontos</p>';
+  htmlContent += '</div>';
+  
+  if (config && config.textoLivre) {
+    htmlContent += '<div style="background:#f5f5f5;padding:10px;border-radius:6px;margin-bottom:20px;font-size:13px;">' + config.textoLivre + '</div>';
+  }
+  
+  htmlContent += '<p style="font-size:14px;margin-bottom:20px;">Nome: _________________________________ Data: ____/____/________</p>';
+  
+  var letras = ["A", "B", "C", "D"];
+  var questoes = provaData.questoes || [];
+  
+  questoes.forEach(function(q, i) {
+    htmlContent += '<div style="margin-bottom:25px;">';
+    htmlContent += '<p style="font-weight:bold;margin-bottom:8px;">' + (i + 1) + ') ' + q.pergunta + '</p>';
+    
+    if (q.alternativas && q.alternativas.length > 0) {
+      q.alternativas.forEach(function(alt, j) {
+        htmlContent += '<div style="margin:5px 0;padding-left:20px;">( ) ' + alt + '</div>';
+      });
+    } else {
+      htmlContent += '<div style="border-bottom:1px solid #ccc;min-height:30px;"></div>';
+    }
+    
+    htmlContent += '</div>';
+  });
+  
+  htmlContent += '</div>';
+  
+  document.getElementById("pdf-content").innerHTML = htmlContent;
+  
+  var opt = {
+    margin: 10,
+    filename: (provaData.nome || "prova").replace(/[^a-zA-Z0-9]/g, "_") + ".pdf",
+    image: { type: "jpeg", quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+  };
+  
+  html2pdf().set(opt).from(htmlContent).save();
+}
+
+async function excluirProva() {
+  if (!confirm("Tem certeza que deseja excluir esta prova? Esta ação não pode ser desfeita.")) {
+    return;
+  }
+  
+  try {
+    await db.collection("simulados").doc(provaAtualId).delete();
+    alert("Prova excluída com sucesso!");
+    window.location.href = "professor.html";
+  } catch (e) {
+    alert("Erro ao excluir: " + e.message);
+  }
+}
+
+carregarProva();
+</script>
+
+</body>
+</html>

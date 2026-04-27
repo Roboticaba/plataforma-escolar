@@ -110,8 +110,7 @@ async function filtrarProvas() {
 }
 
 function verProva(id) {
-  provaAtualId = id;
-  window.parent.location.href = "professor.html?ver=" + id;
+  window.location.href = "professor-ver.html?id=" + id;
 }
 
 async function excluirProva(id) {
