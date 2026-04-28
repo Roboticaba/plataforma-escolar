@@ -67,11 +67,12 @@ async function carregarTurmas() {
 }
 
 function abrirTurma(id, nome) {
+  alert(" abrir: " + id + " " + nome);
+  turmaAtualId = id;
+  alert("turmaAtualId: " + turmaAtualId);
   var modal = document.getElementById("modalTurma");
   modal.style.display = "flex";
-  modal.classList.add("active");
   document.getElementById("tituloTurma").textContent = nome;
-  turmaAtualId = id;
   carregarDadosTurma();
 }
 
@@ -83,15 +84,19 @@ function fecharTurma() {
 }
 
 async function carregarDadosTurma() {
+  alert("carregarDadosTurma iniciado id:" + turmaAtualId);
   if (!turmaAtualId) return;
   const doc = await db.collection("turmas").doc(turmaAtualId).get();
+  alert("doc obtained");
   const t = doc.data();
+  alert("alunos:" + (t.alunos ? t.alunos.length : 0));
   document.getElementById("listaAlunosTurma").innerHTML = "";
   if (t.alunos) {
     t.alunos.forEach(function(a, i) {
       document.getElementById("listaAlunosTurma").innerHTML += '<div style="padding:10px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;"><span>' + a.nome + '</span><button class="btn btn-danger btn-sm" style="padding:4px 8px;" onclick="removerAluno(' + i + ')">✕</button></div>';
     });
   }
+  alert("lista atualizada");
 }
 
 async function adicionarAlunoTurma() {
