@@ -172,7 +172,7 @@ async function adicionarAluno() {
   const senha = document.getElementById("senhaAluno").value.trim();
   if (!nome || !senha) { alert("Preencha nome e senha"); return; }
 
-  const email = `${nome.toLowerCase().replace(/s+/g, '.')}.aluno.${turmaAtualId}@plataforma.app`;
+  const email = `${nome.toLowerCase().replace(/\s+/g, '.')}.aluno.${turmaAtualId}@plataforma.app`;
 
   try {
     const cred = await secondaryAuth.createUserWithEmailAndPassword(email, senha);
@@ -378,76 +378,58 @@ async function gerarPDF() {
     const cab = userDoc.exists ? (userDoc.data().cabecalho || {}) : {};
     
     const letras = ["A","B","C","D","E"];
-    const nomeProfessor = cab.nomeProfessor || "";
     
     let htmlContent = `
       <style>
         * { box-sizing: border-box; }
-        #area-impressao { width: 100%; font-family: Arial, sans-serif; font-size: 14px; }
+        .header-container { width: 100%; border: 2px solid #000; border-radius: 12px; padding: 16px; font-family: Arial, sans-serif; }
+        .top-row { display: flex; align-items: center; width: 100%; }
+        .logo { width: 160px; flex-shrink: 0; text-align: center; }
+        .logo img { max-width: 100%; height: auto; max-height: 80px; }
+        .textos { flex: 1; text-align: center; }
+        .titulo { font-weight: bold; font-size: 16px; }
+        .endereco { font-size: 13px; margin-top: 4px; }
+        .form { width: 100%; }
+        .linha { display: flex; justify-content: space-between; margin-top: 10px; font-size: 14px; width: 100%; }
+        .esquerda { flex: 1; }
+        .direita { width: 180px; text-align: right; }
+        .linha-input { display: inline-block; border-bottom: 1px solid #000; width: 60%; margin-left: 8px; }
+        .titulo-prova { text-align: center; font-weight: bold; font-size: 16px; margin-top: 16px; width: 100%; }
         
-        .header-container { width: 100%; border: 2px solid #000; border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; }
+        #area-impressao { width: 100%; margin: 0 auto; padding: 0; box-sizing: border-box; }
         
-        .logo-container { width: 100px; flex-shrink: 0; display: flex; justify-content: center; }
-        .logo-container img { max-width: 100px; max-height: 80px; object-fit: contain; }
-        
-        .right-content { flex: 1; display: flex; flex-direction: column; gap: 10px; }
-        
-        .school-info { text-align: center; }
-        .nome-escola { font-weight: bold; font-size: 16px; }
-        .endereco-escola { font-size: 12px; }
-        
-        .form-row { display: flex; width: 100%; gap: 10px; }
-        .field { flex: 1; display: flex; flex-direction: column; }
-        .field-short { width: 120px; display: flex; flex-direction: column; }
-        .label { font-size: 12px; font-weight: bold; margin-bottom: 2px; }
-        .line { border-bottom: 1px solid #000; height: 18px; display: flex; align-items: flex-end; }
-        
-        .texto-livre { text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 15px; }
-        .info-prova { text-align: center; margin-bottom: 15px; }
-        .valor-total { font-weight: bold; }
-        
-        .q { margin: 25px 0; page-break-inside: avoid; }
-        .alt { margin: 5px 0; margin-left: 20px; }
+        .q{margin:25px 0;page-break-inside:avoid; width: 100%;}
+        .alt{margin:5px 0;margin-left:20px;}
+        .valor-total{font-size:18px;font-weight:bold;}
+        .valor-questao{font-size:14px;color:#666;}
       </style>
       
       <div id="area-impressao">
         <div class="header-container">
-          <div class="logo-container">${cab.logoUrl ? `<img src="${cab.logoUrl}">` : ""}</div>
-          <div class="right-content">
-            <div class="school-info">
-              <div class="nome-escola">${cab.nomeEscola || ""}</div>
-              <div class="endereco-escola">${cab.endereco || ""}</div>
+          <div class="top-row">
+            <div class="logo">${cab.logoUrl?`<img src="${cab.logoUrl}">`:""}</div>
+            <div class="textos">
+              <div class="titulo">${cab.nomeEscola || ""}</div>
+              <div class="endereco">${cab.endereco || ""}</div>
             </div>
-            
-            <div class="form-row">
-              <div class="field">
-                <div class="label">ALUNO(A):</div>
-                <div class="line"></div>
-              </div>
-              <div class="field-short">
-                <div class="label">ANO:</div>
-                <div class="line"></div>
-              </div>
+          </div>
+          <div class="form">
+            <div class="linha">
+              <div class="esquerda">ALUNO(A): <span class="linha-input"></span></div>
+              <div class="direita">ANO: ______</div>
             </div>
-            <div class="form-row">
-              <div class="field">
-                <div class="label">PROFESSOR(A):</div>
-                <div class="line">${nomeProfessor}</div>
-              </div>
-              <div class="field-short">
-                <div class="label">DATA:</div>
-                <div class="line"></div>
-              </div>
+            <div class="linha">
+              <div class="esquerda">PROFESSOR(A): <span class="linha-input">${cab.nomeProfessor || ""}</span></div>
+              <div class="direita">DATA: ___/___/___</div>
             </div>
           </div>
         </div>
         
-        ${cab.textoLivre ? `<div class="texto-livre">${cab.textoLivre}</div>` : ""}
-        
-        <div class="info-prova">
-          <strong>${p.nome}</strong><br>
-          <span class="valor-total">Valor: ${parseFloat(p.valor||8).toFixed(1).replace(".",",")} pontos</span>
+        <div class="titulo-prova">
+          ${cab.textoLivre || ""}
         </div>
+        
+        <div class="info"><strong>${p.nome}</strong><br><span class="valor-total">Valor: ${parseFloat(p.valor||8).toFixed(1).replace(".",",")} pontos</span></div>
     `;
     
     const valorTotal = parseFloat(p.valor||8);
@@ -455,9 +437,10 @@ async function gerarPDF() {
     const valorPorQuestao = numQuestoes > 0 ? (valorTotal / numQuestoes).toFixed(2) : valorTotal.toFixed(2);
     
     (p.questoes||[]).forEach((q,i) => {
-      const processarImagens = (texto) => texto.replace(/\[img\](.*?)\[\/img\]/g, `<img src="$1" style="max-height:100px;display:block;margin:5px 0;">`);
+    // 1. Processar imagens de shortcodes na pergunta e alternativas
+      const processarImagens = (texto) => texto.replace(/\[img\](.*?)\[\/img\]/g, '<img src="$1" style="max-height:100px;display:block;margin:5px 0;">');
       
-      htmlContent += `<div class="q"><div><b>Questão ${i+1}</b> ${q.descritor?" ("+q.descritor.split("|")[0]+")":""} <span class="valor-questao">(${valorPorQuestao.replace(".",",")} pontos)</span></div>`;
+      htmlContent += `<div class="q"><div><b>Questão ${i+1}</b>${q.descritor?" ("+q.descritor.split("|")[0]+")":""} <span class="valor-questao">(${valorPorQuestao.replace(".",",")} pontos)</span></div>`;
       
       htmlContent+=`<div style="margin-bottom:10px;"><b>${processarImagens(q.pergunta)}</b></div>`;
       if(q.textoAntes) htmlContent+=`<div style="font-style:italic;margin-bottom:5px;white-space:pre-wrap;">${processarImagens(q.textoAntes)}</div>`;
@@ -476,18 +459,21 @@ async function gerarPDF() {
     });
     htmlContent += "</div>";
     
+    // Gerar PDF sem container de debug, direto do HTML
     const opt = {
       margin: [10, 10, 10, 10],
-      filename: "prova.pdf",
-      image: { type: "jpeg", quality: 0.98 },
+      filename: 'prova.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     
     await html2pdf().set(opt).from(htmlContent).save();
     
   } catch(e) { alert("Erro ao gerar PDF: "+e.message); }
-}function atualizarDescritores() {
+}
+
+function atualizarDescritores() {
   const disc = document.getElementById("disciplinaProva").value;
   const ano = document.getElementById("anoProva").value;
   const selectQ = document.getElementById("descritorQuestao");
@@ -630,7 +616,7 @@ async function adicionarQuestao() {
     let alternativas = [], correta = null;
     if (tipo === "multipla") {
       if (tipoAlt === "texto") {
-        alternativas = document.getElementById("alternativasTexto").value.split("n").map(a=>a.trim()).filter(a=>a);
+        alternativas = document.getElementById("alternativasTexto").value.split("\n").map(a=>a.trim()).filter(a=>a);
       } else {
         const filesAlternativas = document.getElementById("uploadAlternativasImg").files;
         
@@ -828,11 +814,4 @@ window.fecharConfig = fecharConfig;
 window.uploadLogo = uploadLogo;
 window.salvarConfig = salvarConfig;
 window.sair = sair;
-
-
-
-
-
-
-
 

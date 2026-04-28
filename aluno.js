@@ -16,7 +16,7 @@ const db = firebase.firestore();
 
 const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
 
-if (!usuario || usuario.role !== 'aluno' || usuario.ativo === false) {
+if (!usuario || usuario.role !== 'aluno') {
   window.location.href = 'index.html';
 }
 
@@ -138,15 +138,10 @@ async function enviarProva() {
   }
 
   try {
-    // Buscar nome da turma
-    const docTurma = await db.collection("turmas").doc(usuario.turmaId).get();
-    const nomeTurma = docTurma.exists ? docTurma.data().nome : "";
-
     await db.collection("respostas").add({
       alunoId: usuario.uid,
       aluno: usuario.nome,
-      turmaId: usuario.turmaId,
-      turmaNome: nomeTurma,
+      turma: usuario.turmaId,
       prova: provaAtual.nome,
       provaId,
       respostas,

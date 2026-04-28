@@ -31,50 +31,9 @@
   <iframe id="frame-criar" class="tab-frame" src="professor-criar.html" style="display:none;"></iframe>
 </main>
 
-<div class="modal-overlay" id="modalConfig">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title">Configurações do Cabeçalho</h3>
-      <button class="modal-close" onclick="fecharConfig()">&times;</button>
-    </div>
-    <div class="form-group">
-      <label>Nome da Escola</label>
-      <input id="cfgNomeEscola" placeholder="Escola Municipal...">
-    </div>
-    <div class="form-group">
-      <label>Endereço da Escola</label>
-      <input id="cfgEndereco" placeholder="Rua, número - Bairro - Cidade">
-    </div>
-    <div class="form-group">
-      <label>Logo (imagem)</label>
-      <input type="file" id="inputLogo" accept="image/*" onchange="uploadLogo()" style="padding:10px;">
-      <div id="previewLogo" style="margin-top:10px;"></div>
-    </div>
-    <div class="form-group">
-      <label>Nome do Professor</label>
-      <input id="cfgNomeProfessor" placeholder="Seu nome">
-    </div>
-    <div class="form-group">
-      <label>Texto Livre (opcional)</label>
-      <textarea id="cfgTextoLivre" placeholder="Ex.: Leia com atenção..."></textarea>
-    </div>
-    <div style="background:#e8f5e9;padding:15px;border-radius:8px;margin-top:15px;">
-      <p style="margin:0;font-size:13px;color:#2e7d32;">💡 Estes dados serão salvos e usados automaticamente em todos os PDFs que você gerar.</p>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-success" onclick="salvarConfig()">Salvar</button>
-      <button class="btn btn-secondary" onclick="fecharConfig()">Cancelar</button>
-    </div>
-  </div>
-</div>
-
 <script>
 let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
 if (!usuario || usuario.role !== "professor") {
-  window.location.href = "index.html";
-}
-if (usuario.ativo === false) {
-  localStorage.removeItem("usuario");
   window.location.href = "index.html";
 }
 document.getElementById("nomeProfessor").textContent = usuario.nome || "Professor";
@@ -120,19 +79,6 @@ function fecharConfig() {
   document.getElementById("modalConfig").classList.remove("active");
 }
 
-function carregarConfig() {
-  var config = JSON.parse(localStorage.getItem("configProfessor") || "null");
-  if (config) {
-    document.getElementById("cfgNomeEscola").value = config.nomeEscola || "";
-    document.getElementById("cfgEndereco").value = config.endereco || "";
-    document.getElementById("cfgNomeProfessor").value = config.nomeProfessor || "";
-    document.getElementById("cfgTextoLivre").value = config.textoLivre || "";
-    if (config.logoUrl) {
-      document.getElementById("previewLogo").innerHTML = '<img src="' + config.logoUrl + '" style="max-height:80px;">';
-    }
-  }
-}
-
 function salvarConfig() {
   var config = {
     nomeEscola: document.getElementById("cfgNomeEscola").value,
@@ -144,6 +90,19 @@ function salvarConfig() {
   localStorage.setItem("configProfessor", JSON.stringify(config));
   alert("Configurações salvas!");
   fecharConfig();
+}
+
+function carregarConfig() {
+  var config = JSON.parse(localStorage.getItem("configProfessor") || "null");
+  if (config) {
+    document.getElementById("cfgNomeEscola").value = config.nomeEscola || "";
+    document.getElementById("cfgEndereco").value = config.endereco || "";
+    document.getElementById("cfgNomeProfessor").value = config.nomeProfessor || "";
+    document.getElementById("cfgTextoLivre").value = config.textoLivre || "";
+    if (config.logoUrl) {
+      document.getElementById("previewLogo").innerHTML = '<img src="' + config.logoUrl + '" style="max-height:80px;">';
+    }
+  }
 }
 
 function uploadLogo() {
@@ -159,6 +118,43 @@ function uploadLogo() {
 
 var logoData = "";
 </script>
+
+<div class="modal-overlay" id="modalConfig">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Configurações do Cabeçalho</h3>
+      <button class="modal-close" onclick="fecharConfig()">&times;</button>
+    </div>
+    <div class="form-group">
+      <label>Nome da Escola</label>
+      <input id="cfgNomeEscola" placeholder="Escola Municipal...">
+    </div>
+    <div class="form-group">
+      <label>Endereço da Escola</label>
+      <input id="cfgEndereco" placeholder="Rua, número - Bairro - Cidade">
+    </div>
+    <div class="form-group">
+      <label>Logo (imagem)</label>
+      <input type="file" id="inputLogo" accept="image/*" onchange="uploadLogo()" style="padding:10px;">
+      <div id="previewLogo" style="margin-top:10px;"></div>
+    </div>
+    <div class="form-group">
+      <label>Nome do Professor</label>
+      <input id="cfgNomeProfessor" placeholder="Seu nome">
+    </div>
+    <div class="form-group">
+      <label>Texto Livre (opcional)</label>
+      <textarea id="cfgTextoLivre" placeholder="Ex.: Leia com atenção..."></textarea>
+    </div>
+    <div style="background:#e8f5e9;padding:15px;border-radius:8px;margin-top:15px;">
+      <p style="margin:0;font-size:13px;color:#2e7d32;">💡 Estes dados serão salvos e usados automaticamente em todos os PDFs que você gerar.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="salvarConfig()">Salvar</button>
+      <button class="btn btn-secondary" onclick="fecharConfig()">Cancelar</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>

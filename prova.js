@@ -17,14 +17,13 @@ const db = firebase.firestore();
 const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
 const provaId = localStorage.getItem('provaSelecionada');
 
-if (!usuario || usuario.role !== 'aluno' || !provaId || usuario.ativo === false) {
+if (!usuario || usuario.role !== 'aluno' || !provaId) {
   window.location.href = 'index.html';
 }
 
 let respostas = JSON.parse(localStorage.getItem("respostasTemp")) || {};
 let prova = null;
-let tempo = 0;
-let timer = null;
+let tempo = 600;
 
 function atualizarTempo() {
   tempo--;
@@ -35,16 +34,13 @@ function atualizarTempo() {
   }
 }
 
+const timer = setInterval(atualizarTempo, 1000);
+
 async function carregarProva() {
   try {
     const doc = await db.collection("simulados").doc(provaId).get();
     prova = doc.data();
     document.getElementById("titulo").innerText = prova.nome;
-
-    // Usa o tempo da prova, fallback 10 min se não definido
-    tempo = (prova.tempo || 10) * 60;
-    timer = setInterval(atualizarTempo, 1000);
-
     render();
   } catch (e) {
     console.error("Erro ao carregar prova:", e);
@@ -94,21 +90,14 @@ function salvar() {
 
 function atualizarBarra() {
   const total = prova.questoes.length;
-  const feitas = Object.keys(respostas).filter(i => respostas[i] !== "" && respostas[i] !== undefined && respostas[i] !== null).length;
+  const feitas = Object.keys(respostas).length;
   const porcentagem = (feitas / total) * 100;
   document.getElementById("barra").style.width = porcentagem + "%";
 }
 
 async function enviar() {
-  // Valida se todas as questões foram respondidas corretamente
-  if (!prova) {
-    return;
-  }
-
-  const total = prova.questoes.length;
-  const respondidas = Object.keys(respostas).filter(i => respostas[i] !== "" && respostas[i] !== undefined && respostas[i] !== null).length;
-
-  if (respondidas < total) {
+  // Valida se todas as questões foram respondidas
+  if (!prova || Object.keys(respostas).length < prova.questoes.length) {
     alert("Responda todas as questões antes de enviar!");
     return;
   }

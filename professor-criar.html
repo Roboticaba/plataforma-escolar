@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
@@ -14,7 +14,7 @@
     <div class="etapa-title">1. Dados da Prova</div>
     <div class="form-group">
       <label>Nome da Prova</label>
-      <input id="nomeProva" placeholder="Ex.: Avaliação de Matemática - 3º Bimestre">
+      <input id="nomeProva" placeholder="Ex.: AvaliaÃ§Ã£o de MatemÃ¡tica - 3Âº Bimestre">
     </div>
     <div class="form-row">
       <div class="form-col">
@@ -22,11 +22,11 @@
           <label>Ano</label>
           <select id="anoProva" onchange="atualizarDescritores()">
             <option value="">Selecione</option>
-            <option value="1">1º Ano</option>
-            <option value="2">2º Ano</option>
-            <option value="3">3º Ano</option>
-            <option value="4">4º Ano</option>
-            <option value="5">5º Ano</option>
+            <option value="1">1Âº Ano</option>
+            <option value="2">2Âº Ano</option>
+            <option value="3">3Âº Ano</option>
+            <option value="4">4Âº Ano</option>
+            <option value="5">5Âº Ano</option>
           </select>
         </div>
       </div>
@@ -35,15 +35,15 @@
           <label>Disciplina</label>
           <select id="disciplinaProva" onchange="atualizarDescritores()">
             <option value="">Selecione</option>
-            <option value="portugues">Português</option>
-            <option value="matematica">Matemática</option>
-            <option value="ciencias">Ciências</option>
-            <option value="historia">História</option>
+            <option value="portugues">PortuguÃªs</option>
+            <option value="matematica">MatemÃ¡tica</option>
+            <option value="ciencias">CiÃªncias</option>
+            <option value="historia">HistÃ³ria</option>
             <option value="geografia">Geografia</option>
             <option value="arte">Arte</option>
-            <option value="edfisica">Ed. Física</option>
-            <option value="ingles">Inglês</option>
-            <option value="robotica">Robótica</option>
+            <option value="edfisica">Ed. FÃ­sica</option>
+            <option value="ingles">InglÃªs</option>
+            <option value="robotica">RobÃ³tica</option>
           </select>
         </div>
       </div>
@@ -63,13 +63,13 @@
   </div>
 
   <div class="etapa">
-    <div class="etapa-title">2. Adicionar Questão</div>
+    <div class="etapa-title">2. Adicionar QuestÃ£o</div>
     <div class="form-row">
       <div class="form-col">
         <div class="form-group">
-          <label>Tipo de Questão</label>
+          <label>Tipo de QuestÃ£o</label>
           <select id="tipoQuestao" onchange="mudouTipoQuestao()">
-            <option value="multipla">Múltipla Escolha</option>
+            <option value="multipla">MÃºltipla Escolha</option>
             <option value="texto">Resposta Escrita</option>
           </select>
         </div>
@@ -94,7 +94,7 @@
         <option value="">Selecione</option>
       </select>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;">
-        <button type="button" class="btn btn-outline btn-sm" onclick="sugerirDescritorQuestao()">🔮 Sugerir descritor</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="sugerirDescritorQuestao()">ðŸ”® Sugerir descritor</button>
         <span id="statusDescritor" style="font-size:13px;color:#64748b;">Selecione disciplina e ano para ver os descritores.</span>
       </div>
     </div>
@@ -119,22 +119,22 @@
         <option value="3">(D)</option>
       </select>
     </div>
-    <button class="btn btn-success" onclick="adicionarQuestao()">➕ Adicionar Questão</button>
+    <button class="btn btn-success" onclick="adicionarQuestao()">âž• Adicionar QuestÃ£o</button>
   </div>
 
   <div class="etapa">
-    <div class="etapa-title">3. Questões Adicionadas</div>
-    <p id="resumoQuestoes" style="color:#64748b;margin-bottom:15px;">Nenhuma questão adicionada ainda.</p>
+    <div class="etapa-title">3. QuestÃµes Adicionadas</div>
+    <p id="resumoQuestoes" style="color:#64748b;margin-bottom:15px;">Nenhuma questÃ£o adicionada ainda.</p>
     <div id="listaQuestoes"></div>
   </div>
 
-  <button class="btn btn-success" style="width:100%;padding:15px;font-size:16px;" onclick="salvarProva()">💾 Salvar Prova</button>
+  <button class="btn btn-success" style="width:100%;padding:15px;font-size:16px;" onclick="salvarProva()">ðŸ’¾ Salvar Prova</button>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="html2pdf.bundle.min.js"></script>
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
@@ -154,19 +154,19 @@ let questoesTemp = [];
 let logoData = "";
 
 const descritoresPortugues = {
-  "1": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}],
-  "2": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}],
-  "3": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}],
-  "4": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}],
-  "5": [{c:"D01",n:"Localizar informações"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informação"},{c:"D08",n:"Causa/consequência"},{c:"D10",n:"Marcas linguísticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"Gênero do texto"}]
+  "1": [{c:"D01",n:"Localizar informaÃ§Ãµes"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informaÃ§Ã£o"},{c:"D08",n:"Causa/consequÃªncia"},{c:"D10",n:"Marcas linguÃ­sticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"GÃªnero do texto"}],
+  "2": [{c:"D01",n:"Localizar informaÃ§Ãµes"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informaÃ§Ã£o"},{c:"D08",n:"Causa/consequÃªncia"},{c:"D10",n:"Marcas linguÃ­sticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"GÃªnero do texto"}],
+  "3": [{c:"D01",n:"Localizar informaÃ§Ãµes"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informaÃ§Ã£o"},{c:"D08",n:"Causa/consequÃªncia"},{c:"D10",n:"Marcas linguÃ­sticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"GÃªnero do texto"}],
+  "4": [{c:"D01",n:"Localizar informaÃ§Ãµes"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informaÃ§Ã£o"},{c:"D08",n:"Causa/consequÃªncia"},{c:"D10",n:"Marcas linguÃ­sticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"GÃªnero do texto"}],
+  "5": [{c:"D01",n:"Localizar informaÃ§Ãµes"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informaÃ§Ã£o"},{c:"D08",n:"Causa/consequÃªncia"},{c:"D10",n:"Marcas linguÃ­sticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"GÃªnero do texto"}]
 };
 
 const descritoresMatematica = {
-  "1": [{c:"D01",n:"Ler números"},{c:"D02",n:"Ordenar"},{c:"D03",n:"Figuras"},{c:"D07",n:"Unidades"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}],
-  "2": [{c:"D01",n:"Ler números"},{c:"D02",n:"Ordenar"},{c:"D03",n:"Figuras"},{c:"D07",n:"Unidades"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}],
-  "3": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"Perímetro"},{c:"D12",n:"Área"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D19",n:"Problema"},{c:"D24",n:"Fração"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}],
-  "4": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"Perímetro"},{c:"D12",n:"Área"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D19",n:"Problema"},{c:"D24",n:"Fração"},{c:"D26",n:"Porcentagem"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}],
-  "5": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"Perímetro"},{c:"D12",n:"Área"},{c:"D17",n:"Adição/subtração"},{c:"D18",n:"Multiplicação"},{c:"D19",n:"Problema"},{c:"D24",n:"Fração"},{c:"D26",n:"Porcentagem"},{c:"D27",n:"Tabelas"},{c:"D28",n:"Gráficos"}]
+  "1": [{c:"D01",n:"Ler nÃºmeros"},{c:"D02",n:"Ordenar"},{c:"D03",n:"Figuras"},{c:"D07",n:"Unidades"},{c:"D17",n:"AdiÃ§Ã£o/subtraÃ§Ã£o"},{c:"D18",n:"MultiplicaÃ§Ã£o"},{c:"D27",n:"Tabelas"},{c:"D28",n:"GrÃ¡ficos"}],
+  "2": [{c:"D01",n:"Ler nÃºmeros"},{c:"D02",n:"Ordenar"},{c:"D03",n:"Figuras"},{c:"D07",n:"Unidades"},{c:"D17",n:"AdiÃ§Ã£o/subtraÃ§Ã£o"},{c:"D18",n:"MultiplicaÃ§Ã£o"},{c:"D27",n:"Tabelas"},{c:"D28",n:"GrÃ¡ficos"}],
+  "3": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"PerÃ­metro"},{c:"D12",n:"Ãrea"},{c:"D17",n:"AdiÃ§Ã£o/subtraÃ§Ã£o"},{c:"D18",n:"MultiplicaÃ§Ã£o"},{c:"D19",n:"Problema"},{c:"D24",n:"FraÃ§Ã£o"},{c:"D27",n:"Tabelas"},{c:"D28",n:"GrÃ¡ficos"}],
+  "4": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"PerÃ­metro"},{c:"D12",n:"Ãrea"},{c:"D17",n:"AdiÃ§Ã£o/subtraÃ§Ã£o"},{c:"D18",n:"MultiplicaÃ§Ã£o"},{c:"D19",n:"Problema"},{c:"D24",n:"FraÃ§Ã£o"},{c:"D26",n:"Porcentagem"},{c:"D27",n:"Tabelas"},{c:"D28",n:"GrÃ¡ficos"}],
+  "5": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"PerÃ­metro"},{c:"D12",n:"Ãrea"},{c:"D17",n:"AdiÃ§Ã£o/subtraÃ§Ã£o"},{c:"D18",n:"MultiplicaÃ§Ã£o"},{c:"D19",n:"Problema"},{c:"D24",n:"FraÃ§Ã£o"},{c:"D26",n:"Porcentagem"},{c:"D27",n:"Tabelas"},{c:"D28",n:"GrÃ¡ficos"}]
 };
 
 function atualizarDescritores() {
@@ -181,7 +181,7 @@ function atualizarDescritores() {
   
   if ((disc === "portugues" || disc === "matematica") && ano) {
     areaQ.style.display = "block";
-    status.textContent = "Descritores do " + ano + "º ano - " + (disc === "portugues" ? "Português" : "Matemática");
+    status.textContent = "Descritores do " + ano + "Âº ano - " + (disc === "portugues" ? "PortuguÃªs" : "MatemÃ¡tica");
     var lista = disc === "portugues" ? descritoresPortugues[ano] : descritoresMatematica[ano];
     if (lista) {
       lista.forEach(function(d) {
@@ -196,33 +196,33 @@ function atualizarDescritores() {
 
 const DESCRIPTOR_HINTS = {
   "portugues": {
-    "D01": ["localizar", "encontrar", "informação explícita", "quem", "quando", "onde", "quanto", "número", "data", "nome", "fato"],
-    "D03": ["inferir", "significado implícito", "deduzir", "sentido oculto", "não diz", "mas sugere", "indica que"],
-    "D04": ["inferir", "informação", "conclusão", "possível", "provável", "pode ser", "seria"],
-    "D05": ["gráfico", "tabela", "infográfico", "interpretar dados"],
-    "D08": ["causa", "consequência", "porque", "resultado", "por isso", "então", "assim", "consequentemente"],
-    "D10": ["linguagem", "marcas linguísticas", "registro", "formal", "informal", "termo", "vocábulo", "palavra"],
-    "D14": ["pontuação", "ponto final", "vírgula", "exclamação", "interrogação", "efeito", "entonação"],
-    "D15": ["comparar", "diferença", "semelhança", "contraste", "igual", "diferente", "ambos"],
-    "D23": ["gênero", "tipo de texto", "texto narrativo", "dissertativo", "argumentativo", "jornal", "reportagem"]
+    "D01": ["localizar", "encontrar", "informaÃ§Ã£o explÃ­cita", "quem", "quando", "onde", "quanto", "nÃºmero", "data", "nome", "fato"],
+    "D03": ["inferir", "significado implÃ­cito", "deduzir", "sentido oculto", "nÃ£o diz", "mas sugere", "indica que"],
+    "D04": ["inferir", "informaÃ§Ã£o", "conclusÃ£o", "possÃ­vel", "provÃ¡vel", "pode ser", "seria"],
+    "D05": ["grÃ¡fico", "tabela", "infogrÃ¡fico", "interpretar dados"],
+    "D08": ["causa", "consequÃªncia", "porque", "resultado", "por isso", "entÃ£o", "assim", "consequentemente"],
+    "D10": ["linguagem", "marcas linguÃ­sticas", "registro", "formal", "informal", "termo", "vocÃ¡bulo", "palavra"],
+    "D14": ["pontuaÃ§Ã£o", "ponto final", "vÃ­rgula", "exclamaÃ§Ã£o", "interrogaÃ§Ã£o", "efeito", "entonaÃ§Ã£o"],
+    "D15": ["comparar", "diferenÃ§a", "semelhanÃ§a", "contraste", "igual", "diferente", "ambos"],
+    "D23": ["gÃªnero", "tipo de texto", "texto narrativo", "dissertativo", "argumentativo", "jornal", "reportagem"]
   },
   "matematica": {
-    "D01": ["ler", "número", "escrever", "numeral", "quantidade"],
-    "D02": ["ordenar", "sequência", "crescente", "decrescente", "maior", "menor"],
-    "D03": ["figura", "forma", "geométrica", "desenho", "quadrado", "círculo"],
-    "D05": ["medida", "comprimento", "altura", "largura", "metro", "centímetro"],
+    "D01": ["ler", "nÃºmero", "escrever", "numeral", "quantidade"],
+    "D02": ["ordenar", "sequÃªncia", "crescente", "decrescente", "maior", "menor"],
+    "D03": ["figura", "forma", "geomÃ©trica", "desenho", "quadrado", "cÃ­rculo"],
+    "D05": ["medida", "comprimento", "altura", "largura", "metro", "centÃ­metro"],
     "D07": ["unidade", "medida", "quilo", "litro", "metro", "grama"],
-    "D10": ["dinheiro", "real", "centavo", "custo", "valor", "preço", "troco"],
-    "D11": ["perímetro", "contorno", "bordas", "volta"],
-    "D12": ["área", "superfície", "tamanho", "metro quadrado"],
-    "D17": ["adição", "soma", "subtração", "menos", "mais", "calcular"],
-    "D18": ["multiplicação", "vezes", "produto", "duas vezes", "três vezes"],
-    "D19": ["problema", "situação", "resolver", "cálculo"],
+    "D10": ["dinheiro", "real", "centavo", "custo", "valor", "preÃ§o", "troco"],
+    "D11": ["perÃ­metro", "contorno", "bordas", "volta"],
+    "D12": ["Ã¡rea", "superfÃ­cie", "tamanho", "metro quadrado"],
+    "D17": ["adiÃ§Ã£o", "soma", "subtraÃ§Ã£o", "menos", "mais", "calcular"],
+    "D18": ["multiplicaÃ§Ã£o", "vezes", "produto", "duas vezes", "trÃªs vezes"],
+    "D19": ["problema", "situaÃ§Ã£o", "resolver", "cÃ¡lculo"],
     "D23": ["dinheiro", "real", "centavo", "compra", "venda"],
-    "D24": ["fração", "meio", "metade", "terço", "quarto", "parte"],
+    "D24": ["fraÃ§Ã£o", "meio", "metade", "terÃ§o", "quarto", "parte"],
     "D26": ["porcentagem", "por cento", "desconto", "aumento", "%"],
     "D27": ["tabela", "dados", "organizar", "linha", "coluna"],
-    "D28": ["gráfico", "coluna", "barra", "linha", "interpretar"]
+    "D28": ["grÃ¡fico", "coluna", "barra", "linha", "interpretar"]
   }
 };
 
@@ -259,9 +259,9 @@ function sugerirDescritorQuestao() {
   var resultado = classifyDescriptorAutomatically(textoQuestao, disc, ano);
   if (resultado) {
     document.getElementById("descritorQuestao").value = resultado.c + "|" + resultado.n;
-    alert("Sugestão: " + resultado.c + " - " + resultado.n);
+    alert("SugestÃ£o: " + resultado.c + " - " + resultado.n);
   } else {
-    alert("Nenhum descritor encontrado para este conteúdo. Você pode selecionar manualmente.");
+    alert("Nenhum descritor encontrado para este conteÃºdo. VocÃª pode selecionar manualmente.");
   }
 }
 
@@ -330,9 +330,9 @@ async function adicionarQuestao() {
     document.getElementById("pergunta").value = "";
     document.getElementById("alternativasTexto").value = "";
     renderQuestoes();
-    alert("Questão adicionada!");
+    alert("QuestÃ£o adicionada!");
   } catch (e) {
-    alert("Erro ao adicionar questão: " + e.message);
+    alert("Erro ao adicionar questÃ£o: " + e.message);
   }
 }
 
@@ -341,17 +341,17 @@ function renderQuestoes() {
   var resumo = document.getElementById("resumoQuestoes");
   
   if (questoesTemp.length === 0) {
-    resumo.textContent = "Nenhuma questão adicionada ainda.";
+    resumo.textContent = "Nenhuma questÃ£o adicionada ainda.";
     lista.innerHTML = "";
     return;
   }
   
   var letras = ["A","B","C","D"];
-  resumo.textContent = questoesTemp.length + " questão(ões) adicionada(s)";
+  resumo.textContent = questoesTemp.length + " questÃ£o(Ãµes) adicionada(s)";
   lista.innerHTML = "";
   questoesTemp.forEach(function(q, i) {
     var html = '<div style="background:white;border-radius:8px;padding:15px;margin-bottom:10px;border:1px solid #e2e8f0;">';
-    html += '<div style="display:flex;justify-content:space-between;margin-bottom:10px;"><span style="font-weight:600;">Questão ' + (i+1) + '</span><button onclick="removerQuestao(' + i + ')" style="background:#ef4444;color:white;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;">✕</button></div>';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:10px;"><span style="font-weight:600;">QuestÃ£o ' + (i+1) + '</span><button onclick="removerQuestao(' + i + ')" style="background:#ef4444;color:white;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;">âœ•</button></div>';
     html += '<div style="font-size:14px;">' + q.pergunta + '</div>';
     if (q.alternativas && q.alternativas.length > 0) {
       html += '<div style="margin-top:10px;font-size:13px;">';
@@ -378,7 +378,7 @@ async function salvarProva() {
   var valor = parseFloat(document.getElementById("valorProva").value.replace(",", ".")) || 10;
   
   if (!nome || !ano || !disc) { alert("Preencha nome, ano e disciplina"); return; }
-  if (questoesTemp.length === 0) { alert("Adicione pelo menos uma questão"); return; }
+  if (questoesTemp.length === 0) { alert("Adicione pelo menos uma questÃ£o"); return; }
   
   try {
     await db.collection("simulados").add({

@@ -18,7 +18,7 @@ const auth = firebase.auth();
 // Verificar se é aluno
 const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
 
-if (!usuario || usuario.role !== 'aluno' || usuario.ativo === false) {
+if (!usuario || usuario.role !== 'aluno') {
   window.location.href = 'index.html';
 }
 
