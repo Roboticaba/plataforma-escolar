@@ -11,8 +11,17 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
+function escapeHtml(str) {
+  if (!str) return "";
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
 let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
 if (!usuario || usuario.role !== "professor") {
+  window.location.href = "index.html";
+}
+if (usuario.ativo === false) {
+  localStorage.removeItem("usuario");
   window.location.href = "index.html";
 }
 
@@ -82,7 +91,18 @@ function trocarAbaCriar() {
   questoesTemp = [];
 }
 
-async function criarTurma() {
+async function trocarAba(aba) {
+  document.getElementById("section-turmas").style.display = "none";
+  document.getElementById("section-banco").style.display = "none";
+  document.getElementById("section-criar").style.display = "none";
+  document.getElementById("section-" + aba).style.display = "block";
+  document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+  document.querySelector("[data-tab='" + aba + "']").classList.add("active");
+  if (aba === "banco") filtrarProvas();
+  else if (aba === "turmas") carregarTurmas();
+}
+
+function criarTurma() {
   const nome = prompt("Nome da turma:");
   if (!nome) return;
   try {
@@ -214,7 +234,7 @@ async function removerAluno(index) {
   await db.collection("turmas").doc(turmaAtualId).update({ alunos: updatedAlunos });
 
   if (alunoToRemove.uid) {
-    await db.collection("users").doc(alunoToRemove.uid).delete();
+    await db.collection("users").doc(alunoToRemove.uid).update({ ativo: false });
   }
 
   carregarDadosTurma();
@@ -345,11 +365,11 @@ async function verProva(id) {
   
   (p.questoes || []).forEach((q,i) => {
     html += `<div class="questao-card">
-      <div style="font-weight:600;margin-bottom:8px;">Questão ${i+1} ${q.descritor ? `<span class="badge badge-green">${q.descritor}</span>` : ""}</div>
-      ${q.textoAntes ? `<p style="font-style:italic;">${q.textoAntes}</p>` : ""}
+      <div style="font-weight:600;margin-bottom:8px;">Questão ${i+1} ${q.descritor ? `<span class="badge badge-green">${escapeHtml(q.descritor)}</span>` : ""}</div>
+      ${q.textoAntes ? `<p style="font-style:italic;">${escapeHtml(q.textoAntes)}</p>` : ""}
       ${q.imagens && q.imagens.length ? q.imagens.map(img=>`<img src="${img}" style="max-height:100px;margin:5px 0;display:block;">`).join("") : ""}
-      <p><b>${q.pergunta}</b></p>
-      ${q.alternativas ? q.alternativas.map((a,j) => `<div>(${letras[j]}) ${a}</div>`).join("") : "<i>Resposta discursiva</i>"}
+      <p><b>${escapeHtml(q.pergunta)}</b></p>
+      ${q.alternativas ? q.alternativas.map((a,j) => `<div>(${letras[j]}) ${escapeHtml(a)}</div>`).join("") : "<i>Resposta discursiva</i>"}
     </div>`;
   });
   

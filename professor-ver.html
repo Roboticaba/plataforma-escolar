@@ -7,7 +7,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
@@ -108,7 +108,7 @@ async function carregarProva() {
     });
     
     if (questoes.length === 0) {
-      listaQuestoes.innerHTML = "<div style=""color:#64748b;text-align:center;padding:30px;"">Nenhuma quest�o adicionada nesta prova.</div>";
+      listaQuestoes.innerHTML = '<div style="color:#64748b;text-align:center;padding:30px;">Nenhuma questão adicionada nesta prova.</div>';
     }
   } catch (e) {
     document.getElementById("loading").style.display = "none";
