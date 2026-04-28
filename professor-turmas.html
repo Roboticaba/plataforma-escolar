@@ -145,7 +145,7 @@ carregarTurmas();
   <div class="modal">
     <div class="modal-header">
       <h3 class="modal-title" id="tituloTurma">Turma</h3>
-      <button class="modal-close" onclick="fecharTurma()">&times;</button>
+      <button class="modal-close" onclick="console.log('fechar clicked'); document.getElementById('modalTurma').style.display='none';">&times;</button>
     </div>
     <div style="display:flex;gap:10px;margin-bottom:15px;">
       <input id="nomeAlunoinput" placeholder="Nome do aluno" style="flex:2;padding:8px;">
