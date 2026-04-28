@@ -67,9 +67,13 @@ async function carregarTurmas() {
 }
 
 function abrirTurma(id, nome) {
+  console.log("Abrir turma:", id, nome);
   turmaAtualId = id;
   document.getElementById("tituloTurma").textContent = nome;
-  document.getElementById("modalTurma").classList.add("active");
+  var modal = document.getElementById("modalTurma");
+  console.log("Modal element:", modal);
+  modal.classList.add("active");
+  console.log("Modal class after:", modal.className);
   carregarDadosTurma();
 }
 
@@ -135,6 +139,12 @@ async function limparSenhasLegadas() {
 }
 
 carregarTurmas();
+
+// Debug global
+window.onerror = function(msg, url, line) {
+  alert("Erro: " + msg + " na linha " + line);
+  return false;
+};
 </script>
 
 <div class="modal-overlay" id="modalTurma" style="display:none;">
