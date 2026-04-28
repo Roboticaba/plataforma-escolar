@@ -254,12 +254,26 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #f1f5f
 
     <!-- ABA NOTAS -->
     <div id="aba-notas-turma" class="tab-content-inner">
-      <div style="padding:20px;text-align:center;color:#64748b;">Selecione uma prova para ver as notas dos alunos.</div>
+      <div class="form-group">
+        <label>Selecione a Prova</label>
+        <select id="selectProvaNotas" onchange="carregarNotasProva()">
+          <option value="">Selecione uma prova...</option>
+        </select>
+      </div>
+      <div id="lista-notas-turma">
+        <div style="padding:20px;text-align:center;color:#64748b;">Selecione uma prova para ver as notas.</div>
+      </div>
     </div>
 
     <!-- ABA RANKING -->
     <div id="aba-ranking-turma" class="tab-content-inner">
-      <div style="padding:20px;text-align:center;color:#64748b;">Em construção...</div>
+      <div id="ranking-turma">
+        <div style="padding:40px;text-align:center;color:#64748b;">
+          <div style="font-size:32px;margin-bottom:10px;">📊</div>
+          <div>Em breve: Ranking de notas dos alunos.</div>
+          <div style="font-size:13px;margin-top:10px;">Atribua notas nas provas para gerar o ranking.</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -484,11 +498,22 @@ async function carregarDadosTurma() {
 
   // Carregar provas atribuídas
   const listaProvas = document.getElementById('lista-provas-turma');
+  const selectProvaNotas = document.getElementById('selectProvaNotas');
   listaProvas.innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">Carregando...</div>';
+  selectProvaNotas.innerHTML = '<option value="">Carregando...</option>';
 
   try {
     const docTurma = await db.collection('turmas').doc(turmaAtualId).get();
     const provasIds = docTurma.data().provas || [];
+
+    // Update dropdown for notas
+    selectProvaNotas.innerHTML = '<option value="">Selecione uma prova...</option>';
+    for (const pid of provasIds) {
+      const dp = await db.collection('simulados').doc(pid).get();
+      if (dp.exists) {
+        selectProvaNotas.innerHTML += `<option value="${pid}">${dp.data().nome}</option>`;
+      }
+    }
 
     if (provasIds.length === 0) {
       listaProvas.innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">Nenhuma prova atribuída</div>';
@@ -535,31 +560,52 @@ async function adicionarAluno() {
   const email = nome.toLowerCase().replace(/\s+/g, '.') + '.aluno.' + turmaAtualId + '@plataforma.app';
 
   try {
-    const cred = await secondaryAuth.createUserWithEmailAndPassword(email, senha);
-    const uid = cred.user.uid;
+    // First, check if user already exists
+    const existingUser = await db.collection('users').where('email', '==', email).get();
 
-    await db.collection('users').doc(uid).set({
-      nome: nome,
-      role: 'aluno',
-      turmaId: turmaAtualId,
-      ativo: true,
-      email: email,
-      criarEm: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    if (!existingUser.empty) {
+      // User already exists - just add to this class
+      const uid = existingUser.docs[0].id;
+      await db.collection('turmas').doc(turmaAtualId).collection('alunos').doc(uid).set({
+        nome: nome,
+        email: email,
+        ativo: true,
+        dataIngresso: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await db.collection('users').doc(uid).update({
+        turmaId: turmaAtualId,
+        ativo: true
+      });
+      alert('Aluno adicionado à turma!');
+    } else {
+      // Create new user
+      const cred = await secondaryAuth.createUserWithEmailAndPassword(email, senha);
+      const uid = cred.user.uid;
 
-    await db.collection('turmas').doc(turmaAtualId).collection('alunos').doc(uid).set({
-      nome: nome,
-      email: email,
-      ativo: true,
-      dataIngresso: firebase.firestore.FieldValue.serverTimestamp()
-    });
+      await db.collection('users').doc(uid).set({
+        nome: nome,
+        role: 'aluno',
+        turmaId: turmaAtualId,
+        ativo: true,
+        email: email,
+        criarEm: firebase.firestore.FieldValue.serverTimestamp()
+      });
 
-    await secondaryAuth.signOut();
+      await db.collection('turmas').doc(turmaAtualId).collection('alunos').doc(uid).set({
+        nome: nome,
+        email: email,
+        ativo: true,
+        dataIngresso: firebase.firestore.FieldValue.serverTimestamp()
+      });
 
-    alert('Aluno criado! Email: ' + email);
+      await secondaryAuth.signOut();
+      alert('Aluno criado! Email: ' + email);
+    }
+
     ocultarFormAluno();
     carregarDadosTurma();
   } catch (err) {
+    console.error('Erro ao adicionar aluno:', err);
     alert('Erro: ' + err.message);
   }
 }
@@ -611,8 +657,7 @@ async function atribuirProva() {
   if (!pid || !turmaAtualId) return;
 
   try {
-    const turmasRef = db.collection('turmas').doc(turmaAtualId);
-    await turmasRef.update({
+    await db.collection('turmas').doc(turmaAtualId).update({
       provas: firebase.firestore.FieldValue.arrayUnion(pid)
     });
     ocultarAtribuirProva();
@@ -620,6 +665,67 @@ async function atribuirProva() {
   } catch (e) {
     alert('Erro: ' + e.message);
   }
+}
+
+async function carregarNotasProva() {
+  const pid = document.getElementById('selectProvaNotas').value;
+  const lista = document.getElementById('lista-notas-turma');
+
+  if (!pid) {
+    lista.innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">Selecione uma prova.</div>';
+    return;
+  }
+
+  lista.innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">Carregando...</div>';
+
+  try {
+    const snap = await db.collection('respostas').where('provaId', '==', pid).get();
+
+    if (snap.empty) {
+      lista.innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">Nenhuma resposta desta prova ainda.</div>';
+      return;
+    }
+
+    lista.innerHTML = '<table style="width:100%;border-collapse:collapse;"><tr style="background:#f8fafc;"><th style="padding:10px;text-align:left;">Aluno</th><th style="padding:10px;">Nota</th><th style="padding:10px;">Ações</th></tr>';
+
+    for (const doc of snap.docs) {
+      const r = doc.data();
+      const userDoc = await db.collection('users').doc(r.alunoId).get();
+      const alunoNome = userDoc.exists ? userDoc.data().nome : 'Desconhecido';
+
+      lista.innerHTML += `<tr style="border-bottom:1px solid #e2e8f0;">
+        <td style="padding:10px;">${escapeHtml(alunoNome)}</td>
+        <td style="padding:10px;text-align:center;">
+          <input type="number" step="0.1" min="0" max="10" value="${r.nota || ''}" style="width:60px;padding:5px;" id="nota-${doc.id}" />
+        </td>
+        <td style="padding:10px;text-align:center;">
+          <button class="btn btn-primary btn-sm" onclick="salvarNota('${doc.id}')">Salvar</button>
+        </td>
+      </tr>`;
+    }
+    lista.innerHTML += '</table>';
+  } catch (e) {
+    lista.innerHTML = '<div style="padding:20px;text-align:center;color:#ef4444;">Erro: ' + e.message + '</div>';
+  }
+}
+
+async function salvarNota(respostaId) {
+  const nota = parseFloat(document.getElementById('nota-' + respostaId).value);
+  if (isNaN(nota)) {
+    alert('Digite uma nota válida');
+    return;
+  }
+  try {
+    await db.collection('respostas').doc(respostaId).update({
+      nota: nota,
+      corrigida: true,
+      dataCorrecao: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alert('Nota salva!');
+  } catch (e) {
+    alert('Erro: ' + e.message);
+  }
+}
 }
 
 async function removerProvaTurma(pid) {
