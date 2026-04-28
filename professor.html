@@ -4,8 +4,12 @@
 <meta charset="UTF-8">
 <title>Painel do Professor</title>
 <link rel="stylesheet" href="professor-styles.css">
+<style>
+.tab-frame { width: 100%; height: calc(100vh - 130px); border: none; }
+</style>
 </head>
 <body>
+
 <header class="header">
   <h1 class="logo">📚 Plataforma Escolar</h1>
   <div class="header-actions">
@@ -16,102 +20,21 @@
 </header>
 
 <nav class="tabs">
-  <button class="tab active" id="tab-turmas" onclick="mostrarAba('turmas')">📚 Turmas</button>
-  <button class="tab" id="tab-banco" onclick="mostrarAba('banco')">📋 Banco de Provas</button>
-  <button class="tab" id="tab-criar" onclick="mostrarAba('criar')">➕ Criar Prova</button>
+  <button class="tab active" id="tab-turmas" onclick="mostrarTurmas()">📚 Turmas</button>
+  <button class="tab" id="tab-banco" onclick="mostrarBanco()">📋 Banco de Provas</button>
+  <button class="tab" id="tab-criar" onclick="mostrarCriar()">➕ Criar Prova</button>
 </nav>
 
 <main class="main">
-  <div id="aba-turmas" class="tab-content active">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-      <h2 class="page-title" style="margin:0;">Minhas Turmas</h2>
-      <button class="btn btn-primary" onclick="criarTurma()">➕ Criar Nova Turma</button>
-    </div>
-    <div id="lista-turmas">
-      <div class="empty-state"><div>📚</div><div>Carregando...</div></div>
-    </div>
-  </div>
-
-  <div id="aba-banco" class="tab-content" style="display:none;">
-    <h2 class="page-title">Banco de Provas</h2>
-    <div id="lista-provas">
-      <div class="empty-state"><div>📋</div><div>Carregando...</div></div>
-    </div>
-  </div>
-
-  <div id="aba-criar" class="tab-content" style="display:none;">
-    <h2 class="page-title">Criar Nova Prova</h2>
-    <div class="card">
-      <p>Funcionalidade em construção. Por enquanto use <a href="professor-criar.html">professor-criar.html</a></p>
-    </div>
-  </div>
+  <iframe id="frame-turmas" class="tab-frame" src="professor-turmas.html"></iframe>
+  <iframe id="frame-banco" class="tab-frame" src="professor-banco.html" style="display:none;"></iframe>
+  <iframe id="frame-criar" class="tab-frame" src="professor-criar.html" style="display:none;"></iframe>
 </main>
 
-<!-- MODAL TURMA -->
-<div class="modal-overlay" id="modalTurma">
-  <div class="modal" style="max-width:900px;">
-    <div class="modal-header">
-      <h3 class="modal-title" id="tituloTurmaModal">Turma</h3>
-      <button class="modal-close" onclick="fecharTurma()">&times;</button>
-    </div>
-    <div style="display:flex;border-bottom:1px solid #e2e8f0;margin-bottom:20px;">
-      <button class="tab" style="padding:12px 20px;" id="tab-alunos" onclick="mostrarAbaInterna('alunos')">Alunos</button>
-      <button class="tab" style="padding:12px 20px;" id="tab-provas" onclick="mostrarAbaInterna('provas')">Provas</button>
-      <button class="tab" style="padding:12px 20px;" id="tab-notas" onclick="mostrarAbaInterna('notas')">Notas</button>
-      <button class="tab" style="padding:12px 20px;" id="tab-ranking" onclick="mostrarAbaInterna('ranking')">Ranking</button>
-    </div>
-
-    <div id="content-alunos" class="aba-conteudo">
-      <button class="btn btn-primary btn-sm" onclick="mostrarFormAluno()" style="margin-bottom:15px;">➕ Adicionar Aluno</button>
-      <div id="form-aluno" style="display:none;background:#f8fafc;padding:15px;border-radius:8px;margin-bottom:15px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div class="form-group">
-            <label>Nome</label>
-            <input id="input-nome-aluno" placeholder="Nome completo">
-          </div>
-          <div class="form-group">
-            <label>Senha</label>
-            <input id="input-senha-aluno" type="password" placeholder="Senha">
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;">
-          <button class="btn btn-primary btn-sm" onclick="salvarAluno()">Salvar</button>
-          <button class="btn btn-outline btn-sm" onclick="esconderFormAluno()">Cancelar</button>
-        </div>
-      </div>
-      <div id="lista-alunos">Carregando...</div>
-    </div>
-
-    <div id="content-provas" class="aba-conteudo" style="display:none;">
-      <button class="btn btn-primary btn-sm" onclick="mostrarFormProva()" style="margin-bottom:15px;">➕ Atribuir Prova</button>
-      <div id="form-prova" style="display:none;background:#f8fafc;padding:15px;border-radius:8px;margin-bottom:15px;">
-        <div class="form-group">
-          <label>Selecionar Prova</label>
-          <select id="select-prova-atribuir"></select>
-        </div>
-        <div style="display:flex;gap:10px;">
-          <button class="btn btn-primary btn-sm" onclick="atribuirProva()">Atribuir</button>
-          <button class="btn btn-outline btn-sm" onclick="esconderFormProva()">Cancelar</button>
-        </div>
-      </div>
-      <div id="lista-provas-turma">Nenhuma prova atribuída</div>
-    </div>
-
-    <div id="content-notas" class="aba-conteudo" style="display:none;">
-      <div id="lista-notas">Selecione uma prova para ver as notas</div>
-    </div>
-
-    <div id="content-ranking" class="aba-conteudo" style="display:none;">
-      <div style="padding:40px;text-align:center;color:#64748b;">Em breve: Ranking de notas</div>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL CONFIG -->
 <div class="modal-overlay" id="modalConfig">
   <div class="modal">
     <div class="modal-header">
-      <h3 class="modal-title">Configurações</h3>
+      <h3 class="modal-title">Configurações do Cabeçalho</h3>
       <button class="modal-close" onclick="fecharConfig()">&times;</button>
     </div>
     <div class="form-group">
@@ -119,40 +42,33 @@
       <input id="cfgNomeEscola" placeholder="Escola Municipal...">
     </div>
     <div class="form-group">
-      <label>Endereço</label>
+      <label>Endereço da Escola</label>
       <input id="cfgEndereco" placeholder="Rua, número - Bairro - Cidade">
+    </div>
+    <div class="form-group">
+      <label>Logo (imagem)</label>
+      <input type="file" id="inputLogo" accept="image/*" onchange="uploadLogo()" style="padding:10px;">
+      <div id="previewLogo" style="margin-top:10px;"></div>
     </div>
     <div class="form-group">
       <label>Nome do Professor</label>
       <input id="cfgNomeProfessor" placeholder="Seu nome">
     </div>
+    <div class="form-group">
+      <label>Texto Livre (opcional)</label>
+      <textarea id="cfgTextoLivre" placeholder="Ex.: Leia com atenção..."></textarea>
+    </div>
+    <div style="background:#e8f5e9;padding:15px;border-radius:8px;margin-top:15px;">
+      <p style="margin:0;font-size:13px;color:#2e7d32;">💡 Estes dados serão salvos e usados automaticamente em todos os PDFs que você gerar.</p>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-success" onclick="salvarConfig()">Salvar</button>
-      <button class="btn btn-outline" onclick="fecharConfig()">Cancelar</button>
+      <button class="btn btn-secondary" onclick="fecharConfig()">Cancelar</button>
     </div>
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script>
-// Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
-  authDomain: "plataforma-escolar-71635.firebaseapp.com",
-  projectId: "plataforma-escolar-71635",
-  storageBucket: "plataforma-escolar-71635.firebasestorage.app",
-  messagingSenderId: "194897243209",
-  appId: "1:194897243209:web:ff339bee22bced4098e398"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const auth = firebase.auth();
-const secondaryApp = firebase.initializeApp(firebaseConfig, 'secondary');
-const secondaryAuth = secondaryApp.auth();
-
-// Usuario
 let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
 if (!usuario || usuario.role !== "professor") {
   window.location.href = "index.html";
@@ -163,237 +79,86 @@ if (usuario.ativo === false) {
 }
 document.getElementById("nomeProfessor").textContent = usuario.nome || "Professor";
 
-// Variaveis
-let turmaAtualId = null;
-
-// Navegação
-function mostrarAba(aba) {
-  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + aba).classList.add('active');
-  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-  document.getElementById('aba-' + aba).style.display = 'block';
-  if (aba === 'turmas') carregarTurmas();
-  if (aba === 'banco') filtrarProvas();
+function mostrarTurmas() {
+  document.getElementById("tab-turmas").classList.add("active");
+  document.getElementById("tab-banco").classList.remove("active");
+  document.getElementById("tab-criar").classList.remove("active");
+  document.getElementById("frame-turmas").style.display = "block";
+  document.getElementById("frame-banco").style.display = "none";
+  document.getElementById("frame-criar").style.display = "none";
 }
 
-function mostrarAbaInterna(aba) {
-  document.querySelectorAll('#modalTurma .tab').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + aba).classList.add('active');
-  document.querySelectorAll('.aba-conteudo').forEach(c => c.style.display = 'none');
-  document.getElementById('content-' + aba).style.display = 'block';
+function mostrarBanco() {
+  document.getElementById("tab-turmas").classList.remove("active");
+  document.getElementById("tab-banco").classList.add("active");
+  document.getElementById("tab-criar").classList.remove("active");
+  document.getElementById("frame-turmas").style.display = "none";
+  document.getElementById("frame-banco").style.display = "block";
+  document.getElementById("frame-criar").style.display = "none";
+}
+
+function mostrarCriar() {
+  document.getElementById("tab-turmas").classList.remove("active");
+  document.getElementById("tab-banco").classList.remove("active");
+  document.getElementById("tab-criar").classList.add("active");
+  document.getElementById("frame-turmas").style.display = "none";
+  document.getElementById("frame-banco").style.display = "none";
+  document.getElementById("frame-criar").style.display = "block";
 }
 
 function sair() {
-  localStorage.removeItem('usuario');
-  window.location.href = 'index.html';
+  localStorage.removeItem("usuario");
+  window.location.href = "index.html";
 }
 
-// Config
 function abrirConfig() {
-  document.getElementById('modalConfig').classList.add('active');
-  const config = JSON.parse(localStorage.getItem('configProfessor') || 'null');
+  document.getElementById("modalConfig").classList.add("active");
+  carregarConfig();
+}
+
+function fecharConfig() {
+  document.getElementById("modalConfig").classList.remove("active");
+}
+
+function carregarConfig() {
+  var config = JSON.parse(localStorage.getItem("configProfessor") || "null");
   if (config) {
-    document.getElementById('cfgNomeEscola').value = config.nomeEscola || '';
-    document.getElementById('cfgEndereco').value = config.endereco || '';
-    document.getElementById('cfgNomeProfessor').value = config.nomeProfessor || '';
+    document.getElementById("cfgNomeEscola").value = config.nomeEscola || "";
+    document.getElementById("cfgEndereco").value = config.endereco || "";
+    document.getElementById("cfgNomeProfessor").value = config.nomeProfessor || "";
+    document.getElementById("cfgTextoLivre").value = config.textoLivre || "";
+    if (config.logoUrl) {
+      document.getElementById("previewLogo").innerHTML = '<img src="' + config.logoUrl + '" style="max-height:80px;">';
+    }
   }
 }
-function fecharConfig() { document.getElementById('modalConfig').classList.remove('active'); }
+
 function salvarConfig() {
-  const config = {
-    nomeEscola: document.getElementById('cfgNomeEscola').value,
-    endereco: document.getElementById('cfgEndereco').value,
-    nomeProfessor: document.getElementById('cfgNomeProfessor').value
+  var config = {
+    nomeEscola: document.getElementById("cfgNomeEscola").value,
+    endereco: document.getElementById("cfgEndereco").value,
+    logoUrl: logoData,
+    nomeProfessor: document.getElementById("cfgNomeProfessor").value,
+    textoLivre: document.getElementById("cfgTextoLivre").value
   };
-  localStorage.setItem('configProfessor', JSON.stringify(config));
-  alert('Salvo!');
+  localStorage.setItem("configProfessor", JSON.stringify(config));
+  alert("Configurações salvas!");
   fecharConfig();
 }
 
-// Turmas
-async function carregarTurmas() {
-  const lista = document.getElementById('lista-turmas');
-  lista.innerHTML = '<div class="empty-state"><div>📚</div><div>Carregando...</div></div>';
-  try {
-    const snap = await db.collection('turmas').get();
-    const turmas = snap.docs.filter(d => d.data().criadoPor === usuario.uid);
-    if (turmas.length === 0) {
-      lista.innerHTML = '<div class="empty-state"><div>📚</div><div>Nenhuma turma</div><div>Crie sua primeira turma</div></div>';
-      return;
-    }
-    lista.innerHTML = '';
-    turmas.forEach(doc => {
-      const t = doc.data();
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:600;">' + (t.nome || 'Sem nome') + '</div><div style="font-size:13px;color:#64748b;">' + (t.alunos || []).length + ' alunos • ' + (t.provas || []).length + ' provas' + '</div></div><div style="display:flex;gap:8px;"><button class="btn btn-primary btn-sm" onclick="abrirTurma(\'' + doc.id + '\',\'' + (t.nome || '') + '\')">Gerenciar</button><button class="btn btn-danger btn-sm" onclick="excluirTurma(\'' + doc.id + '\')">Excluir</button></div></div>';
-      lista.appendChild(card);
-    });
-  } catch (e) {
-    lista.innerHTML = '<div class="empty-state"><div>⚠️</div><div>Erro: ' + e.message + '</div></div>';
-  }
+function uploadLogo() {
+  var file = document.getElementById("inputLogo").files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    logoData = e.target.result;
+    document.getElementById("previewLogo").innerHTML = '<img src="' + logoData + '" style="max-height:80px;">';
+  };
+  reader.readAsDataURL(file);
 }
 
-async function criarTurma() {
-  const nome = prompt('Nome da turma:');
-  if (!nome) return;
-  let ano = 1;
-  const match = nome.match(/(\d+)/);
-  if (match) ano = parseInt(match[1]);
-  try {
-    await db.collection('turmas').add({ nome, ano, alunos: [], provas: [], criadoPor: usuario.uid });
-    carregarTurmas();
-  } catch (e) { alert('Erro: ' + e.message); }
-}
-
-async function excluirTurma(id) {
-  if (!confirm('Excluir turma?')) return;
-  await db.collection('turmas').doc(id).delete();
-  carregarTurmas();
-}
-
-// Modal Turma
-function abrirTurma(id, nome) {
-  turmaAtualId = id;
-  document.getElementById('tituloTurmaModal').textContent = nome;
-  document.getElementById('modalTurma').classList.add('active');
-  mostrarAbaInterna('alunos');
-  carregarAlunos();
-  carregarProvasTurma();
-}
-
-function fecharTurma() {
-  document.getElementById('modalTurma').classList.remove('active');
-  turmaAtualId = null;
-}
-
-// Alunos
-function mostrarFormAluno() { document.getElementById('form-aluno').style.display = 'block'; }
-function esconderFormAluno() {
-  document.getElementById('form-aluno').style.display = 'none';
-  document.getElementById('input-nome-aluno').value = '';
-  document.getElementById('input-senha-aluno').value = '';
-}
-
-async function carregarAlunos() {
-  const lista = document.getElementById('lista-alunos');
-  if (!turmaAtualId) return;
-  lista.innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">Carregando...</div>';
-  try {
-    const snap = await db.collection('turmas').doc(turmaAtualId).collection('alunos').get();
-    if (snap.empty) {
-      lista.innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">Nenhum aluno</div>';
-    } else {
-      lista.innerHTML = '';
-      snap.forEach(doc => {
-        const a = doc.data();
-        const div = document.createElement('div');
-        div.className = 'list-item';
-        div.innerHTML = '<div><strong>' + (a.nome || '') + '</strong> <span style="font-size:12px;color:#64748b;">' + (a.email || '') + '</span></div><div><button class="btn btn-danger btn-sm" onclick="removerAluno(\'' + doc.id + '\')">X</button></div>';
-        lista.appendChild(div);
-      });
-    }
-  } catch (e) { lista.innerHTML = '<div style="color:#ef4444;">Erro: ' + e.message + '</div>'; }
-}
-
-async function salvarAluno() {
-  if (!turmaAtualId) return;
-  const nome = document.getElementById('input-nome-aluno').value.trim();
-  const senha = document.getElementById('input-senha-aluno').value.trim();
-  if (!nome || !senha) { alert('Preencha nome e senha'); return; }
-  const email = nome.toLowerCase().replace(/\s+/g, '.') + '.aluno.' + turmaAtualId + '@plataforma.app';
-  try {
-    const cred = await secondaryAuth.createUserWithEmailAndPassword(email, senha);
-    const uid = cred.user.uid;
-    await db.collection('users').doc(uid).set({ nome, role: 'aluno', turmaId: turmaAtualId, ativo: true, email });
-    await db.collection('turmas').doc(turmaAtualId).collection('alunos').doc(uid).set({ nome, email, ativo: true });
-    await secondaryAuth.signOut();
-    alert('Aluno criado: ' + email);
-    esconderFormAluno();
-    carregarAlunos();
-  } catch (e) { alert('Erro: ' + e.message); }
-}
-
-async function removerAluno(uid) {
-  if (!confirm('Remover aluno?')) return;
-  try {
-    await db.collection('users').doc(uid).update({ ativo: false });
-    await db.collection('turmas').doc(turmaAtualId).collection('alunos').doc(uid).delete();
-    carregarAlunos();
-  } catch (e) { alert('Erro: ' + e.message); }
-}
-
-// Provas da Turma
-function mostrarFormProva() { document.getElementById('form-prova').style.display = 'block'; }
-function esconderFormProva() { document.getElementById('form-prova').style.display = 'none'; }
-
-async function carregarProvasTurma() {
-  const lista = document.getElementById('lista-provas-turma');
-  if (!turmaAtualId) return;
-  lista.innerHTML = 'Carregando...';
-  try {
-    const docTurma = await db.collection('turmas').doc(turmaAtualId).get();
-    const provasIds = docTurma.data().provas || [];
-    if (provasIds.length === 0) {
-      lista.innerHTML = 'Nenhuma prova atribuída';
-      return;
-    }
-    lista.innerHTML = '';
-    for (const pid of provasIds) {
-      const dp = await db.collection('simulados').doc(pid).get();
-      if (dp.exists) {
-        const div = document.createElement('div');
-        div.className = 'list-item';
-        div.innerHTML = '<div>' + dp.data().nome + '</div><button class="btn btn-danger btn-sm" onclick="removerProvaTurma(\'' + pid + '\')">X</button>';
-        lista.appendChild(div);
-      }
-    }
-  } catch (e) { lista.innerHTML = 'Erro: ' + e.message; }
-}
-
-async function atribuirProva() {
-  const pid = document.getElementById('select-prova-atribuir').value;
-  if (!pid) return;
-  try {
-    await db.collection('turmas').doc(turmaAtualId).update({ provas: firebase.firestore.FieldValue.arrayUnion(pid) });
-    esconderFormProva();
-    carregarProvasTurma();
-  } catch (e) { alert('Erro: ' + e.message); }
-}
-
-async function removerProvaTurma(pid) {
-  if (!confirm('Remover?')) return;
-  try {
-    await db.collection('turmas').doc(turmaAtualId).update({ provas: firebase.firestore.FieldValue.arrayRemove(pid) });
-    carregarProvasTurma();
-  } catch (e) { alert('Erro: ' + e.message); }
-}
-
-// Banco de Provas
-async function filtrarProvas() {
-  const lista = document.getElementById('lista-provas');
-  lista.innerHTML = '<div class="empty-state"><div>📋</div><div>Carregando...</div></div>';
-  try {
-    const snap = await db.collection('simulados').where('criadoPor', '==', usuario.uid).get();
-    if (snap.empty) {
-      lista.innerHTML = '<div class="empty-state"><div>📋</div><div>Nenhuma prova</div></div>';
-      return;
-    }
-    lista.innerHTML = '';
-    snap.docs.forEach(doc => {
-      const p = doc.data();
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = '<div style="display:flex;justify-content:space-between;"><div><div style="font-weight:600;">' + (p.nome || 'Sem nome') + '</div><div style="font-size:13px;color:#64748b;">' + (p.disciplina || '') + ' - ' + (p.ano || '') + 'º ano</div></div><button class="btn btn-primary btn-sm" onclick="verProva(\'' + doc.id + '\')">Ver</button></div>';
-      lista.appendChild(card);
-    });
-  } catch (e) { lista.innerHTML = '<div class="empty-state"><div>⚠️</div><div>Erro</div></div>'; }
-}
-
-function verProva(id) { window.open('professor-ver.html?id=' + id, '_blank'); }
-
-// Inicializar
-carregarTurmas();
+var logoData = "";
 </script>
+
 </body>
 </html>
