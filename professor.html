@@ -8,6 +8,55 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script>
+// Funções globais precisam estar antes de qualsquer uso
+function escapeHtml(str) {
+  if (!str) return "";
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+if (!usuario || usuario.role !== "professor") {
+  window.location.href = "index.html";
+}
+if (usuario.ativo === false) {
+  localStorage.removeItem("usuario");
+  window.location.href = "index.html";
+}
+
+function trocarAba(aba) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector('[data-aba="' + aba + '"]').classList.add('active');
+  document.getElementById('aba-' + aba).classList.add('active');
+
+  if (aba === 'turmas') carregarTurmas();
+  if (aba === 'banco') filtrarProvas();
+}
+
+function trocarAbaTurma(aba) {
+  document.querySelectorAll('.tab-inner').forEach(b => {
+    b.classList.remove('active');
+    b.style.color = '#64748b';
+    b.style.borderBottomColor = 'transparent';
+  });
+  document.querySelectorAll('.tab-content-inner').forEach(c => c.classList.remove('active'));
+  
+  const btn = document.querySelector('[data-aba="' + aba + '"]');
+  if (btn) {
+    btn.classList.add('active');
+    btn.style.color = '#3b82f6';
+    btn.style.borderBottomColor = '#3b82f6';
+  }
+  const content = document.getElementById('aba-' + aba + '-turma');
+  if (content) content.classList.add('active');
+}
+
+// Inicialização - após as funções
+document.addEventListener("DOMContentLoaded", function() {
+  document.getElementById("nomeProfessor").textContent = usuario.nome || "Professor";
+  carregarTurmas();
+});
+
 const firebaseConfig = {
   apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
   authDomain: "plataforma-escolar-71635.firebaseapp.com",
@@ -23,10 +72,9 @@ const auth = firebase.auth();
 const secondaryApp = firebase.initializeApp(firebaseConfig, 'secondary');
 const secondaryAuth = secondaryApp.auth();
 
-let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
-if (!usuario || usuario.role !== "professor") {
-  window.location.href = "index.html";
-}
+let turmaAtualId = null;
+let provaAtualId = null;
+let logoData = "";
 if (usuario.ativo === false) {
   localStorage.removeItem("usuario");
   window.location.href = "index.html";
@@ -465,26 +513,6 @@ function abrirTurma(id, nome) {
 function fecharModalTurma() {
   document.getElementById('modalTurma').classList.remove('active');
   turmaAtualId = null;
-}
-
-function trocarAbaTurma(aba) {
-  // Remove active from all inner tabs
-  document.querySelectorAll('.tab-inner').forEach(b => {
-    b.classList.remove('active');
-    b.style.color = '#64748b';
-    b.style.borderBottomColor = 'transparent';
-  });
-  document.querySelectorAll('.tab-content-inner').forEach(c => c.classList.remove('active'));
-  
-  // Add active to clicked
-  const btn = document.querySelector('[data-aba="' + aba + '"]');
-  if (btn) {
-    btn.classList.add('active');
-    btn.style.color = '#3b82f6';
-    btn.style.borderBottomColor = '#3b82f6';
-  }
-  const content = document.getElementById('aba-' + aba + '-turma');
-  if (content) content.classList.add('active');
 }
 
 async function carregarDadosTurma() {
