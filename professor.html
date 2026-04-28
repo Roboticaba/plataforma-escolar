@@ -203,11 +203,11 @@ body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #f1f5f
       <h3 class="modal-title" id="tituloTurmaModal">Turma</h3>
       <button class="modal-close" onclick="fecharModalTurma()">&times;</button>
     </div>
-    <div class="tabs-inner">
-      <button class="tab-inner active" data-aba="alunos" onclick="trocarAbaTurma('alunos')">Alunos</button>
-      <button class="tab-inner" data-aba="provas" onclick="trocarAbaTurma('provas')">Provas</button>
-      <button class="tab-inner" data-aba="notas" onclick="trocarAbaTurma('notas')">Notas</button>
-      <button class="tab-inner" data-aba="ranking" onclick="trocarAbaTurma('ranking')">Ranking</button>
+    <div class="tabs-inner" style="display:flex;gap:5px;margin-bottom:20px;border-bottom:1px solid #e2e8f0;">
+      <button class="tab-inner active" style="padding:12px 18px;background:none;border:none;cursor:pointer;font-size:14px;color:#64748b;border-bottom:2px solid transparent;" data-aba="alunos" onclick="trocarAbaTurma('alunos')">Alunos</button>
+      <button class="tab-inner" style="padding:12px 18px;background:none;border:none;cursor:pointer;font-size:14px;color:#64748b;border-bottom:2px solid transparent;" data-aba="provas" onclick="trocarAbaTurma('provas')">Provas</button>
+      <button class="tab-inner" style="padding:12px 18px;background:none;border:none;cursor:pointer;font-size:14px;color:#64748b;border-bottom:2px solid transparent;" data-aba="notas" onclick="trocarAbaTurma('notas')">Notas</button>
+      <button class="tab-inner" style="padding:12px 18px;background:none;border:none;cursor:pointer;font-size:14px;color:#64748b;border-bottom:2px solid transparent;" data-aba="ranking" onclick="trocarAbaTurma('ranking')">Ranking</button>
     </div>
 
     <!-- ABA ALUNOS -->
@@ -420,11 +420,23 @@ async function carregarTurmas() {
 }
 
 async function criarTurma() {
-  const nome = prompt('Nome da turma:');
+  const nome = prompt('Nome da turma (ex: 7º Ano A):');
   if (!nome) return;
+  
+  // Extraer anno do nome se possível
+  let ano = 1;
+  const match = nome.match(/(\d+)\s*º?\s*ano/i);
+  if (match) {
+    ano = parseInt(match[1]);
+  } else {
+    const anoInput = prompt('Ano/Série da turma (1-5):');
+    if (anoInput) ano = parseInt(anoInput);
+  }
+  
   try {
     await db.collection('turmas').add({
       nome: nome,
+      ano: ano,
       alunos: [],
       provas: [],
       criadoPor: usuario.uid,
@@ -456,10 +468,23 @@ function fecharModalTurma() {
 }
 
 function trocarAbaTurma(aba) {
-  document.querySelectorAll('.tab-inner').forEach(b => b.classList.remove('active'));
+  // Remove active from all inner tabs
+  document.querySelectorAll('.tab-inner').forEach(b => {
+    b.classList.remove('active');
+    b.style.color = '#64748b';
+    b.style.borderBottomColor = 'transparent';
+  });
   document.querySelectorAll('.tab-content-inner').forEach(c => c.classList.remove('active'));
-  document.querySelector('[data-aba="' + aba + '"]').classList.add('active');
-  document.getElementById('aba-' + aba + '-turma').classList.add('active');
+  
+  // Add active to clicked
+  const btn = document.querySelector('[data-aba="' + aba + '"]');
+  if (btn) {
+    btn.classList.add('active');
+    btn.style.color = '#3b82f6';
+    btn.style.borderBottomColor = '#3b82f6';
+  }
+  const content = document.getElementById('aba-' + aba + '-turma');
+  if (content) content.classList.add('active');
 }
 
 async function carregarDadosTurma() {
@@ -496,7 +521,7 @@ async function carregarDadosTurma() {
     listaAlunos.innerHTML = '<div style="padding:20px;text-align:center;color:#ef4444;">Erro: ' + e.message + '</div>';
   }
 
-  // Carregar provas atribuídas
+  // Carregar provas atribuídas - filtrar por ano da turma
   const listaProvas = document.getElementById('lista-provas-turma');
   const selectProvaNotas = document.getElementById('selectProvaNotas');
   listaProvas.innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">Carregando...</div>';
@@ -504,14 +529,17 @@ async function carregarDadosTurma() {
 
   try {
     const docTurma = await db.collection('turmas').doc(turmaAtualId).get();
-    const provasIds = docTurma.data().provas || [];
+    const turmasData = docTurma.data();
+    const provasIds = turmasData.provas || [];
+    const turmaAno = turmasData.ano || null; // Buscar o ano da turma
 
-    // Update dropdown for notas
+    // Update dropdown for notas - apenas provas do mesmo ano
     selectProvaNotas.innerHTML = '<option value="">Selecione uma prova...</option>';
     for (const pid of provasIds) {
       const dp = await db.collection('simulados').doc(pid).get();
       if (dp.exists) {
-        selectProvaNotas.innerHTML += `<option value="${pid}">${dp.data().nome}</option>`;
+        const provaAno = dp.data().ano;
+        selectProvaNotas.innerHTML += `<option value="${pid}">${dp.data().nome} (${provaAno}º ano)</option>`;
       }
     }
 
@@ -522,10 +550,14 @@ async function carregarDadosTurma() {
       for (const pid of provasIds) {
         const dp = await db.collection('simulados').doc(pid).get();
         if (dp.exists) {
+          const p = dp.data();
           const div = document.createElement('div');
           div.className = 'list-item';
           div.innerHTML = `
-            <div>${escapeHtml(dp.data().nome)}</div>
+            <div>
+              <strong>${escapeHtml(p.nome)}</strong>
+              <span style="font-size:12px;color:#64748b;margin-left:8px;">${p.ano}º ano - ${p.disciplina || ''}</span>
+            </div>
             <button class="btn btn-danger btn-sm" onclick="removerProvaTurma('${pid}')">X</button>
           `;
           listaProvas.appendChild(div);
