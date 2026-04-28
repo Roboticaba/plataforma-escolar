@@ -67,14 +67,18 @@ async function carregarTurmas() {
 }
 
 function abrirTurma(id, nome) {
-  turmaAtualId = id;
+  var modal = document.getElementById("modalTurma");
+  modal.style.display = "flex";
+  modal.classList.add("active");
   document.getElementById("tituloTurma").textContent = nome;
-  document.getElementById("modalTurma").classList.add("active");
+  turmaAtualId = id;
   carregarDadosTurma();
 }
 
 function fecharTurma() {
-  document.getElementById("modalTurma").style.display = "none";
+  var modal = document.getElementById("modalTurma");
+  modal.style.display = "none";
+  modal.classList.remove("active");
   turmaAtualId = null;
 }
 
