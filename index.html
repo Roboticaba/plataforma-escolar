@@ -64,7 +64,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 window.entrar = async function() {
-  const identificador = document.getElementById("login").value.trim();
+  const identificador = document.getElementById("login").value.trim().toLowerCase();
   const senha = document.getElementById("senha").value;
   const erro = document.getElementById("erro");
   const btn = document.getElementById("btnEntrar");
@@ -74,24 +74,21 @@ window.entrar = async function() {
   btn.innerText = "Entrando...";
 
   if (!identificador || !senha) {
-    erro.innerText = "Digite usuário e senha";
+    erro.innerText = "Digite usuario e senha";
     btn.disabled = false;
     btn.innerText = "Entrar";
     return;
   }
 
   try {
-    const email = `${identificador}@plataforma.app`;
+    const email = identificador.includes("@") ? identificador : `${identificador}@plataforma.app`;
     const userCred = await auth.signInWithEmailAndPassword(email, senha);
     const uid = userCred.user.uid;
-
     const userDoc = await db.collection("users").doc(uid).get();
 
     if (!userDoc.exists) {
       await auth.signOut();
-      erro.innerText = "Usuário não configurado. Contacte o professor.";
-      btn.disabled = false;
-      btn.innerText = "Entrar";
+      erro.innerText = `Conta autenticada, mas o documento users/${uid} nao foi encontrado.`;
       return;
     }
 
@@ -99,38 +96,41 @@ window.entrar = async function() {
 
     if (userData.ativo === false) {
       await auth.signOut();
-      erro.innerText = "Conta inativada. Contacte o professor.";
-      btn.disabled = false;
-      btn.innerText = "Entrar";
+      erro.innerText = "Conta inativada. Fale com o professor.";
       return;
     }
 
-    localStorage.setItem('usuario', JSON.stringify({
-      uid: uid,
+    localStorage.setItem("usuario", JSON.stringify({
+      uid,
       email: userCred.user.email,
-      nome: userData.nome || "Aluno",
+      nome: userData.nome || (userData.role === "professor" ? "Professor" : "Aluno"),
       role: userData.role || "aluno",
-      turmaId: userData.turmaId || null
+      turmaId: userData.turmaId || null,
+      professorId: userData.professorId || null
     }));
 
-    window.location = userData.role === 'professor' ? 'professor.html' : 'home.html';
-
+    window.location = userData.role === "professor" ? "professor.html" : "home.html";
   } catch (err) {
-    console.error('Erro login:', err);
+    console.error("Erro login:", err);
 
-    let mensagem = "Erro ao fazer login";
-    if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-      mensagem = "Usuário ou senha inválidos";
-    } else if (err.code === 'auth/invalid-email') {
-      mensagem = "Email inválido";
-    } else if (err.code === 'auth/too-many-requests') {
-      mensagem = "Muitas tentativas. Tente novamente mais tarde";
+    let mensagem = "Erro ao fazer login.";
+    if (err.code === "auth/wrong-password") {
+      mensagem = "Senha incorreta.";
+    } else if (err.code === "auth/user-not-found") {
+      mensagem = "Usuario nao encontrado.";
+    } else if (err.code === "auth/invalid-email") {
+      mensagem = "Email de login invalido.";
+    } else if (err.code === "auth/too-many-requests") {
+      mensagem = "Muitas tentativas. Tente novamente mais tarde.";
+    } else if (err.code === "auth/invalid-credential") {
+      mensagem = "Email ou senha invalidos.";
     }
 
     erro.innerText = mensagem;
-    btn.disabled = false;
-    btn.innerText = "Entrar";
   }
+
+  btn.disabled = false;
+  btn.innerText = "Entrar";
 };
 </script>
 

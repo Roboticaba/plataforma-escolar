@@ -4,123 +4,63 @@
 <meta charset="UTF-8">
 <title>Banco de Provas</title>
 <link rel="stylesheet" href="professor-styles.css">
+<link rel="stylesheet" href="assets/css/professor-app.css">
 </head>
-<body style="background:#f1f5f9;">
-
-<div style="padding:20px;">
-  <div class="page-title">Banco de Provas</div>
-  
-  <div class="card" style="margin-bottom:20px;">
-    <div class="form-row">
-      <div class="form-col">
-        <div class="form-group">
-          <label>Filtrar por Ano</label>
-          <select id="filtroAno" onchange="filtrarProvas()">
-            <option value="">Todos</option>
-            <option value="1">1º Ano</option>
-            <option value="2">2º Ano</option>
-            <option value="3">3º Ano</option>
-            <option value="4">4º Ano</option>
-            <option value="5">5º Ano</option>
-          </select>
+<body class="dashboard-page">
+<div class="page-shell">
+  <section class="hero-panel">
+    <article class="hero-card">
+      <span class="hero-badge">Banco de Provas</span>
+      <h1 class="hero-title">Visualize todas as provas criadas e entenda de onde veio cada questão.</h1>
+      <p class="hero-text">
+        O painel já diferencia quantas questões vieram do Banco de Questões e quantas foram criadas como temporárias durante a montagem da prova.
+      </p>
+    </article>
+    <aside class="hero-side-card">
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-label">Total de provas</div>
+          <div class="metric-value" id="totalProvas">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Questões do banco usadas</div>
+          <div class="metric-value" id="totalQuestoesBanco">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Questões temporárias usadas</div>
+          <div class="metric-value" id="totalQuestoesTemporarias">0</div>
         </div>
       </div>
-      <div class="form-col">
-        <div class="form-group">
-          <label>Filtrar por Disciplina</label>
-          <select id="filtroDisciplina" onchange="filtrarProvas()">
-            <option value="">Todas</option>
-            <option value="portugues">Português</option>
-            <option value="matematica">Matemática</option>
-            <option value="ciencias">Ciências</option>
-            <option value="historia">História</option>
-            <option value="geografia">Geografia</option>
-            <option value="arte">Arte</option>
-            <option value="edfisica">Ed. Física</option>
-            <option value="ingles">Inglês</option>
-            <option value="robotica">Robótica</option>
-          </select>
-        </div>
+    </aside>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Filtrar Provas</h2>
+        <p class="panel-subtitle">Refine por ano e disciplina para encontrar rapidamente a prova desejada.</p>
       </div>
     </div>
-  </div>
-  
-  <div id="listaProvas"></div>
+    <div class="filters-row">
+      <select id="filtroAno"></select>
+      <select id="filtroDisciplina"></select>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Catálogo de Provas</h2>
+        <p class="panel-subtitle">Abra a visualização detalhada ou exclua provas que não serão mais usadas.</p>
+      </div>
+    </div>
+    <div id="listaProvas" class="question-list"></div>
+  </section>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
-  authDomain: "plataforma-escolar-71635.firebaseapp.com",
-  projectId: "plataforma-escolar-71635",
-  storageBucket: "plataforma-escolar-71635.firebasestorage.app",
-  messagingSenderId: "194897243209",
-  appId: "1:194897243209:web:ff339bee22bced4098e398"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const auth = firebase.auth();
-
-let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
-let provaAtualId = null;
-
-async function filtrarProvas() {
-  const ano = document.getElementById("filtroAno").value;
-  const disc = document.getElementById("filtroDisciplina").value;
-  const lista = document.getElementById("listaProvas");
-  lista.innerHTML = "<p>Carregando...</p>";
-  
-  try {
-    var ref = db.collection("simulados").where("criadoPor", "==", usuario.uid);
-    const snap = await ref.get();
-    
-    if (snap.empty) {
-      lista.innerHTML = '<div class="card"><p style="color:#64748b;">Nenhuma prova criada.</p></div>';
-      return;
-    }
-    
-    var provas = [];
-    snap.forEach(doc => {
-      const p = doc.data();
-      if ((!ano || p.ano === ano) && (!disc || p.disciplina === disc)) {
-        provas.push({ id: doc.id, data: p });
-      }
-    });
-    
-    if (provas.length === 0) {
-      lista.innerHTML = '<div class="card"><p style="color:#64748b;">Nenhuma prova encontrada com esses filtros.</p></div>';
-      return;
-    }
-    
-    lista.innerHTML = "";
-    provas.forEach(function(prova) {
-      const p = prova.data;
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:600;font-size:16px;">' + (p.nome || "Sem nome") + '</div><div style="font-size:13px;color:#64748b;">' + (p.disciplina || "") + ' - ' + (p.ano || "") + 'º ano - ' + ((p.questoes||[]).length || 0) + ' questões</div></div><div style="display:flex;gap:8px;"><button class="btn btn-primary btn-sm" onclick="verProva(\'' + prova.id + '\')">Ver</button><button class="btn btn-danger btn-sm" onclick="excluirProva(\'' + prova.id + '\')">Excluir</button></div></div>';
-      lista.appendChild(div);
-    });
-  } catch (e) {
-    lista.innerHTML = "<p>Erro: "+e.message+"</p>";
-  }
-}
-
-function verProva(id) {
-  window.open("professor-ver.html?id=" + id, "_blank");
-}
-
-async function excluirProva(id) {
-  if (!confirm("Excluir prova?")) return;
-  await db.collection("simulados").doc(id).delete();
-  filtrarProvas();
-}
-
-filtrarProvas();
-</script>
-
+<script type="module" src="assets/js/pages/professor-banco.js"></script>
 </body>
 </html>

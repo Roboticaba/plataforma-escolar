@@ -1,405 +1,289 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
 <title>Criar Prova</title>
 <link rel="stylesheet" href="professor-styles.css">
+<link rel="stylesheet" href="assets/css/professor-app.css">
 </head>
-<body style="background:#f1f5f9;">
+<body class="dashboard-page">
+<div class="page-shell">
+  <section class="hero-panel">
+    <article class="hero-card">
+      <span class="hero-badge">Arquitetura hibrida de conteudo</span>
+      <h1 class="hero-title">Monte provas usando o Banco de Questoes ou criando novas questoes no fluxo.</h1>
+      <p class="hero-text">
+        As questoes reutilizaveis entram na prova por ID. As questoes criadas no momento podem ficar so nesta prova ou tambem ir para o banco global.
+      </p>
+    </article>
+    <aside class="hero-side-card">
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-label">Questoes do banco nesta prova</div>
+          <div class="metric-value" id="resumoBanco">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Questoes temporarias</div>
+          <div class="metric-value" id="resumoTemporarias">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Total de questoes</div>
+          <div class="metric-value" id="resumoTotal">0</div>
+        </div>
+      </div>
+    </aside>
+  </section>
 
-<div style="padding:20px;">
-  <div class="page-title">Criar Nova Prova</div>
-  
-  <div class="etapa">
-    <div class="etapa-title">1. Dados da Prova</div>
-    <div class="form-group">
-      <label>Nome da Prova</label>
-      <input id="nomeProva" placeholder="Ex.: AvaliaÃ§Ã£o de MatemÃ¡tica - 3Âº Bimestre">
-    </div>
-    <div class="form-row">
-      <div class="form-col">
-        <div class="form-group">
-          <label>Ano</label>
-          <select id="anoProva" onchange="atualizarDescritores()">
-            <option value="">Selecione</option>
-            <option value="1">1Âº Ano</option>
-            <option value="2">2Âº Ano</option>
-            <option value="3">3Âº Ano</option>
-            <option value="4">4Âº Ano</option>
-            <option value="5">5Âº Ano</option>
-          </select>
+  <div class="layout-grid">
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Dados da Prova</h2>
+          <p class="panel-subtitle">Defina a estrutura da prova antes de montar o conteudo.</p>
         </div>
       </div>
-      <div class="form-col">
-        <div class="form-group">
-          <label>Disciplina</label>
-          <select id="disciplinaProva" onchange="atualizarDescritores()">
-            <option value="">Selecione</option>
-            <option value="portugues">PortuguÃªs</option>
-            <option value="matematica">MatemÃ¡tica</option>
-            <option value="ciencias">CiÃªncias</option>
-            <option value="historia">HistÃ³ria</option>
-            <option value="geografia">Geografia</option>
-            <option value="arte">Arte</option>
-            <option value="edfisica">Ed. FÃ­sica</option>
-            <option value="ingles">InglÃªs</option>
-            <option value="robotica">RobÃ³tica</option>
-          </select>
+
+      <form id="formProva" class="proof-summary">
+        <div class="grid-fields">
+          <div class="form-field" style="grid-column: span 2;">
+            <label for="titulo">Titulo da prova</label>
+            <input id="titulo" name="titulo" placeholder="Ex.: Avaliacao Diagnostica - Matematica" required>
+          </div>
+          <div class="form-field">
+            <label for="turma">Turma</label>
+            <select id="turma" name="turma"></select>
+          </div>
+          <div class="form-field">
+            <label for="anoEscolar">Ano escolar</label>
+            <select id="anoEscolar" name="anoEscolar" required></select>
+          </div>
+          <div class="form-field">
+            <label for="disciplina">Disciplina</label>
+            <select id="disciplina" name="disciplina" required></select>
+          </div>
+          <div class="form-field">
+            <label for="tempoMinutos">Tempo (minutos)</label>
+            <input id="tempoMinutos" name="tempoMinutos" type="number" min="1" value="60">
+          </div>
+          <div class="form-field">
+            <label for="valorTotal">Valor total</label>
+            <input id="valorTotal" name="valorTotal" type="number" min="0" step="0.1" value="10">
+          </div>
+        </div>
+
+        <div class="question-toolbar">
+          <button type="button" class="button button-primary" id="btnAbrirBanco">Adicionar do Banco de Questoes</button>
+          <button type="button" class="button button-secondary" id="btnAbrirNovaQuestao">Criar Nova Questao</button>
+        </div>
+
+        <div class="proof-stack">
+          <div class="panel" style="padding:18px;">
+            <h3 class="proof-section-title">Questoes do Banco selecionadas</h3>
+            <div id="listaBancoSelecionadas" class="selection-list"></div>
+          </div>
+          <div class="panel" style="padding:18px;">
+            <h3 class="proof-section-title">Questoes temporarias desta prova</h3>
+            <div id="listaTemporarias" class="selection-list"></div>
+          </div>
+        </div>
+
+        <div id="feedbackProva" class="feedback" hidden></div>
+        <div class="modal-actions">
+          <button type="submit" class="button button-primary" id="btnSalvarProva">Salvar prova</button>
+        </div>
+      </form>
+    </section>
+
+    <aside class="panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Como o sistema salva</h2>
+          <p class="panel-subtitle">Estrutura pronta para evolucao sem duplicar conteudo.</p>
         </div>
       </div>
-      <div class="form-col">
-        <div class="form-group">
-          <label>Tempo (min)</label>
-          <input id="tempoProva" type="number" placeholder="Ex.: 60">
+      <div class="question-card">
+        <div class="tag-row">
+          <span class="tag tag-success">Questoes do banco</span>
+          <span class="tag tag-neutral">Salvas por ID</span>
         </div>
+        <p class="panel-subtitle">A prova guarda referencias em <code>questoesBancoIds</code>.</p>
       </div>
-      <div class="form-col">
-        <div class="form-group">
-          <label>Valor</label>
-          <input id="valorProva" type="number" step="0.1" placeholder="Ex.: 8,0">
+      <div class="question-card">
+        <div class="tag-row">
+          <span class="tag tag-warning">Questoes temporarias</span>
+          <span class="tag tag-neutral">Embutidas na prova</span>
         </div>
+        <p class="panel-subtitle">Questoes exclusivas da prova vao para <code>questoesTemporarias</code>.</p>
       </div>
-    </div>
+      <div class="question-card">
+        <div class="tag-row">
+          <span class="tag tag-primary">Exportacao pronta</span>
+        </div>
+        <p class="panel-subtitle">O novo schema prepara PDF/Word com texto de apoio, imagens e alternativas estruturadas.</p>
+      </div>
+    </aside>
   </div>
+</div>
 
-  <div class="etapa">
-    <div class="etapa-title">2. Adicionar QuestÃ£o</div>
-    <div class="form-row">
-      <div class="form-col">
-        <div class="form-group">
-          <label>Tipo de QuestÃ£o</label>
-          <select id="tipoQuestao" onchange="mudouTipoQuestao()">
-            <option value="multipla">MÃºltipla Escolha</option>
-            <option value="texto">Resposta Escrita</option>
-          </select>
-        </div>
+<div class="modal" id="modalBanco" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <h2 class="panel-title">Banco de Questoes</h2>
+        <p class="panel-subtitle">Filtre, pesquise e selecione multiplas questoes para anexar a prova.</p>
       </div>
-      <div class="form-col">
-        <div class="form-group">
-          <label>Alternativas</label>
-          <select id="tipoAlternativa" onchange="mudouTipoAlternativa()">
-            <option value="texto">Texto</option>
-            <option value="imagem">Imagem</option>
-          </select>
-        </div>
-      </div>
+      <button class="close-button" type="button" data-close-modal="banco">&times;</button>
     </div>
-    <div class="form-group">
-      <label>Pergunta</label>
-      <textarea id="pergunta" placeholder="O que o aluno deve responder?" style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;"></textarea>
-    </div>
-    <div class="form-group" id="areaDescritorQuestao" style="display:none;">
-      <label>Descritor (opcional)</label>
-      <select id="descritorQuestao">
-        <option value="">Selecione</option>
+
+    <div class="filters-row" style="margin-bottom:16px;">
+      <select id="filtroBancoAno"></select>
+      <select id="filtroBancoDisciplina"></select>
+      <select id="filtroBancoDescritor">
+        <option value="">Todos os descritores</option>
       </select>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;">
-        <button type="button" class="btn btn-outline btn-sm" onclick="sugerirDescritorQuestao()">ðŸ”® Sugerir descritor</button>
-        <span id="statusDescritor" style="font-size:13px;color:#64748b;">Selecione disciplina e ano para ver os descritores.</span>
+      <input id="filtroBancoBusca" placeholder="Buscar por texto no enunciado">
+    </div>
+
+    <div class="selection-count" id="contadorBancoSelecionado">0 selecionada(s) para a prova</div>
+    <div id="listaBancoQuestoes" class="question-list" style="margin-top:16px;"></div>
+
+    <div class="modal-actions">
+      <button class="button button-primary" type="button" data-close-modal="banco">Concluir selecao</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modalQuestao" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <h2 class="panel-title">Criar Nova Questao</h2>
+        <p class="panel-subtitle">Escolha se a questao vai para o banco ou se sera usada so nesta prova.</p>
       </div>
+      <button class="close-button" type="button" data-close-modal="questao">&times;</button>
     </div>
-    <div class="form-group">
-      <label>Texto de Apoio (opcional)</label>
-      <textarea id="textoAntes" placeholder="Ex.: Observe a imagem..." style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;white-space:pre-wrap;"></textarea>
-    </div>
-    <div class="form-group" id="areaAltTexto">
-      <label>Alternativas de Texto (uma por linha)</label>
-      <textarea id="alternativasTexto" placeholder="(A) Alternativa A" style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;"></textarea>
-    </div>
-    <div class="form-group" id="areaAltImagem" style="display:none;">
-      <label>Imagens das Alternativas</label>
-      <input type="file" id="uploadAlternativasImg" multiple accept="image/*">
-    </div>
-    <div class="form-group" id="areaCorreta">
-      <label>Resposta Correta</label>
-      <select id="correta">
-        <option value="0">(A)</option>
-        <option value="1">(B)</option>
-        <option value="2">(C)</option>
-        <option value="3">(D)</option>
-      </select>
-    </div>
-    <button class="btn btn-success" onclick="adicionarQuestao()">âž• Adicionar QuestÃ£o</button>
-  </div>
 
-  <div class="etapa">
-    <div class="etapa-title">3. QuestÃµes Adicionadas</div>
-    <p id="resumoQuestoes" style="color:#64748b;margin-bottom:15px;">Nenhuma questÃ£o adicionada ainda.</p>
-    <div id="listaQuestoes"></div>
-  </div>
+    <form id="formQuestao">
+      <div class="grid-fields">
+        <div class="form-field">
+          <label for="tipoQuestao">Tipo</label>
+          <select id="tipoQuestao" name="tipo" required>
+            <option value="multipla_texto">Multipla escolha com texto</option>
+            <option value="multipla_imagem">Multipla escolha com imagem</option>
+            <option value="resposta_escrita">Resposta escrita</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="questaoAnoEscolar">Ano escolar</label>
+          <select id="questaoAnoEscolar" name="anoEscolar" required></select>
+        </div>
+        <div class="form-field">
+          <label for="questaoDisciplina">Disciplina</label>
+          <select id="questaoDisciplina" name="disciplina" required></select>
+        </div>
+        <div class="form-field" id="questaoDescritorWrapper" hidden>
+          <label for="questaoDescritor">Descritor</label>
+          <select id="questaoDescritor" name="descritor">
+            <option value="">Selecione</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="questaoNivelDificuldade">Nivel de dificuldade</label>
+          <select id="questaoNivelDificuldade" name="nivelDificuldade">
+            <option value="">Opcional</option>
+            <option value="baixa">Baixa</option>
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+          </select>
+        </div>
+        <div class="form-field" style="grid-column: 1 / -1;">
+          <label for="questaoTextoApoio">Texto de apoio</label>
+          <textarea id="questaoTextoApoio" name="textoApoio" placeholder="Opcional. Cole aqui o texto base da questao."></textarea>
+        </div>
+        <div class="form-field" style="grid-column: 1 / -1;">
+          <label for="questaoImagensApoio">Imagens de apoio</label>
+          <input id="questaoImagensApoio" name="imagensApoio" type="file" accept="image/*" multiple>
+          <div id="questaoPreviewImagensApoio" class="image-preview-grid"></div>
+        </div>
+        <div class="form-field" style="grid-column: 1 / -1;">
+          <label for="questaoEnunciado">Enunciado</label>
+          <textarea id="questaoEnunciado" name="enunciado" placeholder="Digite o enunciado da questao" required></textarea>
+        </div>
+      </div>
 
-  <button class="btn btn-success" style="width:100%;padding:15px;font-size:16px;" onclick="salvarProva()">ðŸ’¾ Salvar Prova</button>
+      <section class="panel" style="padding:18px; margin-top:18px;" id="questaoDescritorSuggestionPanel" hidden>
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title" style="font-size:1rem;">Sugestao automatica de descritor</h3>
+            <p class="panel-subtitle">A sugestao usa heuristica preparada para IA e precisa da sua confirmacao.</p>
+          </div>
+          <button class="button-inline button-outline" type="button" id="btnSugerirDescritorQuestao">Sugerir descritor</button>
+        </div>
+        <div id="questaoDescritorSuggestionFeedback" class="feedback" hidden></div>
+        <label class="checkbox-row" style="margin-top:12px;">
+          <input type="checkbox" id="questaoDescritorConfirmadoPeloProfessor">
+          <span>Confirmo o descritor selecionado para esta questao.</span>
+        </label>
+      </section>
+
+      <section id="alternativasWrapper" class="panel" style="padding:18px; margin-top:18px;">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title" style="font-size:1rem;">Alternativas</h3>
+            <p class="panel-subtitle">Digite uma alternativa por linha. O sistema limpa marcadores automaticamente.</p>
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="alternativasTexto">Alternativas em texto</label>
+          <textarea id="alternativasTexto" placeholder="a) Casa&#10;b) Escola&#10;c) Bola&#10;d) Livro"></textarea>
+        </div>
+        <div id="alternativasUploads" class="selection-list"></div>
+        <div class="form-field" style="margin-top:14px;">
+          <label for="respostaCorreta">Resposta correta</label>
+          <select id="respostaCorreta" name="respostaCorreta">
+            <option value="">Selecione</option>
+          </select>
+        </div>
+      </section>
+
+      <section id="respostaEsperadaWrapper" class="panel" style="padding:18px; margin-top:18px;" hidden>
+        <div class="form-field">
+          <label for="questaoRespostaEsperada">Resposta esperada</label>
+          <textarea id="questaoRespostaEsperada" name="respostaEsperada" placeholder="Explique o que o aluno precisa apresentar na resposta."></textarea>
+        </div>
+      </section>
+
+      <section class="panel" style="padding:18px; margin-top:18px;">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title" style="font-size:1rem;">Destino da questao</h3>
+            <p class="panel-subtitle">Escolha se a questao sera reutilizavel ou exclusiva desta prova.</p>
+          </div>
+        </div>
+        <div class="option-row">
+          <label class="radio-card">
+            <input type="radio" id="questaoSalvarBancoSim" name="destinoQuestao" value="banco">
+            Salvar no Banco de Questoes
+          </label>
+          <label class="radio-card">
+            <input type="radio" id="questaoSalvarBancoNao" name="destinoQuestao" value="temporaria" checked>
+            Usar apenas nesta prova
+          </label>
+        </div>
+      </section>
+
+      <div id="feedbackQuestao" class="feedback" hidden></div>
+      <div class="modal-actions">
+        <button type="button" class="button button-outline" data-close-modal="questao">Cancelar</button>
+        <button type="submit" class="button button-primary" id="btnSalvarQuestao">Adicionar questao</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="html2pdf.bundle.min.js"></script>
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyDoVdjkrWdJrrRC1BEeWksGkp4ydWcFW9Y",
-  authDomain: "plataforma-escolar-71635.firebaseapp.com",
-  projectId: "plataforma-escolar-71635",
-  storageBucket: "plataforma-escolar-71635.firebasestorage.app",
-  messagingSenderId: "194897243209",
-  appId: "1:194897243209:web:ff339bee22bced4098e398"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const auth = firebase.auth();
-
-let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
-let questoesTemp = [];
-let logoData = "";
-
-const descritoresPortugues = {
-  "1": [{c:"D01",n:"Localizar informaÃ§Ãµes"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informaÃ§Ã£o"},{c:"D08",n:"Causa/consequÃªncia"},{c:"D10",n:"Marcas linguÃ­sticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"GÃªnero do texto"}],
-  "2": [{c:"D01",n:"Localizar informaÃ§Ãµes"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informaÃ§Ã£o"},{c:"D08",n:"Causa/consequÃªncia"},{c:"D10",n:"Marcas linguÃ­sticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"GÃªnero do texto"}],
-  "3": [{c:"D01",n:"Localizar informaÃ§Ãµes"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informaÃ§Ã£o"},{c:"D08",n:"Causa/consequÃªncia"},{c:"D10",n:"Marcas linguÃ­sticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"GÃªnero do texto"}],
-  "4": [{c:"D01",n:"Localizar informaÃ§Ãµes"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informaÃ§Ã£o"},{c:"D08",n:"Causa/consequÃªncia"},{c:"D10",n:"Marcas linguÃ­sticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"GÃªnero do texto"}],
-  "5": [{c:"D01",n:"Localizar informaÃ§Ãµes"},{c:"D03",n:"Inferir sentido"},{c:"D04",n:"Inferir informaÃ§Ã£o"},{c:"D08",n:"Causa/consequÃªncia"},{c:"D10",n:"Marcas linguÃ­sticas"},{c:"D15",n:"Comparar textos"},{c:"D23",n:"GÃªnero do texto"}]
-};
-
-const descritoresMatematica = {
-  "1": [{c:"D01",n:"Ler nÃºmeros"},{c:"D02",n:"Ordenar"},{c:"D03",n:"Figuras"},{c:"D07",n:"Unidades"},{c:"D17",n:"AdiÃ§Ã£o/subtraÃ§Ã£o"},{c:"D18",n:"MultiplicaÃ§Ã£o"},{c:"D27",n:"Tabelas"},{c:"D28",n:"GrÃ¡ficos"}],
-  "2": [{c:"D01",n:"Ler nÃºmeros"},{c:"D02",n:"Ordenar"},{c:"D03",n:"Figuras"},{c:"D07",n:"Unidades"},{c:"D17",n:"AdiÃ§Ã£o/subtraÃ§Ã£o"},{c:"D18",n:"MultiplicaÃ§Ã£o"},{c:"D27",n:"Tabelas"},{c:"D28",n:"GrÃ¡ficos"}],
-  "3": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"PerÃ­metro"},{c:"D12",n:"Ãrea"},{c:"D17",n:"AdiÃ§Ã£o/subtraÃ§Ã£o"},{c:"D18",n:"MultiplicaÃ§Ã£o"},{c:"D19",n:"Problema"},{c:"D24",n:"FraÃ§Ã£o"},{c:"D27",n:"Tabelas"},{c:"D28",n:"GrÃ¡ficos"}],
-  "4": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"PerÃ­metro"},{c:"D12",n:"Ãrea"},{c:"D17",n:"AdiÃ§Ã£o/subtraÃ§Ã£o"},{c:"D18",n:"MultiplicaÃ§Ã£o"},{c:"D19",n:"Problema"},{c:"D24",n:"FraÃ§Ã£o"},{c:"D26",n:"Porcentagem"},{c:"D27",n:"Tabelas"},{c:"D28",n:"GrÃ¡ficos"}],
-  "5": [{c:"D03",n:"Figuras"},{c:"D05",n:"Medidas"},{c:"D07",n:"Unidades"},{c:"D10",n:"Dinheiro"},{c:"D11",n:"PerÃ­metro"},{c:"D12",n:"Ãrea"},{c:"D17",n:"AdiÃ§Ã£o/subtraÃ§Ã£o"},{c:"D18",n:"MultiplicaÃ§Ã£o"},{c:"D19",n:"Problema"},{c:"D24",n:"FraÃ§Ã£o"},{c:"D26",n:"Porcentagem"},{c:"D27",n:"Tabelas"},{c:"D28",n:"GrÃ¡ficos"}]
-};
-
-function atualizarDescritores() {
-  var disc = document.getElementById("disciplinaProva").value;
-  var ano = document.getElementById("anoProva").value;
-  var selectQ = document.getElementById("descritorQuestao");
-  var areaQ = document.getElementById("areaDescritorQuestao");
-  var status = document.getElementById("statusDescritor");
-  
-  if (!selectQ) return;
-  selectQ.innerHTML = "<option value=''>Selecione</option>";
-  
-  if ((disc === "portugues" || disc === "matematica") && ano) {
-    areaQ.style.display = "block";
-    status.textContent = "Descritores do " + ano + "Âº ano - " + (disc === "portugues" ? "PortuguÃªs" : "MatemÃ¡tica");
-    var lista = disc === "portugues" ? descritoresPortugues[ano] : descritoresMatematica[ano];
-    if (lista) {
-      lista.forEach(function(d) {
-        selectQ.innerHTML += "<option value='" + d.c + "|" + d.n + "'>" + d.c + " - " + d.n + "</option>";
-      });
-    }
-  } else {
-    areaQ.style.display = "none";
-    if (status) status.textContent = "Selecione disciplina e ano para ver os descritores.";
-  }
-}
-
-const DESCRIPTOR_HINTS = {
-  "portugues": {
-    "D01": ["localizar", "encontrar", "informaÃ§Ã£o explÃ­cita", "quem", "quando", "onde", "quanto", "nÃºmero", "data", "nome", "fato"],
-    "D03": ["inferir", "significado implÃ­cito", "deduzir", "sentido oculto", "nÃ£o diz", "mas sugere", "indica que"],
-    "D04": ["inferir", "informaÃ§Ã£o", "conclusÃ£o", "possÃ­vel", "provÃ¡vel", "pode ser", "seria"],
-    "D05": ["grÃ¡fico", "tabela", "infogrÃ¡fico", "interpretar dados"],
-    "D08": ["causa", "consequÃªncia", "porque", "resultado", "por isso", "entÃ£o", "assim", "consequentemente"],
-    "D10": ["linguagem", "marcas linguÃ­sticas", "registro", "formal", "informal", "termo", "vocÃ¡bulo", "palavra"],
-    "D14": ["pontuaÃ§Ã£o", "ponto final", "vÃ­rgula", "exclamaÃ§Ã£o", "interrogaÃ§Ã£o", "efeito", "entonaÃ§Ã£o"],
-    "D15": ["comparar", "diferenÃ§a", "semelhanÃ§a", "contraste", "igual", "diferente", "ambos"],
-    "D23": ["gÃªnero", "tipo de texto", "texto narrativo", "dissertativo", "argumentativo", "jornal", "reportagem"]
-  },
-  "matematica": {
-    "D01": ["ler", "nÃºmero", "escrever", "numeral", "quantidade"],
-    "D02": ["ordenar", "sequÃªncia", "crescente", "decrescente", "maior", "menor"],
-    "D03": ["figura", "forma", "geomÃ©trica", "desenho", "quadrado", "cÃ­rculo"],
-    "D05": ["medida", "comprimento", "altura", "largura", "metro", "centÃ­metro"],
-    "D07": ["unidade", "medida", "quilo", "litro", "metro", "grama"],
-    "D10": ["dinheiro", "real", "centavo", "custo", "valor", "preÃ§o", "troco"],
-    "D11": ["perÃ­metro", "contorno", "bordas", "volta"],
-    "D12": ["Ã¡rea", "superfÃ­cie", "tamanho", "metro quadrado"],
-    "D17": ["adiÃ§Ã£o", "soma", "subtraÃ§Ã£o", "menos", "mais", "calcular"],
-    "D18": ["multiplicaÃ§Ã£o", "vezes", "produto", "duas vezes", "trÃªs vezes"],
-    "D19": ["problema", "situaÃ§Ã£o", "resolver", "cÃ¡lculo"],
-    "D23": ["dinheiro", "real", "centavo", "compra", "venda"],
-    "D24": ["fraÃ§Ã£o", "meio", "metade", "terÃ§o", "quarto", "parte"],
-    "D26": ["porcentagem", "por cento", "desconto", "aumento", "%"],
-    "D27": ["tabela", "dados", "organizar", "linha", "coluna"],
-    "D28": ["grÃ¡fico", "coluna", "barra", "linha", "interpretar"]
-  }
-};
-
-function classifyDescriptorAutomatically(textoQuestao, disc, ano) {
-  if (!textoQuestao || !disc) return null;
-  var texto = textoQuestao.toLowerCase();
-  var hints = DESCRIPTOR_HINTS[disc];
-  if (!hints) return null;
-  var bestMatch = null;
-  var bestScore = 0;
-  var descritoresAno = disc === "portugues" ? descritoresPortugues[ano] : descritoresMatematica[ano];
-  if (!descritoresAno) return null;
-  for (var i = 0; i < descritoresAno.length; i++) {
-    var d = descritoresAno[i];
-    var keywords = hints[d.c] || [];
-    var score = 0;
-    for (var j = 0; j < keywords.length; j++) {
-      if (texto.indexOf(keywords[j].toLowerCase()) !== -1) score++;
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = d;
-    }
-  }
-  return bestScore > 0 ? bestMatch : null;
-}
-
-function sugerirDescritorQuestao() {
-  var textoQuestao = document.getElementById("pergunta").value;
-  var disc = document.getElementById("disciplinaProva").value;
-  var ano = document.getElementById("anoProva").value;
-  if (!textoQuestao) { alert("Digite a pergunta primeiro"); return; }
-  if (!disc || !ano) { alert("Selecione disciplina e ano primeiro"); return; }
-  var resultado = classifyDescriptorAutomatically(textoQuestao, disc, ano);
-  if (resultado) {
-    document.getElementById("descritorQuestao").value = resultado.c + "|" + resultado.n;
-    alert("SugestÃ£o: " + resultado.c + " - " + resultado.n);
-  } else {
-    alert("Nenhum descritor encontrado para este conteÃºdo. VocÃª pode selecionar manualmente.");
-  }
-}
-
-function mudouTipoQuestao() {
-  const tipo = document.getElementById("tipoQuestao").value;
-  document.getElementById("areaAltTexto").style.display = tipo === "multipla" ? "block" : "none";
-  document.getElementById("areaAltImagem").style.display = tipo === "multipla" ? "block" : "none";
-  document.getElementById("areaCorreta").style.display = tipo === "multipla" ? "block" : "none";
-}
-
-function mudouTipoAlternativa() {
-  const tipoAlt = document.getElementById("tipoAlternativa").value;
-  document.getElementById("areaAltTexto").style.display = tipoAlt === "texto" ? "block" : "none";
-  document.getElementById("areaAltImagem").style.display = tipoAlt === "imagem" ? "block" : "none";
-}
-
-function uploadFileToCloudinary(file) {
-  return new Promise(function(resolve, reject) {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      var dataUrl = e.target.result;
-      var base64 = dataUrl.split(",")[1];
-      var xhr = new XMLHttpRequest();
-      xhr.open("POST", "https://api.cloudinary.com/v1_1/dflo5rpxy/image/upload");
-      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-      xhr.onload = function() {
-        if (xhr.status === 200) {
-          var res = JSON.parse(xhr.responseText);
-          resolve(res.secure_url);
-        } else {
-          reject(new Error("Upload failed"));
-        }
-      };
-      xhr.onerror = function() { reject(new Error("Upload failed")); };
-      xhr.send("file=" + encodeURIComponent(base64) + "&upload_preset=alunos_upload");
-    };
-    reader.onerror = function() { reject(new Error("Read failed")); };
-    reader.readAsDataURL(file);
-  });
-}
-
-async function adicionarQuestao() {
-  const tipo = document.getElementById("tipoQuestao").value;
-  const tipoAlt = document.getElementById("tipoAlternativa").value;
-  const textoAntes = document.getElementById("textoAntes").value;
-  const pergunta = document.getElementById("pergunta").value.trim();
-  const disc = document.getElementById("disciplinaProva").value;
-  
-  if (!pergunta) { alert("Digite a pergunta"); return; }
-  
-  try {
-    var alternativas = [];
-    var correta = null;
-    if (tipo === "multipla") {
-      if (tipoAlt === "texto") {
-        var linhas = document.getElementById("alternativasTexto").value.split("\n");
-        alternativas = linhas.map(function(l) { return l.trim(); }).filter(function(l) { return l; });
-      }
-      if (alternativas.length < 2) { alert("Digite pelo menos 2 alternativas"); return; }
-      correta = parseInt(document.getElementById("correta").value);
-    }
-    
-    questoesTemp.push({ tipo: tipo, tipoAlt: tipoAlt, textoAntes: textoAntes, pergunta: pergunta, alternativas: alternativas, correta: correta, disciplina: disc });
-    
-    document.getElementById("textoAntes").value = "";
-    document.getElementById("pergunta").value = "";
-    document.getElementById("alternativasTexto").value = "";
-    renderQuestoes();
-    alert("QuestÃ£o adicionada!");
-  } catch (e) {
-    alert("Erro ao adicionar questÃ£o: " + e.message);
-  }
-}
-
-function renderQuestoes() {
-  var lista = document.getElementById("listaQuestoes");
-  var resumo = document.getElementById("resumoQuestoes");
-  
-  if (questoesTemp.length === 0) {
-    resumo.textContent = "Nenhuma questÃ£o adicionada ainda.";
-    lista.innerHTML = "";
-    return;
-  }
-  
-  var letras = ["A","B","C","D"];
-  resumo.textContent = questoesTemp.length + " questÃ£o(Ãµes) adicionada(s)";
-  lista.innerHTML = "";
-  questoesTemp.forEach(function(q, i) {
-    var html = '<div style="background:white;border-radius:8px;padding:15px;margin-bottom:10px;border:1px solid #e2e8f0;">';
-    html += '<div style="display:flex;justify-content:space-between;margin-bottom:10px;"><span style="font-weight:600;">QuestÃ£o ' + (i+1) + '</span><button onclick="removerQuestao(' + i + ')" style="background:#ef4444;color:white;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;">âœ•</button></div>';
-    html += '<div style="font-size:14px;">' + q.pergunta + '</div>';
-    if (q.alternativas && q.alternativas.length > 0) {
-      html += '<div style="margin-top:10px;font-size:13px;">';
-      q.alternativas.forEach(function(alt, j) {
-        html += '<div' + (j === q.correta ? ' style="color:#10b981;font-weight:600;"' : '') + '>(' + letras[j] + ') ' + alt + '</div>';
-      });
-      html += '</div>';
-    }
-    html += '</div>';
-    lista.innerHTML += html;
-  });
-}
-
-function removerQuestao(index) {
-  questoesTemp.splice(index, 1);
-  renderQuestoes();
-}
-
-async function salvarProva() {
-  var nome = document.getElementById("nomeProva").value.trim();
-  var ano = document.getElementById("anoProva").value;
-  var disc = document.getElementById("disciplinaProva").value;
-  var tempo = parseInt(document.getElementById("tempoProva").value) || 60;
-  var valor = parseFloat(document.getElementById("valorProva").value.replace(",", ".")) || 10;
-  
-  if (!nome || !ano || !disc) { alert("Preencha nome, ano e disciplina"); return; }
-  if (questoesTemp.length === 0) { alert("Adicione pelo menos uma questÃ£o"); return; }
-  
-  try {
-    await db.collection("simulados").add({
-      nome: nome,
-      ano: ano,
-      disciplina: disc,
-      tempo: tempo,
-      valor: valor,
-      questoes: questoesTemp,
-      criadoPor: usuario.uid,
-      criadoEm: new Date()
-    });
-    alert("Prova salva com sucesso!");
-    window.location.reload();
-  } catch (e) {
-    alert("Erro ao salvar: " + e.message);
-  }
-}
-
-renderQuestoes();
-</script>
-
+<script type="module" src="assets/js/pages/professor-criar.js"></script>
 </body>
 </html>

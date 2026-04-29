@@ -110,6 +110,20 @@ window.sair = async function() {
   window.location.href = "index.html";
 }
 
+async function carregarDocumentoProva(provaId) {
+  let doc = await db.collection("provas").doc(provaId).get();
+  if (doc.exists) {
+    return { id: doc.id, ...doc.data(), _collection: "provas" };
+  }
+
+  doc = await db.collection("simulados").doc(provaId).get();
+  if (doc.exists) {
+    return { id: doc.id, ...doc.data(), _collection: "simulados" };
+  }
+
+  return null;
+}
+
 async function carregarProvas() {
   const listaProvas = document.getElementById("listaProvas");
   const listaNotas = document.getElementById("listaNotas");
@@ -138,17 +152,17 @@ async function carregarProvas() {
 
     for (const id of provasTurma) {
       try {
-        const provaSnap = await db.collection("simulados").doc(id).get();
-        if (!provaSnap.exists) continue;
+        const prova = await carregarDocumentoProva(id);
+        if (!prova) continue;
 
-        const prova = provaSnap.data();
         const resposta = respostasAluno[id];
+        const nomeProva = prova.titulo || prova.nome || "Prova";
 
         if (!resposta) {
           temDisponivel = true;
           const div = document.createElement("div");
           div.className = "prova-item";
-          div.innerHTML = `<span class="nome">${prova.nome}</span><span class="badge badge-disponivel">Fazer</span>`;
+          div.innerHTML = `<span class="nome">${nomeProva}</span><span class="badge badge-disponivel">Fazer</span>`;
           div.onclick = () => {
             localStorage.setItem("provaSelecionada", id);
             window.location = "prova.html";
@@ -158,12 +172,12 @@ async function carregarProvas() {
           temNota = true;
           const div = document.createElement("div");
           div.className = "prova-item";
-          
-          if (resposta.correcao) {
+
+          if (resposta.correcao && resposta.correcao.status === "corrigida") {
             const nota = resposta.correcao.notaFinal?.toFixed(1) || "-";
-            div.innerHTML = `<span class="nome">${prova.nome}</span><span class="badge badge-corrigida">Nota: ${nota}</span>`;
+            div.innerHTML = `<span class="nome">${nomeProva}</span><span class="badge badge-corrigida">Nota: ${nota}</span>`;
           } else {
-            div.innerHTML = `<span class="nome">${prova.nome}</span><span class="badge badge-aguardando">Aguardando correção</span>`;
+            div.innerHTML = `<span class="nome">${nomeProva}</span><span class="badge badge-aguardando">Aguardando correção</span>`;
           }
           listaNotas.appendChild(div);
         }
@@ -198,7 +212,7 @@ async function carregarRanking() {
 
     respostasSnap.forEach(r => {
       const data = r.data();
-      if (data.correcao && data.correcao.notaFinal !== undefined) {
+      if (data.correcao && data.correcao.status === "corrigida" && data.correcao.notaFinal !== undefined) {
         const existing = alunosMap.get(data.alunoId);
         // Mantém a maior nota para cada aluno
         if (!existing || data.correcao.notaFinal > existing.nota) {

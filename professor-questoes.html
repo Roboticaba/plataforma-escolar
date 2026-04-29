@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Banco de Questoes</title>
+<link rel="stylesheet" href="professor-styles.css">
+<link rel="stylesheet" href="assets/css/professor-app.css">
+</head>
+<body class="dashboard-page">
+<div class="page-shell">
+  <section class="hero-panel">
+    <article class="hero-card">
+      <span class="hero-badge">Banco de Questoes global</span>
+      <h1 class="hero-title">Crie questoes reutilizaveis com texto, imagem, resposta escrita e descritores confirmados.</h1>
+      <p class="hero-text">
+        O banco agora aceita texto de apoio, imagens, alternativas estruturadas, sugestao de descritor para Portugues e Matematica e schema preparado para IA e expansao futura.
+      </p>
+      <div class="toolbar" style="margin-top:18px;">
+        <button class="button button-primary" id="btnNovaQuestao">Nova questao</button>
+      </div>
+    </article>
+    <aside class="hero-side-card">
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-label">Total no banco</div>
+          <div class="metric-value" id="totalQuestoes">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Criadas por voce</div>
+          <div class="metric-value" id="totalMinhasQuestoes">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Compartilhadas</div>
+          <div class="metric-value" id="totalCompartilhadas">0</div>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  <div class="layout-grid">
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Filtros do Banco</h2>
+          <p class="panel-subtitle">Busque por ano, disciplina, descritor ou palavras do enunciado e do texto de apoio.</p>
+        </div>
+      </div>
+      <div class="filters-row">
+        <select id="filtroAno"></select>
+        <select id="filtroDisciplina"></select>
+        <select id="filtroDescritor">
+          <option value="">Todos os descritores</option>
+        </select>
+        <input id="filtroBusca" placeholder="Buscar por enunciado ou texto de apoio">
+      </div>
+      <div id="listaQuestoes" class="question-list" style="margin-top:18px;"></div>
+    </section>
+
+    <aside class="panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Regras do Banco</h2>
+          <p class="panel-subtitle">Padroes para manter o conteudo consistente e pronto para crescer.</p>
+        </div>
+      </div>
+      <div class="question-card">
+        <div class="tag-row"><span class="tag tag-primary">Descritor confirmado</span></div>
+        <p class="panel-subtitle">Portugues e Matematica exigem confirmacao do descritor antes de salvar.</p>
+      </div>
+      <div class="question-card">
+        <div class="tag-row"><span class="tag tag-success">Cloudinary</span></div>
+        <p class="panel-subtitle">Imagens de apoio e das alternativas sao enviadas para o Cloudinary e somente as URLs vao para o Firestore.</p>
+      </div>
+      <div class="question-card">
+        <div class="tag-row"><span class="tag tag-warning">Compatibilidade legada</span></div>
+        <p class="panel-subtitle">Questoes antigas continuam visiveis e novas ja usam o schema expandido.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="modal" id="modalQuestao" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <h2 class="panel-title">Criar Questao</h2>
+        <p class="panel-subtitle">Cadastre uma nova questao reutilizavel no Banco de Questoes.</p>
+      </div>
+      <button class="close-button" type="button" data-close-modal="questao">&times;</button>
+    </div>
+
+    <form id="formQuestao">
+      <div class="grid-fields">
+        <div class="form-field">
+          <label for="tipoQuestao">Tipo</label>
+          <select id="tipoQuestao" name="tipo" required>
+            <option value="multipla_texto">Multipla escolha com texto</option>
+            <option value="multipla_imagem">Multipla escolha com imagem</option>
+            <option value="resposta_escrita">Resposta escrita</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="anoEscolar">Ano escolar</label>
+          <select id="anoEscolar" name="anoEscolar" required></select>
+        </div>
+        <div class="form-field">
+          <label for="disciplina">Disciplina</label>
+          <select id="disciplina" name="disciplina" required></select>
+        </div>
+        <div class="form-field" id="descritorWrapper" hidden>
+          <label for="descritor">Descritor</label>
+          <select id="descritor" name="descritor">
+            <option value="">Selecione</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="nivelDificuldade">Nivel de dificuldade</label>
+          <select id="nivelDificuldade" name="nivelDificuldade">
+            <option value="">Opcional</option>
+            <option value="baixa">Baixa</option>
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+          </select>
+        </div>
+        <div class="form-field" style="grid-column: 1 / -1;">
+          <label for="textoApoio">Texto de apoio</label>
+          <textarea id="textoApoio" name="textoApoio" placeholder="Opcional. Cole aqui o texto base da questao."></textarea>
+        </div>
+        <div class="form-field" style="grid-column: 1 / -1;">
+          <label for="imagensApoio">Imagens de apoio</label>
+          <input id="imagensApoio" name="imagensApoio" type="file" accept="image/*" multiple>
+          <div id="previewImagensApoio" class="image-preview-grid"></div>
+        </div>
+        <div class="form-field" style="grid-column: 1 / -1;">
+          <label for="enunciado">Enunciado / pergunta</label>
+          <textarea id="enunciado" name="enunciado" placeholder="Digite o enunciado completo da questao" required></textarea>
+        </div>
+      </div>
+
+      <section class="panel" style="padding:18px; margin-top:18px;" id="descritorSuggestionPanel" hidden>
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title" style="font-size:1rem;">Sugestao automatica de descritor</h3>
+            <p class="panel-subtitle">A sugestao usa heuristica preparada para IA e precisa da sua confirmacao.</p>
+          </div>
+          <button class="button-inline button-outline" type="button" id="btnSugerirDescritor">Sugerir descritor</button>
+        </div>
+        <div id="descritorSuggestionFeedback" class="feedback" hidden></div>
+        <label class="checkbox-row" style="margin-top:12px;">
+          <input type="checkbox" id="descritorConfirmadoPeloProfessor">
+          <span>Confirmo o descritor selecionado para esta questao.</span>
+        </label>
+      </section>
+
+      <section id="alternativasWrapper" class="panel" style="padding:18px; margin-top:18px;">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title" style="font-size:1rem;">Alternativas</h3>
+            <p class="panel-subtitle">Digite uma alternativa por linha. O sistema limpa marcadores automaticamente.</p>
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="alternativasTexto">Alternativas em texto</label>
+          <textarea id="alternativasTexto" placeholder="a) Casa&#10;b) Escola&#10;c) Bola&#10;d) Livro"></textarea>
+        </div>
+        <div id="alternativasUploads" class="selection-list"></div>
+        <div class="form-field" style="margin-top:14px;">
+          <label for="respostaCorreta">Resposta correta</label>
+          <select id="respostaCorreta" name="respostaCorreta">
+            <option value="">Selecione</option>
+          </select>
+        </div>
+      </section>
+
+      <section id="respostaEsperadaWrapper" class="panel" style="padding:18px; margin-top:18px;" hidden>
+        <div class="form-field">
+          <label for="respostaEsperada">Resposta esperada</label>
+          <textarea id="respostaEsperada" name="respostaEsperada" placeholder="Explique o que o aluno precisa apresentar na resposta."></textarea>
+        </div>
+      </section>
+
+      <div id="feedbackQuestao" class="feedback" hidden></div>
+      <div class="modal-actions">
+        <button type="button" class="button button-outline" data-close-modal="questao">Cancelar</button>
+        <button type="submit" class="button button-primary" id="btnSalvarQuestao">Salvar no banco</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script type="module" src="assets/js/pages/professor-questoes.js"></script>
+</body>
+</html>

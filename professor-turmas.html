@@ -4,16 +4,166 @@
 <meta charset="UTF-8">
 <title>Turmas</title>
 <link rel="stylesheet" href="professor-styles.css">
+<style>
+.toolbar { margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; }
+.section-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:15px; }
+.tab-inline { display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; }
+.tab-inline .btn.active { background:#3b82f6; color:#fff; }
+.list-row { padding:12px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.list-row:last-child { border-bottom:none; }
+.list-main { flex:1; min-width:0; }
+.list-title { font-weight:600; color:#1e293b; }
+.list-subtitle { font-size:12px; color:#64748b; margin-top:2px; }
+.list-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.summary-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:15px; }
+.summary-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; }
+.summary-label { font-size:12px; color:#64748b; margin-bottom:4px; }
+.summary-value { font-size:22px; font-weight:700; color:#1e293b; }
+.filter-bar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px; }
+.question-box { border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:12px; background:#fff; }
+.question-title { font-weight:600; margin-bottom:8px; color:#1e293b; }
+.answer-box { background:#f8fafc; border-radius:8px; padding:10px; white-space:pre-wrap; margin-top:8px; }
+.badge-inline { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:600; }
+.badge-pending { background:#fef3c7; color:#92400e; }
+.badge-done { background:#d1fae5; color:#065f46; }
+.badge-manual { background:#dbeafe; color:#1d4ed8; }
+.empty-block { color:#64748b; padding:20px; text-align:center; }
+</style>
 </head>
 <body style="background:#f1f5f9;">
 
 <div style="padding:20px;">
   <div class="page-title">Turmas</div>
-  <div style="margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap;">
-    <button class="btn btn-primary" onclick="criarTurma()">➕ Criar Nova Turma</button>
-    <button class="btn btn-secondary" onclick="limparSenhasLegadas()">🧹 Limpar Senhas Legadas</button>
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="criarTurma()">Criar Nova Turma</button>
+    <button class="btn btn-secondary" onclick="limparSenhasLegadas()">Limpar Senhas Legadas</button>
   </div>
   <div id="listaTurmas"></div>
+</div>
+
+<div class="modal-overlay" id="modalTurma">
+  <div class="modal" style="max-width:960px;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="tituloTurma">Turma</h3>
+      <button class="modal-close" onclick="fecharTurma()">&times;</button>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">Alunos</div>
+        <div class="summary-value" id="resumoAlunos">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Provas Atribuídas</div>
+        <div class="summary-value" id="resumoProvas">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Correções Pendentes</div>
+        <div class="summary-value" id="resumoPendencias">0</div>
+      </div>
+    </div>
+
+    <div class="tab-inline">
+      <button class="btn btn-primary active" id="abaBtn-alunos" onclick="trocarAbaTurma('alunos')">Alunos</button>
+      <button class="btn btn-outline" id="abaBtn-provas" onclick="trocarAbaTurma('provas')">Provas</button>
+      <button class="btn btn-outline" id="abaBtn-notas" onclick="trocarAbaTurma('notas')">Notas</button>
+      <button class="btn btn-outline" id="abaBtn-descritores" onclick="trocarAbaTurma('descritores')">Descritores</button>
+      <button class="btn btn-outline" id="abaBtn-correcoes" onclick="trocarAbaTurma('correcoes')">Correcoes</button>
+    </div>
+
+    <div id="conteudo-alunos">
+      <div class="card">
+        <div class="section-actions">
+          <input id="nomeAlunoinput" placeholder="Nome do aluno" style="flex:2; min-width:220px; padding:10px;">
+          <input id="loginAlunoinput" placeholder="Login do aluno (opcional)" style="flex:1; min-width:220px; padding:10px;">
+          <input id="senhaAlunoinput" placeholder="Senha" style="flex:1; min-width:180px; padding:10px;">
+          <button class="btn btn-primary" onclick="adicionarAlunoTurma()">Cadastrar Aluno</button>
+        </div>
+        <div class="list-subtitle" style="margin-bottom:15px;">
+          O professor pode definir o login manualmente ou deixar em branco para gerar automaticamente.
+        </div>
+        <div id="listaAlunosTurma"></div>
+      </div>
+    </div>
+
+    <div id="conteudo-provas" style="display:none;">
+      <div class="card">
+        <div class="section-actions">
+          <select id="selectProvaAtribuir" style="flex:1; min-width:220px; padding:10px;">
+            <option value="">Selecione uma prova</option>
+          </select>
+          <button class="btn btn-primary" onclick="atribuirProva()">Atribuir Prova</button>
+        </div>
+        <div id="provasAtribuidas"></div>
+      </div>
+    </div>
+
+    <div id="conteudo-notas" style="display:none;">
+      <div class="card">
+        <div class="list-subtitle" style="margin-bottom:15px;">
+          Acompanhe atividades realizadas, notas, status e media geral de cada aluno.
+        </div>
+        <div id="painelNotasTurma"></div>
+      </div>
+    </div>
+
+    <div id="conteudo-descritores" style="display:none;">
+      <div class="card">
+        <div class="list-subtitle" style="margin-bottom:15px;">
+          Desempenho por descritor para Portugues e Matematica, por aluno e na visao geral da turma.
+        </div>
+        <div id="painelDescritoresTurma"></div>
+      </div>
+    </div>
+
+    <div id="conteudo-correcoes" style="display:none;">
+      <div class="card">
+        <div class="filter-bar">
+          <select id="filtroCorrecao" onchange="renderCorrecoesTurma()" style="padding:10px;">
+            <option value="pendentes">Mostrar só pendentes</option>
+            <option value="todas">Mostrar todas</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="carregarCorrecoesTurma()">Atualizar Lista</button>
+        </div>
+        <div id="listaCorrecoesTurma"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalMoverAluno">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Mover Aluno</h3>
+      <button class="modal-close" onclick="fecharMoverAluno()">&times;</button>
+    </div>
+    <div class="form-group">
+      <label>Aluno</label>
+      <input id="moverAlunoNome" disabled>
+    </div>
+    <div class="form-group">
+      <label>Nova Turma</label>
+      <select id="moverAlunoDestino"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="confirmarMoverAluno()">Mover</button>
+      <button class="btn btn-secondary" onclick="fecharMoverAluno()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCorrigir">
+  <div class="modal" style="max-width:1000px;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="tituloCorrecao">Correção</h3>
+      <button class="modal-close" onclick="fecharCorrecao()">&times;</button>
+    </div>
+    <div id="conteudoCorrecao"></div>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="salvarCorrecaoAtual()">Salvar Correção</button>
+      <button class="btn btn-secondary" onclick="fecharCorrecao()">Fechar</button>
+    </div>
+  </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -31,125 +181,1116 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const auth = firebase.auth();
+const secondaryApp = firebase.apps.find(app => app.name === "secondary-students") || firebase.initializeApp(firebaseConfig, "secondary-students");
+const secondaryAuth = secondaryApp.auth();
 
-let usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+const usuario = JSON.parse(localStorage.getItem("usuario") || "null");
+let turmasProfessor = [];
 let turmaAtualId = null;
+let turmaAtualData = null;
+let respostasTurmaAtual = [];
+let provasTurmaAtual = {};
+let moverAlunoState = null;
+let correcaoAtual = null;
+
+if (!usuario || usuario.role !== "professor") {
+  window.location.href = "index.html";
+}
+
+function slugify(texto) {
+  return String(texto || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/^\.+|\.+$/g, "");
+}
+
+function escapeHtml(texto) {
+  return String(texto || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function numeroSeguro(valor, casas) {
+  return Number(Number(valor || 0).toFixed(casas || 2));
+}
+
+async function carregarDocumentoProva(provaId) {
+  let provaDoc = await db.collection("provas").doc(provaId).get();
+  if (provaDoc.exists) {
+    return { id: provaDoc.id, ...provaDoc.data(), _collection: "provas" };
+  }
+
+  provaDoc = await db.collection("simulados").doc(provaId).get();
+  if (provaDoc.exists) {
+    return { id: provaDoc.id, ...provaDoc.data(), _collection: "simulados" };
+  }
+
+  return null;
+}
+
+async function resolverQuestoesDaProva(prova) {
+  if (!prova) return [];
+
+  if (Array.isArray(prova.questoes)) {
+    return prova.questoes.map(questao => ({
+      pergunta: questao.pergunta || questao.enunciado || "",
+      textoAntes: questao.textoAntes || "",
+      alternativas: questao.alternativas || [],
+      correta: questao.correta !== undefined ? questao.correta : questao.resposta_correta
+    }));
+  }
+
+  const bancoIds = prova.questoesBancoIds || [];
+  const temporarias = prova.questoesTemporarias || [];
+  const bancoQuestoes = [];
+
+  for (const questaoId of bancoIds) {
+    const questaoDoc = await db.collection("questoes").doc(questaoId).get();
+    if (!questaoDoc.exists) continue;
+    const questao = questaoDoc.data();
+    bancoQuestoes.push({
+      pergunta: questao.enunciado || "",
+      textoAntes: "",
+      alternativas: questao.alternativas || [],
+      correta: questao.resposta_correta
+    });
+  }
+
+  return [
+    ...bancoQuestoes,
+    ...temporarias.map(questao => ({
+      pergunta: questao.enunciado || questao.pergunta || "",
+      textoAntes: questao.textoAntes || "",
+      alternativas: questao.alternativas || [],
+      correta: questao.resposta_correta
+    }))
+  ];
+}
+
+async function normalizarProva(provaId) {
+  const prova = await carregarDocumentoProva(provaId);
+  if (!prova) return null;
+  const questoes = await resolverQuestoesDaProva(prova);
+  return {
+    ...prova,
+    nome: prova.titulo || prova.nome || "Prova",
+    ano: prova.anoEscolar || prova.ano || "",
+    valor: prova.valorTotal || prova.valor || 10,
+    questoes
+  };
+}
+
+function calcularResumoCorrecao(prova, respostas, correcaoExistente) {
+  const questoes = (prova && prova.questoes) || [];
+  const valorTotal = Number((prova && prova.valor) || 10);
+  const totalQuestoes = questoes.length || 1;
+  const valorPorQuestao = valorTotal / totalQuestoes;
+  const questoesDiscursivas = [];
+  let notaObjetivas = 0;
+  let acertosObjetivas = 0;
+  let totalObjetivas = 0;
+
+  questoes.forEach((questao, indice) => {
+    const respostaAluno = respostas ? respostas[indice] : undefined;
+    const ehObjetiva = Array.isArray(questao.alternativas) && questao.alternativas.length > 0;
+
+    if (ehObjetiva) {
+      totalObjetivas++;
+      if (respostaAluno === questao.correta) {
+        acertosObjetivas++;
+        notaObjetivas += valorPorQuestao;
+      }
+      return;
+    }
+
+    const corrigida = correcaoExistente && Array.isArray(correcaoExistente.questoesDiscursivas)
+      ? correcaoExistente.questoesDiscursivas.find(item => item.indice === indice)
+      : null;
+
+    questoesDiscursivas.push({
+      indice,
+      pergunta: questao.pergunta || "",
+      textoAntes: questao.textoAntes || "",
+      resposta: respostaAluno || "",
+      nota: corrigida ? Number(corrigida.nota || 0) : 0,
+      observacao: corrigida ? (corrigida.observacao || "") : "",
+      maxNota: numeroSeguro(valorPorQuestao, 2)
+    });
+  });
+
+  const notaDiscursivas = questoesDiscursivas.reduce((acc, item) => acc + Number(item.nota || 0), 0);
+  const possuiDiscursivas = questoesDiscursivas.length > 0;
+  const notaFinal = numeroSeguro(notaObjetivas + notaDiscursivas, 2);
+
+  return {
+    notaObjetivas: numeroSeguro(notaObjetivas, 2),
+    acertosObjetivas,
+    totalObjetivas,
+    totalQuestoes: questoes.length,
+    possuiDiscursivas,
+    questoesDiscursivas,
+    notaDiscursivas: numeroSeguro(notaDiscursivas, 2),
+    notaFinal
+  };
+}
+
+function respostaPrecisaCorrecao(item) {
+  if (!item.prova) return false;
+  const resumo = calcularResumoCorrecao(item.prova, item.resposta.respostas, item.resposta.correcao);
+  if (!resumo.possuiDiscursivas) {
+    return !(item.resposta.correcao && item.resposta.correcao.status === "corrigida");
+  }
+  return !(item.resposta.correcao && item.resposta.correcao.status === "corrigida");
+}
+
+function normalizarStatusAlunoResposta(resposta) {
+  if (!resposta) return "nao iniciada";
+  if ((resposta.correcao && resposta.correcao.status === "corrigida") || resposta.status === "corrigida") return "corrigida";
+  if (resposta.status === "enviada" || resposta.enviadaEm || resposta.finalizadaEm) return "enviada";
+  if (Array.isArray(resposta.respostas) && resposta.respostas.length) return "em andamento";
+  return "nao iniciada";
+}
+
+function calcularMediaLista(valores) {
+  const validos = (valores || []).filter(valor => typeof valor === "number" && !Number.isNaN(valor));
+  if (!validos.length) return null;
+  return numeroSeguro(validos.reduce((acc, item) => acc + item, 0) / validos.length, 2);
+}
+
+function badgeStatusTurma(status) {
+  const mapa = {
+    "nao iniciada": { cls: "badge-inline", texto: "Nao iniciada" },
+    "em andamento": { cls: "badge-inline badge-manual", texto: "Em andamento" },
+    "enviada": { cls: "badge-inline badge-pending", texto: "Enviada" },
+    "corrigida": { cls: "badge-inline badge-done", texto: "Corrigida" }
+  };
+  return mapa[status] || mapa["nao iniciada"];
+}
+
+function calcularDescritoresDeResposta(prova, resposta) {
+  const questoes = (prova && prova.questoes) || [];
+  const respostasAluno = resposta && Array.isArray(resposta.respostas) ? resposta.respostas : [];
+  const valorPorQuestao = questoes.length ? Number((prova.valor || 10) / questoes.length) : 1;
+  const stats = {};
+
+  questoes.forEach((questao, indice) => {
+    const descritor = questao.descritor || "";
+    const disciplina = questao.disciplina || prova.disciplina || "";
+    if (!descritor || (disciplina !== "portugues" && disciplina !== "matematica")) return;
+
+    if (!stats[descritor]) {
+      stats[descritor] = { descritor, disciplina, total: 0, acertos: 0, pontuacao: 0, pontuacaoPossivel: 0 };
+    }
+
+    const item = stats[descritor];
+    const respostaAluno = respostasAluno[indice];
+    const ehObjetiva = Array.isArray(questao.alternativas) && questao.alternativas.length > 0;
+    let nota = 0;
+    let acertou = false;
+
+    if (ehObjetiva) {
+      acertou = respostaAluno === questao.correta;
+      nota = acertou ? valorPorQuestao : 0;
+    } else {
+      const corrigida = resposta && resposta.correcao && Array.isArray(resposta.correcao.questoesDiscursivas)
+        ? resposta.correcao.questoesDiscursivas.find(entry => entry.indice === indice)
+        : null;
+      nota = corrigida ? Number(corrigida.nota || 0) : 0;
+      acertou = nota >= valorPorQuestao * 0.6;
+    }
+
+    item.total += 1;
+    item.pontuacao += nota;
+    item.pontuacaoPossivel += valorPorQuestao;
+    if (acertou) item.acertos += 1;
+  });
+
+  return Object.values(stats).map(item => ({
+    ...item,
+    percentual: item.pontuacaoPossivel ? numeroSeguro((item.pontuacao / item.pontuacaoPossivel) * 100, 1) : 0
+  }));
+}
+
+async function montarPainelAnaliticoTurma() {
+  const alunos = (turmaAtualData && turmaAtualData.alunos) || [];
+  const provasIds = (turmaAtualData && turmaAtualData.provas) || [];
+  const provas = {};
+  for (const provaId of provasIds) {
+    const prova = await normalizarProva(provaId);
+    if (prova) provas[provaId] = prova;
+  }
+
+  const respostasSnap = await db.collection("respostas").where("turmaId", "==", turmaAtualId).get();
+  const respostas = respostasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const alunosPainel = alunos.map(aluno => {
+    const respostasAluno = respostas.filter(item => item.alunoId === aluno.uid || item.uid === aluno.uid);
+    const atividades = provasIds.map(provaId => {
+      const prova = provas[provaId];
+      const resposta = respostasAluno.find(item => item.provaId === provaId);
+      const status = normalizarStatusAlunoResposta(resposta);
+      const nota = resposta && resposta.correcao && typeof resposta.correcao.notaFinal === "number"
+        ? Number(resposta.correcao.notaFinal)
+        : null;
+      return {
+        provaId,
+        provaNome: prova ? prova.nome : "Prova",
+        disciplina: prova ? (prova.disciplina || "") : "",
+        status,
+        nota
+      };
+    });
+
+    const descritores = [];
+    respostasAluno.forEach(resposta => {
+      const prova = provas[resposta.provaId];
+      if (!prova || normalizarStatusAlunoResposta(resposta) !== "corrigida") return;
+      descritores.push(...calcularDescritoresDeResposta(prova, resposta));
+    });
+
+    const agregados = {};
+    descritores.forEach(item => {
+      if (!agregados[item.descritor]) {
+        agregados[item.descritor] = { descritor: item.descritor, disciplina: item.disciplina, total: 0, acertos: 0, pontuacao: 0, pontuacaoPossivel: 0 };
+      }
+      agregados[item.descritor].total += item.total;
+      agregados[item.descritor].acertos += item.acertos;
+      agregados[item.descritor].pontuacao += item.pontuacao;
+      agregados[item.descritor].pontuacaoPossivel += item.pontuacaoPossivel;
+    });
+
+    const descritoresOrdenados = Object.values(agregados).map(item => ({
+      ...item,
+      percentual: item.pontuacaoPossivel ? numeroSeguro((item.pontuacao / item.pontuacaoPossivel) * 100, 1) : 0
+    })).sort((a, b) => b.percentual - a.percentual);
+
+    return {
+      ...aluno,
+      atividades,
+      media: calcularMediaLista(atividades.map(item => item.nota)),
+      descritores: descritoresOrdenados,
+      melhores: descritoresOrdenados.slice(0, 3),
+      piores: [...descritoresOrdenados].sort((a, b) => a.percentual - b.percentual).slice(0, 3)
+    };
+  });
+
+  const descritoresTurma = {};
+  alunosPainel.forEach(aluno => {
+    aluno.descritores.forEach(item => {
+      if (!descritoresTurma[item.descritor]) {
+        descritoresTurma[item.descritor] = { descritor: item.descritor, disciplina: item.disciplina, total: 0, acertos: 0, pontuacao: 0, pontuacaoPossivel: 0 };
+      }
+      descritoresTurma[item.descritor].total += item.total;
+      descritoresTurma[item.descritor].acertos += item.acertos;
+      descritoresTurma[item.descritor].pontuacao += item.pontuacao;
+      descritoresTurma[item.descritor].pontuacaoPossivel += item.pontuacaoPossivel;
+    });
+  });
+
+  const descritoresTurmaLista = Object.values(descritoresTurma).map(item => ({
+    ...item,
+    percentual: item.pontuacaoPossivel ? numeroSeguro((item.pontuacao / item.pontuacaoPossivel) * 100, 1) : 0
+  })).sort((a, b) => b.percentual - a.percentual);
+
+  return {
+    alunos: alunosPainel,
+    mediaTurma: calcularMediaLista(alunosPainel.map(item => item.media)),
+    descritoresTurma: descritoresTurmaLista,
+    melhoresTurma: descritoresTurmaLista.slice(0, 5),
+    pioresTurma: [...descritoresTurmaLista].sort((a, b) => a.percentual - b.percentual).slice(0, 5),
+    alunosComMaiorDificuldade: [...alunosPainel].filter(item => typeof item.media === "number").sort((a, b) => a.media - b.media).slice(0, 5)
+  };
+}
+
+async function renderNotasTurma() {
+  const alvo = document.getElementById("painelNotasTurma");
+  if (!alvo) return;
+  const painel = await montarPainelAnaliticoTurma();
+
+  if (!painel.alunos.length) {
+    alvo.innerHTML = '<div class="empty-block">Nenhum aluno cadastrado nesta turma.</div>';
+    return;
+  }
+
+  alvo.innerHTML = `
+    <div class="summary-grid" style="margin-bottom:15px;">
+      <div class="summary-card"><div class="summary-label">Media geral da turma</div><div class="summary-value">${painel.mediaTurma !== null ? painel.mediaTurma : "-"}</div></div>
+      <div class="summary-card"><div class="summary-label">Alunos analisados</div><div class="summary-value">${painel.alunos.length}</div></div>
+    </div>
+    ${painel.alunos.map(aluno => `
+      <div class="card" style="margin-bottom:12px;">
+        <div class="list-title">${escapeHtml(aluno.nome || "Aluno")}</div>
+        <div class="list-subtitle">Login: ${escapeHtml(aluno.login || "-")} � Media geral: ${aluno.media !== null ? aluno.media : "-"}</div>
+        ${(aluno.atividades || []).length === 0 ? '<div class="empty-block">Nenhuma prova atribuida.</div>' : aluno.atividades.map(atividade => {
+          const badge = badgeStatusTurma(atividade.status);
+          return `<div class="list-row"><div class="list-main"><div class="list-title">${escapeHtml(atividade.provaNome)}</div><div class="list-subtitle">${escapeHtml(atividade.disciplina || "")} � Nota: ${atividade.nota !== null ? atividade.nota : "-"}</div></div><div class="list-actions"><span class="${badge.cls}">${badge.texto}</span></div></div>`;
+        }).join("")}
+      </div>
+    `).join("")}
+  `;
+}
+
+async function renderDescritoresTurma() {
+  const alvo = document.getElementById("painelDescritoresTurma");
+  if (!alvo) return;
+  const painel = await montarPainelAnaliticoTurma();
+
+  const melhoresTurma = painel.melhoresTurma.length
+    ? painel.melhoresTurma.map(item => `<div class="list-row"><div class="list-main"><div class="list-title">${escapeHtml(item.descritor)}</div><div class="list-subtitle">${escapeHtml(item.disciplina || "")} � ${item.total} questoes</div></div><div class="list-actions"><span class="badge-inline badge-done">${item.percentual}%</span></div></div>`).join("")
+    : '<div class="empty-block">Sem dados corrigidos por descritor.</div>';
+
+  const pioresTurma = painel.pioresTurma.length
+    ? painel.pioresTurma.map(item => `<div class="list-row"><div class="list-main"><div class="list-title">${escapeHtml(item.descritor)}</div><div class="list-subtitle">${escapeHtml(item.disciplina || "")} � ${item.total} questoes</div></div><div class="list-actions"><span class="badge-inline badge-pending">${item.percentual}%</span></div></div>`).join("")
+    : '<div class="empty-block">Sem dados corrigidos por descritor.</div>';
+
+  alvo.innerHTML = `
+    <div class="summary-grid" style="margin-bottom:15px;">
+      <div class="summary-card"><div class="summary-label">Media geral da turma</div><div class="summary-value">${painel.mediaTurma !== null ? painel.mediaTurma : "-"}</div></div>
+      <div class="summary-card"><div class="summary-label">Descritores analisados</div><div class="summary-value">${painel.descritoresTurma.length}</div></div>
+      <div class="summary-card"><div class="summary-label">Alunos com maior dificuldade</div><div class="summary-value">${painel.alunosComMaiorDificuldade.length}</div></div>
+    </div>
+    <div class="card" style="margin-bottom:12px;">
+      <div class="list-title">Descritores mais acertados pela turma</div>
+      ${melhoresTurma}
+    </div>
+    <div class="card" style="margin-bottom:12px;">
+      <div class="list-title">Descritores com maior dificuldade</div>
+      ${pioresTurma}
+    </div>
+    <div class="card">
+      <div class="list-title">Visao individual dos alunos</div>
+      ${painel.alunos.map(aluno => `
+        <div class="question-box">
+          <div class="question-title">${escapeHtml(aluno.nome || "Aluno")} � Media: ${aluno.media !== null ? aluno.media : "-"}</div>
+          <div class="list-subtitle">Melhores descritores: ${aluno.melhores.length ? aluno.melhores.map(item => `${item.descritor} (${item.percentual}%)`).join(", ") : "Sem dados"}</div>
+          <div class="list-subtitle">Maiores dificuldades: ${aluno.piores.length ? aluno.piores.map(item => `${item.descritor} (${item.percentual}%)`).join(", ") : "Sem dados"}</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+async function carregarTurmasProfessor() {
+  const snap = await db.collection("turmas").where("criadoPor", "==", usuario.uid).get();
+  turmasProfessor = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+function renderListaTurmas() {
+  const lista = document.getElementById("listaTurmas");
+  if (turmasProfessor.length === 0) {
+    lista.innerHTML = '<div class="card"><div class="empty-block">Nenhuma turma criada ainda.</div></div>';
+    return;
+  }
+
+  lista.innerHTML = turmasProfessor.map(turma => `
+    <div class="card">
+      <div class="list-row" style="border-bottom:none; padding:0;">
+        <div class="list-main">
+          <div class="list-title">${escapeHtml(turma.nome)}</div>
+          <div class="list-subtitle">${(turma.alunos || []).length} alunos • ${(turma.provas || []).length} provas</div>
+        </div>
+        <div class="list-actions">
+          <button class="btn btn-primary btn-sm" onclick="abrirTurma('${turma.id}')">Gerenciar</button>
+          <button class="btn btn-danger btn-sm" onclick="excluirTurma('${turma.id}')">Excluir</button>
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
 
 async function criarTurma() {
   const nome = prompt("Nome da turma:");
-  if (!nome) return;
-  try {
-    await db.collection("turmas").add({ nome, alunos: [], provas: [], criadoPor: usuario.uid });
-    carregarTurmas();
-  } catch (e) { alert("Erro: " + e.message); }
-}
+  if (!nome || !nome.trim()) return;
 
-async function carregarTurmas() {
-  const lista = document.getElementById("listaTurmas");
-  lista.innerHTML = "<p>Carregando...</p>";
   try {
-    const snap = await db.collection("turmas").where("criadoPor", "==", usuario.uid).get();
-    if (snap.empty) {
-      lista.innerHTML = '<div class="card"><p style="color:#64748b;">Nenhuma turma. Crie sua primeira turma.</p></div>';
-      return;
-    }
-    lista.innerHTML = "";
-    snap.forEach(doc => {
-      const t = doc.data();
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:600;font-size:18px;">' + t.nome + '</div><div style="font-size:13px;color:#64748b;">' + (t.alunos||[]).length + ' alunos</div></div><div style="display:flex;gap:8px;"><button class="btn btn-primary btn-sm" onclick="abrirTurma(\'' + doc.id + '\', \'' + t.nome + '\')">Gerenciar</button><button class="btn btn-danger btn-sm" onclick="excluirTurma(\'' + doc.id + '\')">Excluir</button></div></div>';
-      lista.appendChild(div);
+    await db.collection("turmas").add({
+      nome: nome.trim(),
+      alunos: [],
+      provas: [],
+      criadoPor: usuario.uid,
+      criadoEm: new Date()
     });
-  } catch (e) { lista.innerHTML = "<p>Erro: "+e.message+"</p>"; }
+    await refreshTurmas();
+  } catch (e) {
+    alert("Erro ao criar turma: " + e.message);
+  }
 }
 
-function abrirTurma(id, nome) {
-  turmaAtualId = id;
-  document.getElementById("tituloTurma").textContent = nome;
+async function excluirTurma(turmaId) {
+  if (!confirm("Excluir turma?")) return;
+
+  const turma = turmasProfessor.find(item => item.id === turmaId);
+  if (turma && turma.alunos && turma.alunos.length > 0) {
+    const confirmar = confirm("Essa turma ainda possui alunos. Eles serão desativados. Deseja continuar?");
+    if (!confirmar) return;
+  }
+
+  try {
+    if (turma && Array.isArray(turma.alunos)) {
+      for (const aluno of turma.alunos) {
+        if (aluno.uid) {
+          await db.collection("users").doc(aluno.uid).update({
+            turmaId: null,
+            ativo: false,
+            removidoEm: new Date()
+          });
+        }
+      }
+    }
+
+    await db.collection("turmas").doc(turmaId).delete();
+    if (turmaAtualId === turmaId) {
+      fecharTurma();
+    }
+    await refreshTurmas();
+  } catch (e) {
+    alert("Erro ao excluir turma: " + e.message);
+  }
+}
+
+async function refreshTurmas() {
+  await carregarTurmasProfessor();
+  renderListaTurmas();
+}
+
+async function abrirTurma(turmaId) {
+  turmaAtualId = turmaId;
   document.getElementById("modalTurma").classList.add("active");
-  carregarDadosTurma();
+  trocarAbaTurma("alunos");
+  await recarregarTurmaAtual();
 }
 
 function fecharTurma() {
   document.getElementById("modalTurma").classList.remove("active");
   turmaAtualId = null;
+  turmaAtualData = null;
+  respostasTurmaAtual = [];
+  provasTurmaAtual = {};
 }
 
-async function carregarDadosTurma() {
+function trocarAbaTurma(aba) {
+  ["alunos", "provas", "notas", "descritores", "correcoes"].forEach(item => {
+    document.getElementById("conteudo-" + item).style.display = item === aba ? "block" : "none";
+    document.getElementById("abaBtn-" + item).className = item === aba ? "btn btn-primary active" : "btn btn-outline";
+  });
+}
+
+async function recarregarTurmaAtual() {
   if (!turmaAtualId) return;
-  const doc = await db.collection("turmas").doc(turmaAtualId).get();
-  const t = doc.data();
-  document.getElementById("listaAlunosTurma").innerHTML = "";
-  if (t.alunos) {
-    t.alunos.forEach(function(a, i) {
-      document.getElementById("listaAlunosTurma").innerHTML += '<div style="padding:10px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;"><span>' + a.nome + '</span><button class="btn btn-danger btn-sm" style="padding:4px 8px;" onclick="removerAluno(' + i + ')">✕</button></div>';
-    });
+
+  const turmaDoc = await db.collection("turmas").doc(turmaAtualId).get();
+  if (!turmaDoc.exists) {
+    alert("Turma não encontrada.");
+    fecharTurma();
+    await refreshTurmas();
+    return;
   }
+
+  turmaAtualData = { id: turmaDoc.id, ...turmaDoc.data() };
+  document.getElementById("tituloTurma").textContent = turmaAtualData.nome || "Turma";
+  document.getElementById("resumoAlunos").textContent = (turmaAtualData.alunos || []).length;
+  document.getElementById("resumoProvas").textContent = (turmaAtualData.provas || []).length;
+
+  await Promise.all([
+    renderAlunosTurma(),
+    renderProvasTurma(),
+    renderNotasTurma(),
+    renderDescritoresTurma(),
+    carregarCorrecoesTurma()
+  ]);
+
+  document.getElementById("resumoPendencias").textContent = respostasTurmaAtual.filter(respostaPrecisaCorrecao).length;
+}
+
+async function renderAlunosTurma() {
+  const alvo = document.getElementById("listaAlunosTurma");
+  const alunos = (turmaAtualData && turmaAtualData.alunos) || [];
+
+  if (alunos.length === 0) {
+    alvo.innerHTML = '<div class="empty-block">Nenhum aluno cadastrado nesta turma.</div>';
+    return;
+  }
+
+  alvo.innerHTML = alunos.map((aluno, index) => `
+    <div class="list-row">
+      <div class="list-main">
+        <div class="list-title">${escapeHtml(aluno.nome || "Aluno")}</div>
+        <div class="list-subtitle">Login: ${escapeHtml(aluno.login || "-")} • ${escapeHtml(aluno.email || "sem email")}</div>
+      </div>
+      <div class="list-actions">
+        <button class="btn btn-outline btn-sm" onclick="abrirMoverAluno(${index})">Mover</button>
+        <button class="btn btn-danger btn-sm" onclick="removerAluno(${index})">Remover</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function sanitizarLoginAluno(valor) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/[^a-z0-9._-]/g, "")
+    .replace(/^[._-]+|[._-]+$/g, "");
+}
+
+async function loginAlunoExiste(login) {
+  if (!login) return false;
+  const snap = await db.collection("users").where("login", "==", login).limit(1).get();
+  return !snap.empty;
+}
+
+async function gerarLoginAluno(nome) {
+  const base = sanitizarLoginAluno(slugify(nome)) || "aluno";
+  let login = base;
+  let contador = 0;
+
+  while (await loginAlunoExiste(login)) {
+    contador += 1;
+    login = `${base}${contador}`;
+  }
+
+  return login;
+}
+
+async function resolverLoginAluno(nome, loginInformado) {
+  const loginManual = sanitizarLoginAluno(loginInformado);
+  if (loginManual) {
+    if (await loginAlunoExiste(loginManual)) {
+      throw new Error("LOGIN_EM_USO");
+    }
+    return loginManual;
+  }
+
+  return gerarLoginAluno(nome);
 }
 
 async function adicionarAlunoTurma() {
-  const nome = document.getElementById("nomeAlunoinput").value;
-  const senha = document.getElementById("senhaAlunoinput").value;
-  if (!nome || !senha) { alert("Preencha nome e senha"); return; }
-  const doc = await db.collection("turmas").doc(turmaAtualId).get();
-  const t = doc.data();
-  const alunos = t.alunos || [];
-  alunos.push({ nome: nome, senha: senha });
-  await db.collection("turmas").doc(turmaAtualId).update({ alunos: alunos });
-  document.getElementById("nomeAlunoinput").value = "";
-  document.getElementById("senhaAlunoinput").value = "";
-  carregarDadosTurma();
-}
+  if (!turmaAtualData) return;
 
+  const nomeInput = document.getElementById("nomeAlunoinput");
+  const loginInput = document.getElementById("loginAlunoinput");
+  const senhaInput = document.getElementById("senhaAlunoinput");
+  const nome = nomeInput.value.trim();
+  const loginInformado = loginInput.value.trim();
+  const senha = senhaInput.value.trim();
+
+  if (!nome || !senha) {
+    alert("Preencha nome e senha.");
+    return;
+  }
+
+  let login = "";
+  let email = "";
+
+  try {
+    login = await resolverLoginAluno(nome, loginInformado);
+    email = `${login}@plataforma.app`;
+
+    const cred = await secondaryAuth.createUserWithEmailAndPassword(email, senha);
+    const uid = cred.user.uid;
+
+    await db.collection("users").doc(uid).set({
+      nome,
+      login,
+      email,
+      uid,
+      turmaId: turmaAtualId,
+      professorId: usuario.uid,
+      role: "aluno",
+      ativo: true,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    const alunosAtualizados = [...(turmaAtualData.alunos || []), {
+      uid,
+      nome,
+      login,
+      email,
+      turmaId: turmaAtualId,
+      professorId: usuario.uid,
+      role: "aluno",
+      ativo: true
+    }];
+
+    await db.collection("turmas").doc(turmaAtualId).update({ alunos: alunosAtualizados });
+
+    nomeInput.value = "";
+    loginInput.value = "";
+    senhaInput.value = "";
+    await recarregarTurmaAtual();
+    await refreshTurmas();
+    alert("Aluno cadastrado com sucesso.\nLogin: " + login + "\nEmail: " + email + "\nSenha: " + senha);
+  } catch (e) {
+    let mensagem = "Erro ao cadastrar aluno.";
+
+    if (e.message === "LOGIN_EM_USO") {
+      mensagem = "Este login ja esta em uso. Escolha outro.";
+    } else if (e.code === "auth/weak-password") {
+      mensagem = "A senha precisa ter pelo menos 6 caracteres.";
+    } else if (e.code === "auth/invalid-email") {
+      mensagem = "Email invalido para criar a conta do aluno.";
+    } else if (e.code === "auth/email-already-in-use") {
+      mensagem = "Este login ja esta em uso. Escolha outro.";
+    } else if (e.code && String(e.code).startsWith("auth/")) {
+      mensagem = "Erro ao criar conta no Firebase Auth: " + e.message;
+    } else if (e.message) {
+      mensagem = "Erro ao cadastrar aluno: " + e.message;
+    }
+
+    alert(mensagem);
+  } finally {
+    await secondaryAuth.signOut();
+  }
+}
 async function removerAluno(index) {
-  if (!confirm("Remover aluno?")) return;
-  const doc = await db.collection("turmas").doc(turmaAtualId).get();
-  const t = doc.data();
-  t.alunos.splice(index, 1);
-  await db.collection("turmas").doc(turmaAtualId).update({ alunos: t.alunos });
-  carregarDadosTurma();
+  if (!turmaAtualData) return;
+  if (!confirm("Remover aluno desta turma?")) return;
+
+  const alunos = [...(turmaAtualData.alunos || [])];
+  const aluno = alunos[index];
+  if (!aluno) return;
+
+  alunos.splice(index, 1);
+
+  try {
+    await db.collection("turmas").doc(turmaAtualId).update({ alunos });
+    if (aluno.uid) {
+      await db.collection("users").doc(aluno.uid).update({
+        turmaId: null,
+        ativo: false,
+        removidoEm: new Date()
+      });
+    }
+    await recarregarTurmaAtual();
+    await refreshTurmas();
+  } catch (e) {
+    alert("Erro ao remover aluno: " + e.message);
+  }
 }
 
-async function excluirTurma(id) {
-  if (!confirm("Excluir turma?")) return;
-  await db.collection("turmas").doc(id).delete();
-  carregarTurmas();
+function abrirMoverAluno(index) {
+  const aluno = (turmaAtualData.alunos || [])[index];
+  if (!aluno) return;
+
+  const opcoes = turmasProfessor.filter(turma => turma.id !== turmaAtualId);
+  if (opcoes.length === 0) {
+    alert("Crie outra turma antes de mover um aluno.");
+    return;
+  }
+
+  moverAlunoState = { index, aluno };
+  document.getElementById("moverAlunoNome").value = aluno.nome || "Aluno";
+  document.getElementById("moverAlunoDestino").innerHTML = opcoes.map(turma =>
+    `<option value="${turma.id}">${escapeHtml(turma.nome)}</option>`
+  ).join("");
+  document.getElementById("modalMoverAluno").classList.add("active");
+}
+
+function fecharMoverAluno() {
+  document.getElementById("modalMoverAluno").classList.remove("active");
+  moverAlunoState = null;
+}
+
+async function confirmarMoverAluno() {
+  if (!moverAlunoState || !turmaAtualData) return;
+
+  const destinoId = document.getElementById("moverAlunoDestino").value;
+  if (!destinoId) {
+    alert("Selecione a turma de destino.");
+    return;
+  }
+
+  const alunosOrigem = [...(turmaAtualData.alunos || [])];
+  const aluno = alunosOrigem[moverAlunoState.index];
+  if (!aluno) return;
+
+  alunosOrigem.splice(moverAlunoState.index, 1);
+
+  try {
+    const destinoDoc = await db.collection("turmas").doc(destinoId).get();
+    if (!destinoDoc.exists) {
+      throw new Error("Turma de destino não encontrada.");
+    }
+
+    const destinoData = destinoDoc.data();
+    const alunosDestino = [...(destinoData.alunos || []), {
+      uid: aluno.uid || null,
+      nome: aluno.nome || "",
+      login: aluno.login || "",
+      email: aluno.email || "",
+      ativo: true
+    }];
+
+    await db.collection("turmas").doc(turmaAtualId).update({ alunos: alunosOrigem });
+    await db.collection("turmas").doc(destinoId).update({ alunos: alunosDestino });
+
+    if (aluno.uid) {
+      await db.collection("users").doc(aluno.uid).update({
+        turmaId: destinoId,
+        ativo: true,
+        movidoEm: new Date()
+      });
+    }
+
+    fecharMoverAluno();
+    await recarregarTurmaAtual();
+    await refreshTurmas();
+  } catch (e) {
+    alert("Erro ao mover aluno: " + e.message);
+  }
+}
+
+async function renderProvasTurma() {
+  const select = document.getElementById("selectProvaAtribuir");
+  const lista = document.getElementById("provasAtribuidas");
+  const [provasNovasSnap, provasLegadasSnap] = await Promise.all([
+    db.collection("provas").where("criadoPor", "==", usuario.uid).get(),
+    db.collection("simulados").where("criadoPor", "==", usuario.uid).get()
+  ]);
+
+  const provasCriadas = [
+    ...provasNovasSnap.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      nome: doc.data().titulo || doc.data().nome || "Sem nome"
+    })),
+    ...provasLegadasSnap.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      nome: doc.data().nome || "Sem nome"
+    }))
+  ];
+
+  select.innerHTML =
+    '<option value="">Selecione uma prova</option>' +
+    provasCriadas.map(prova =>
+      `<option value="${prova.id}">${escapeHtml(prova.nome || "Sem nome")}</option>`
+    ).join("");
+
+  provasTurmaAtual = {};
+
+  const provasAtribuidas = turmaAtualData.provas || [];
+  if (provasAtribuidas.length === 0) {
+    lista.innerHTML = '<div class="empty-block">Nenhuma prova atribuida a esta turma.</div>';
+    return;
+  }
+
+  const cards = [];
+  for (const provaId of provasAtribuidas) {
+    const prova = await normalizarProva(provaId);
+    if (!prova) continue;
+
+    provasTurmaAtual[provaId] = prova;
+    cards.push(`
+      <div class="list-row">
+        <div class="list-main">
+          <div class="list-title">${escapeHtml(prova.nome || "Sem nome")}</div>
+          <div class="list-subtitle">${escapeHtml(prova.disciplina || "")} - ${escapeHtml(prova.ano || "")} ano - ${(prova.questoes || []).length} questoes</div>
+        </div>
+        <div class="list-actions">
+          <button class="btn btn-danger btn-sm" onclick="removerProva('${provaId}')">Remover</button>
+        </div>
+      </div>
+    `);
+  }
+
+  lista.innerHTML = cards.join("") || '<div class="empty-block">Nenhuma prova atribuida a esta turma.</div>';
+}
+
+async function atribuirProva() {
+  if (!turmaAtualData) return;
+
+  const provaId = document.getElementById("selectProvaAtribuir").value;
+  if (!provaId) {
+    alert("Selecione uma prova.");
+    return;
+  }
+
+  const provas = [...(turmaAtualData.provas || [])];
+  if (!provas.includes(provaId)) {
+    provas.push(provaId);
+  }
+
+  try {
+    await db.collection("turmas").doc(turmaAtualId).update({ provas });
+    await recarregarTurmaAtual();
+    await refreshTurmas();
+  } catch (e) {
+    alert("Erro ao atribuir prova: " + e.message);
+  }
+}
+
+async function removerProva(provaId) {
+  if (!turmaAtualData) return;
+
+  const provas = (turmaAtualData.provas || []).filter(item => item !== provaId);
+  try {
+    await db.collection("turmas").doc(turmaAtualId).update({ provas });
+    await recarregarTurmaAtual();
+    await refreshTurmas();
+  } catch (e) {
+    alert("Erro ao remover prova: " + e.message);
+  }
+}
+
+window.atribuirProva = atribuirProva;
+window.removerProva = removerProva;
+async function carregarCorrecoesTurma() {
+  if (!turmaAtualId) return;
+
+  const respostasSnap = await db.collection("respostas").where("turmaId", "==", turmaAtualId).get();
+  const provasIds = [...new Set(respostasSnap.docs.map(doc => doc.data().provaId).filter(Boolean))];
+  const provasMap = {};
+
+  for (const provaId of provasIds) {
+    const prova = await normalizarProva(provaId);
+    if (prova) {
+      provasMap[provaId] = prova;
+    }
+  }
+
+  respostasTurmaAtual = respostasSnap.docs.map(doc => ({
+    id: doc.id,
+    resposta: doc.data(),
+    prova: provasMap[doc.data().provaId] || null
+  }));
+
+  renderCorrecoesTurma();
+}
+
+function renderCorrecoesTurma() {
+  const alvo = document.getElementById("listaCorrecoesTurma");
+  const filtro = document.getElementById("filtroCorrecao").value;
+
+  let lista = respostasTurmaAtual.slice();
+  if (filtro === "pendentes") {
+    lista = lista.filter(respostaPrecisaCorrecao);
+  }
+
+  document.getElementById("resumoPendencias").textContent = respostasTurmaAtual.filter(respostaPrecisaCorrecao).length;
+
+  if (lista.length === 0) {
+    alvo.innerHTML = '<div class="empty-block">Nenhuma resposta encontrada neste filtro.</div>';
+    return;
+  }
+
+  alvo.innerHTML = lista.map(item => {
+    const prova = item.prova || {};
+    const resumo = calcularResumoCorrecao(prova, item.resposta.respostas, item.resposta.correcao);
+    const corrigida = item.resposta.correcao && item.resposta.correcao.status === "corrigida";
+    const badgeClass = corrigida ? "badge-done" : "badge-pending";
+    const badgeText = corrigida ? "Corrigida" : "Pendente";
+    const tipoManual = resumo.possuiDiscursivas ? '<span class="badge-inline badge-manual">Com discursiva</span>' : "";
+    const notaTexto = corrigida ? `Nota final: ${numeroSeguro(item.resposta.correcao.notaFinal, 2)}` : `Parcial objetiva: ${resumo.notaObjetivas}`;
+
+    return `
+      <div class="list-row">
+        <div class="list-main">
+          <div class="list-title">${escapeHtml(item.resposta.aluno || "Aluno")} • ${escapeHtml(prova.nome || item.resposta.prova || "Prova")}</div>
+          <div class="list-subtitle">${notaTexto}</div>
+        </div>
+        <div class="list-actions">
+          ${tipoManual}
+          <span class="badge-inline ${badgeClass}">${badgeText}</span>
+          <button class="btn btn-primary btn-sm" onclick="abrirCorrecao('${item.id}')">${corrigida ? "Ver" : "Corrigir"}</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function abrirCorrecao(respostaId) {
+  const item = respostasTurmaAtual.find(entry => entry.id === respostaId);
+  if (!item || !item.prova) {
+    alert("Resposta ou prova não encontrada.");
+    return;
+  }
+
+  const resumo = calcularResumoCorrecao(item.prova, item.resposta.respostas, item.resposta.correcao);
+  correcaoAtual = { ...item, resumo };
+
+  document.getElementById("tituloCorrecao").textContent = `${item.resposta.aluno || "Aluno"} • ${item.prova.nome || "Prova"}`;
+
+  let html = `
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">Nota Objetiva</div>
+        <div class="summary-value">${numeroSeguro(resumo.notaObjetivas, 2)}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Acertos Objetivos</div>
+        <div class="summary-value">${resumo.acertosObjetivas}/${resumo.totalObjetivas}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Valor Total da Prova</div>
+        <div class="summary-value">${numeroSeguro((item.prova && item.prova.valor) || 10, 2)}</div>
+      </div>
+    </div>
+  `;
+
+  const questoes = item.prova.questoes || [];
+  questoes.forEach((questao, indice) => {
+    const ehObjetiva = Array.isArray(questao.alternativas) && questao.alternativas.length > 0;
+    const respostaAluno = item.resposta.respostas ? item.resposta.respostas[indice] : undefined;
+
+    if (ehObjetiva) {
+      const correta = respostaAluno === questao.correta;
+      const respostaTexto = respostaAluno !== undefined && questao.alternativas[respostaAluno] !== undefined
+        ? `(${["A", "B", "C", "D", "E"][respostaAluno]}) ${questao.alternativas[respostaAluno]}`
+        : "Não respondida";
+
+      html += `
+        <div class="question-box">
+          <div class="question-title">Questão ${indice + 1} • Objetiva</div>
+          ${questao.textoAntes ? `<div class="list-subtitle" style="white-space:pre-wrap;">${escapeHtml(questao.textoAntes)}</div>` : ""}
+          <div style="margin-top:8px;"><strong>${escapeHtml(questao.pergunta || "")}</strong></div>
+          <div class="answer-box">Resposta do aluno: ${escapeHtml(respostaTexto)}</div>
+          <div class="list-subtitle" style="margin-top:8px;">Gabarito: (${["A", "B", "C", "D", "E"][questao.correta] || "-"}) ${escapeHtml(questao.alternativas[questao.correta] || "")}</div>
+          <div style="margin-top:8px;">${correta ? '<span class="badge-inline badge-done">Acertou</span>' : '<span class="badge-inline badge-pending">Errou</span>'}</div>
+        </div>
+      `;
+      return;
+    }
+
+    const discursiva = resumo.questoesDiscursivas.find(entry => entry.indice === indice) || {
+      nota: 0,
+      observacao: "",
+      maxNota: 0,
+      resposta: respostaAluno || ""
+    };
+
+    html += `
+      <div class="question-box">
+        <div class="question-title">Questão ${indice + 1} • Discursiva</div>
+        ${questao.textoAntes ? `<div class="list-subtitle" style="white-space:pre-wrap;">${escapeHtml(questao.textoAntes)}</div>` : ""}
+        <div style="margin-top:8px;"><strong>${escapeHtml(questao.pergunta || "")}</strong></div>
+        <div class="answer-box">${escapeHtml(discursiva.resposta || "Sem resposta.")}</div>
+        <div class="form-row" style="margin-top:12px;">
+          <div class="form-col">
+            <label>Nota (máx. ${numeroSeguro(discursiva.maxNota, 2)})</label>
+            <input type="number" id="nota-disc-${indice}" min="0" max="${numeroSeguro(discursiva.maxNota, 2)}" step="0.1" value="${numeroSeguro(discursiva.nota, 2)}">
+          </div>
+          <div class="form-col">
+            <label>Observação</label>
+            <textarea id="obs-disc-${indice}" placeholder="Comentário opcional">${escapeHtml(discursiva.observacao || "")}</textarea>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `
+    <div class="form-group">
+      <label>Feedback Geral</label>
+      <textarea id="feedbackGeralCorrecao" placeholder="Comentário final para o aluno">${escapeHtml((item.resposta.correcao && item.resposta.correcao.feedbackGeral) || "")}</textarea>
+    </div>
+  `;
+
+  document.getElementById("conteudoCorrecao").innerHTML = html;
+  document.getElementById("modalCorrigir").classList.add("active");
+}
+
+function fecharCorrecao() {
+  document.getElementById("modalCorrigir").classList.remove("active");
+  correcaoAtual = null;
+}
+
+async function salvarCorrecaoAtual() {
+  if (!correcaoAtual) return;
+
+  const resumo = correcaoAtual.resumo;
+  const discursivas = resumo.questoesDiscursivas.map(item => {
+    const notaInput = document.getElementById(`nota-disc-${item.indice}`);
+    const obsInput = document.getElementById(`obs-disc-${item.indice}`);
+    const nota = Math.min(item.maxNota, Math.max(0, Number(notaInput ? notaInput.value : item.nota || 0)));
+    return {
+      indice: item.indice,
+      nota: numeroSeguro(nota, 2),
+      observacao: obsInput ? obsInput.value.trim() : ""
+    };
+  });
+
+  const notaDiscursivas = discursivas.reduce((acc, item) => acc + Number(item.nota || 0), 0);
+  const notaFinal = numeroSeguro(resumo.notaObjetivas + notaDiscursivas, 2);
+  const feedbackGeral = document.getElementById("feedbackGeralCorrecao").value.trim();
+
+  try {
+    await db.collection("respostas").doc(correcaoAtual.id).update({
+      correcao: {
+        status: "corrigida",
+        notaObjetivas: numeroSeguro(resumo.notaObjetivas, 2),
+        notaDiscursivas: numeroSeguro(notaDiscursivas, 2),
+        notaFinal,
+        acertosObjetivas: resumo.acertosObjetivas,
+        totalObjetivas: resumo.totalObjetivas,
+        totalQuestoes: resumo.totalQuestoes,
+        possuiDiscursivas: resumo.possuiDiscursivas,
+        questoesDiscursivas: discursivas,
+        feedbackGeral,
+        corrigidoPor: usuario.uid,
+        corrigidoEm: new Date()
+      }
+    });
+
+    fecharCorrecao();
+    await carregarCorrecoesTurma();
+  } catch (e) {
+    alert("Erro ao salvar correção: " + e.message);
+  }
 }
 
 async function limparSenhasLegadas() {
-  if (!confirm("Vai limpar todas as senhas dos alunos. Continuar?")) return;
-  const snap = await db.collection("turmas").where("criadoPor", "==", usuario.uid).get();
-  let total = 0;
-  snap.forEach(async function(doc) {
-    const t = doc.data();
-    if (t.alunos && t.alunos.length > 0) {
-      t.alunos.forEach(function(a) { a.senha = ""; });
-      await db.collection("turmas").doc(doc.id).update({ alunos: t.alunos });
-      total += t.alunos.length;
+  if (!confirm("Vai limpar senhas antigas salvas dentro das turmas. Continuar?")) return;
+
+  try {
+    const batch = db.batch();
+    let total = 0;
+
+    turmasProfessor.forEach(turma => {
+      const alunos = turma.alunos || [];
+      let alterou = false;
+      const limpos = alunos.map(aluno => {
+        if (aluno && Object.prototype.hasOwnProperty.call(aluno, "senha")) {
+          const { senha, ...resto } = aluno;
+          total++;
+          alterou = true;
+          return resto;
+        }
+        return aluno;
+      });
+
+      if (alterou) {
+        batch.update(db.collection("turmas").doc(turma.id), { alunos: limpos });
+      }
+    });
+
+    if (total === 0) {
+      alert("Nenhuma senha legada encontrada.");
+      return;
     }
-  });
-  alert("Limpei " + total + " senhas.");
+
+    await batch.commit();
+    await refreshTurmas();
+    if (turmaAtualId) {
+      await recarregarTurmaAtual();
+    }
+    alert("Limpeza concluída. Senhas removidas: " + total);
+  } catch (e) {
+    alert("Erro ao limpar senhas: " + e.message);
+  }
 }
 
-carregarTurmas();
+refreshTurmas();
 </script>
-
-<div class="modal-overlay" id="modalTurma" style="display:none;">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title" id="tituloTurma">Turma</h3>
-      <button class="modal-close" onclick="fecharTurma()">&times;</button>
-    </div>
-    <div style="display:flex;gap:10px;margin-bottom:15px;">
-      <input id="nomeAlunoinput" placeholder="Nome do aluno" style="flex:2;padding:8px;">
-      <input id="senhaAlunoinput" placeholder="Senha" style="flex:1;padding:8px;">
-      <button class="btn btn-primary" onclick="adicionarAlunoTurma()">➕</button>
-    </div>
-    <div id="listaAlunosTurma"></div>
-  </div>
-</div>
 
 </body>
 </html>
+
+
+

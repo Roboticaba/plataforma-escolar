@@ -130,16 +130,75 @@ function atualizarTempo() {
   if (tempo <= 0) { enviar(); }
 }
 
+async function carregarDocumentoProva(id) {
+  let doc = await db.collection("provas").doc(id).get();
+  if (doc.exists) {
+    return { id: doc.id, ...doc.data(), _collection: "provas" };
+  }
+
+  doc = await db.collection("simulados").doc(id).get();
+  if (doc.exists) {
+    return { id: doc.id, ...doc.data(), _collection: "simulados" };
+  }
+
+  return null;
+}
+
+async function resolverQuestoesDaProva(doc) {
+  if (!doc) return [];
+
+  if (Array.isArray(doc.questoes)) {
+    return doc.questoes.map(questao => ({
+      pergunta: questao.pergunta || questao.enunciado || "",
+      textoAntes: questao.textoAntes || "",
+      imagens: questao.imagens || (questao.recurso && questao.recurso.imagem ? [questao.recurso.imagem] : []),
+      alternativas: questao.alternativas || [],
+      correta: questao.correta !== undefined ? questao.correta : questao.resposta_correta,
+      tipoAlt: questao.tipoAlt || "texto"
+    }));
+  }
+
+  const bancoIds = doc.questoesBancoIds || [];
+  const temporarias = doc.questoesTemporarias || [];
+  const questoesBanco = [];
+
+  for (const questaoId of bancoIds) {
+    const questaoDoc = await db.collection("questoes").doc(questaoId).get();
+    if (!questaoDoc.exists) continue;
+    const questao = questaoDoc.data();
+    questoesBanco.push({
+      pergunta: questao.enunciado || "",
+      textoAntes: "",
+      imagens: questao.recurso && questao.recurso.imagem ? [questao.recurso.imagem] : [],
+      alternativas: questao.alternativas || [],
+      correta: questao.resposta_correta,
+      tipoAlt: "texto"
+    });
+  }
+
+  const questoesTemporarias = temporarias.map(questao => ({
+    pergunta: questao.enunciado || questao.pergunta || "",
+    textoAntes: questao.textoAntes || "",
+    imagens: questao.recurso && questao.recurso.imagem ? [questao.recurso.imagem] : [],
+    alternativas: questao.alternativas || [],
+    correta: questao.resposta_correta,
+    tipoAlt: "texto"
+  }));
+
+  return [...questoesBanco, ...questoesTemporarias];
+}
+
 async function carregarProva() {
   try {
-    const docSnap = await db.collection("simulados").doc(provaId).get();
-    if (!docSnap.exists) {
+    const docSnap = await carregarDocumentoProva(provaId);
+    if (!docSnap) {
       alert("Prova não encontrada!");
       window.location.href = "home.html";
       return;
     }
-    prova = docSnap.data();
-    document.getElementById("titulo").innerText = prova.nome || "Prova";
+    prova = docSnap;
+    prova.questoes = await resolverQuestoesDaProva(docSnap);
+    document.getElementById("titulo").innerText = prova.titulo || prova.nome || "Prova";
     render();
   } catch (e) {
     console.error("Erro ao carregar prova:", e);
@@ -243,6 +302,54 @@ function calcularNotaInstantanea() {
   return { acertos, total: objetivas };
 }
 
+function calcularCorrecaoInicial() {
+  if (!prova) {
+    return null;
+  }
+
+  const questoes = prova.questoes || [];
+  const valorTotal = Number(prova.valorTotal || prova.valor || 10);
+  const totalQuestoes = questoes.length || 1;
+  const valorPorQuestao = valorTotal / totalQuestoes;
+  const questoesDiscursivas = [];
+  let notaObjetivas = 0;
+  let acertosObjetivas = 0;
+  let totalObjetivas = 0;
+
+  questoes.forEach((q, i) => {
+    const ehObjetiva = q.alternativas && q.alternativas.length > 0;
+    if (ehObjetiva) {
+      totalObjetivas++;
+      if (respostas[i] === q.correta) {
+        acertosObjetivas++;
+        notaObjetivas += valorPorQuestao;
+      }
+      return;
+    }
+
+    questoesDiscursivas.push({
+      indice: i,
+      nota: 0,
+      observacao: ""
+    });
+  });
+
+  const possuiDiscursivas = questoesDiscursivas.length > 0;
+  return {
+    status: possuiDiscursivas ? "pendente" : "corrigida",
+    notaObjetivas: Number(notaObjetivas.toFixed(2)),
+    notaDiscursivas: 0,
+    notaFinal: Number(notaObjetivas.toFixed(2)),
+    acertosObjetivas,
+    totalObjetivas,
+    totalQuestoes: questoes.length,
+    possuiDiscursivas,
+    questoesDiscursivas,
+    corrigidoEm: possuiDiscursivas ? null : new Date(),
+    feedbackGeral: ""
+  };
+}
+
 function disparaConfete() {
   const myCanvas = document.getElementById('confetti');
   const myConfetti = confetti.create(myCanvas, { resize: true, useClientRendering: true });
@@ -308,15 +415,17 @@ window.enviar = async function() {
   }
 
   const resultado = calcularNotaInstantanea();
+  const correcaoInicial = calcularCorrecaoInicial();
   
   try {
     await db.collection("respostas").add({
       alunoId: usuario.uid,
       aluno: usuario.nome,
       provaId,
-      prova: prova.nome,
+      prova: prova.titulo || prova.nome,
       turmaId: usuario.turmaId,
       respostas,
+      correcao: correcaoInicial,
       data: new Date()
     });
 
