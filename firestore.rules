@@ -68,8 +68,36 @@ service cloud.firestore {
 
     match /questoes/{questaoId} {
       allow read: if isProfessor() || isAluno();
-      allow create: if isProfessor() && request.resource.data.autor == request.auth.uid;
-      allow update: if isProfessor() && resource.data.autor == request.auth.uid;
+      allow create: if isProfessor() && (
+        request.resource.data.autor == request.auth.uid ||
+        request.resource.data.autorId == request.auth.uid
+      );
+      allow update, delete: if isProfessor() && (
+        resource.data.autor == request.auth.uid ||
+        resource.data.autorId == request.auth.uid
+      );
+    }
+
+    match /blocosQuestoes/{blocoId} {
+      allow read: if isProfessor();
+      allow create: if isProfessor() && (
+        request.resource.data.autor == request.auth.uid ||
+        request.resource.data.autorId == request.auth.uid
+      );
+      allow update, delete: if isProfessor() && (
+        resource.data.autor == request.auth.uid ||
+        resource.data.autorId == request.auth.uid
+      );
+    }
+
+    match /analisesDescritores/{analiseId} {
+      allow read: if isProfessor();
+      allow create: if isProfessor() && request.resource.data.professorId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /configuracoes/{professorId} {
+      allow read, create, update: if isProfessor() && professorId == request.auth.uid;
       allow delete: if false;
     }
 

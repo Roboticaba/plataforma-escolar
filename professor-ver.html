@@ -10,7 +10,7 @@
 <body class="dashboard-page">
 <div class="page-shell">
   <div class="toolbar" style="margin-bottom:18px;">
-    <a href="professor.html" class="button button-outline" style="text-decoration:none;">Voltar ao painel</a>
+    <a href="professor-banco.html" class="button button-outline" style="text-decoration:none;">Voltar ao Banco de Provas</a>
   </div>
 
   <div id="loading" class="panel">
@@ -24,9 +24,9 @@
   <section id="prova-content" hidden>
     <section class="hero-panel">
       <article class="hero-card">
-        <span class="hero-badge">Visualização da prova</span>
+        <span class="hero-badge">Visualizacao da prova</span>
         <h1 class="hero-title" id="prova-nome">Prova</h1>
-        <p class="hero-text">Confira a composição completa da prova, incluindo questões do banco e temporárias.</p>
+        <p class="hero-text">Confira a composicao completa da prova, incluindo questoes individuais, blocos e temporarias.</p>
         <div class="tag-row" style="margin-top:16px;">
           <span class="tag tag-primary" id="prova-disciplina">Disciplina</span>
           <span class="tag tag-neutral" id="prova-ano">Ano</span>
@@ -36,7 +36,7 @@
         </div>
       </article>
       <aside class="hero-side-card">
-        <div class="panel-subtitle">Ações rápidas</div>
+        <div class="panel-subtitle">Acoes rapidas</div>
         <div class="toolbar">
           <button class="button button-primary" id="btnPdf">Gerar PDF</button>
           <button class="button button-secondary" id="btnWord">Gerar Word editavel</button>
@@ -48,8 +48,8 @@
     <section class="panel">
       <div class="panel-header">
         <div>
-          <h2 class="panel-title">Questões da prova</h2>
-          <p class="panel-subtitle">Cada questão exibe a origem do conteúdo para facilitar manutenção futura.</p>
+          <h2 class="panel-title">Questoes da prova</h2>
+          <p class="panel-subtitle">Blocos exibem o texto base uma unica vez antes das questoes relacionadas.</p>
         </div>
       </div>
       <div id="lista-questoes" class="question-list"></div>
@@ -63,6 +63,3 @@
 <script type="module" src="assets/js/pages/professor-ver.js"></script>
 </body>
 </html>
-
-
-

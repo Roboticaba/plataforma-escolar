@@ -1,5 +1,15 @@
-import { db } from "../core/firebase-app.js";
-import { buildQuestionRecord, getQuestionsByIds, normalizeLegacyQuestion } from "./questions-service.js";
+import { auth, db } from "../core/firebase-app.js";
+import {
+  buildQuestionRecord,
+  getQuestionBlockById,
+  getQuestionsByBlockId,
+  getQuestionsByIds,
+  normalizeLegacyQuestion
+} from "./questions-service.js";
+
+function getCurrentUid(usuario) {
+  return auth.currentUser?.uid || usuario?.uid || "";
+}
 
 export function normalizeTemporaryQuestion(payload, usuario) {
   const record = buildQuestionRecord(payload, usuario);
@@ -28,6 +38,8 @@ export function normalizeTemporaryQuestion(payload, usuario) {
 }
 
 export function buildProvaRecord(payload, usuario) {
+  const uid = getCurrentUid(usuario);
+
   if (!payload.titulo || !payload.titulo.trim()) {
     throw new Error("Informe o titulo da prova.");
   }
@@ -41,13 +53,36 @@ export function buildProvaRecord(payload, usuario) {
   }
 
   const questoesBancoIds = [...new Set((payload.questoesBancoIds || []).filter(Boolean))];
+  const blocosIds = [...new Set((payload.blocosIds || []).filter(Boolean))];
+  const blocosResumo = (payload.blocosResumo || [])
+    .filter(item => item?.blocoId || item?.id)
+    .map(item => ({
+      blocoId: item.blocoId || item.id,
+      titulo: item.titulo || "Bloco baseado em texto",
+      totalQuestoes: Number(item.totalQuestoes || item.questoes?.length || 0)
+    }));
   const questoesTemporarias = (payload.questoesTemporarias || []).map(item => ({
     ...item,
+    tempId: item.tempId || `temp-${Math.random().toString(36).slice(2, 10)}`,
     origem: "temporaria"
   }));
-  const totalQuestoes = questoesBancoIds.length + questoesTemporarias.length;
+  const totalQuestoesBlocos = blocosResumo.reduce((acc, item) => acc + Number(item.totalQuestoes || 0), 0);
+  const totalQuestoes = questoesBancoIds.length + questoesTemporarias.length + totalQuestoesBlocos;
+  const totalItens = questoesBancoIds.length + blocosIds.length + questoesTemporarias.length;
+  const itensProva = (payload.itensProva || [])
+    .filter(item => item?.tipo && item?.id)
+    .map((item, index) => ({
+      tipo: item.tipo,
+      id: item.id,
+      ordem: index
+    }));
+  const fallbackItensProva = [
+    ...questoesBancoIds.map(id => ({ tipo: "questao", id })),
+    ...blocosIds.map(id => ({ tipo: "bloco", id })),
+    ...questoesTemporarias.map((item, index) => ({ tipo: "temporaria", id: item.tempId || `temp-index-${index}` }))
+  ].map((item, index) => ({ ...item, ordem: index }));
 
-  if (totalQuestoes === 0) {
+  if (totalItens === 0) {
     throw new Error("Adicione pelo menos uma questao na prova.");
   }
 
@@ -63,8 +98,13 @@ export function buildProvaRecord(payload, usuario) {
     valorTotal: Number(payload.valorTotal || 10),
     valor: Number(payload.valorTotal || 10),
     questoesBancoIds,
+    blocosIds,
+    blocosResumo,
     questoesTemporarias,
-    criadoPor: usuario.uid,
+    itensProva: itensProva.length ? itensProva : fallbackItensProva,
+    totalQuestoes,
+    criadoPor: uid,
+    autorId: uid,
     criadoEm: new Date(),
     atualizadoEm: new Date()
   };
@@ -80,8 +120,9 @@ export async function createProva(payload, usuario) {
 }
 
 export async function listProvasByProfessor(uid) {
+  const queryUid = auth.currentUser?.uid || uid;
   const snapshot = await db.collection("provas")
-    .where("criadoPor", "==", uid)
+    .where("criadoPor", "==", queryUid)
     .orderBy("criadoEm", "desc")
     .get();
 
@@ -92,10 +133,15 @@ export async function deleteProva(id) {
   await db.collection("provas").doc(id).delete();
 }
 
-export async function getLegacyOrNewProva(id) {
-  const provaDoc = await db.collection("provas").doc(id).get();
-  if (provaDoc.exists) {
-    return { id: provaDoc.id, source: "provas", ...provaDoc.data() };
+export async function getLegacyOrNewProva(id, preferredSource = "") {
+  if (preferredSource !== "simulados") {
+    const provaDoc = await db.collection("provas").doc(id).get();
+    if (provaDoc.exists) {
+      return { id: provaDoc.id, source: "provas", ...provaDoc.data() };
+    }
+    if (preferredSource === "provas") {
+      return null;
+    }
   }
 
   const legacyDoc = await db.collection("simulados").doc(id).get();
@@ -107,38 +153,99 @@ export async function getLegacyOrNewProva(id) {
 }
 
 export async function resolveProvaQuestions(prova) {
+  const content = await resolveProvaContent(prova);
+  return content.flatMap(item => item.tipo === "bloco" ? item.questoes : [item.questao]);
+}
+
+export async function resolveProvaContent(prova) {
   if (!prova) {
     return [];
   }
 
   if (Array.isArray(prova.questoes)) {
     return prova.questoes.map((question, index) => ({
-      ...normalizeLegacyQuestion({
-        id: question.questaoId || question.id || `${prova.id || "prova"}-legada-${index}`,
-        ...question
-      }),
-      origem: question.origem || "legada",
-      questaoId: question.questaoId || question.id || null
+      tipo: "questao",
+      questao: {
+        ...normalizeLegacyQuestion({
+          id: question.questaoId || question.id || `${prova.id || "prova"}-legada-${index}`,
+          ...question
+        }),
+        origem: question.origem || "legada",
+        questaoId: question.questaoId || question.id || null
+      }
     }));
   }
 
   const bancoQuestions = await getQuestionsByIds(prova.questoesBancoIds || []);
-  const bancoNormalized = bancoQuestions.map(question => ({
-    ...normalizeLegacyQuestion(question),
-    origem: "banco",
-    questaoId: question.id
+  const bancoItems = bancoQuestions.map(question => ({
+    tipo: "questao",
+    questao: {
+      ...normalizeLegacyQuestion(question),
+      origem: "banco",
+      questaoId: question.id
+    }
   }));
+  const bancoItemsById = new Map(bancoItems.map(item => [item.questao.questaoId || item.questao.id, item]));
 
-  const temporarias = (prova.questoesTemporarias || []).map((question, index) => ({
-    ...normalizeLegacyQuestion({
-      id: `${prova.id || "prova"}-temp-${index}`,
-      ...question
-    }),
-    origem: "temporaria",
-    questaoId: question.questaoId || null
+  const blocoItems = await Promise.all((prova.blocosIds || []).map(async blocoId => {
+    const [block, questions] = await Promise.all([
+      getQuestionBlockById(blocoId),
+      getQuestionsByBlockId(blocoId)
+    ]);
+    const normalizedQuestions = questions.map((question, index) => ({
+      ...normalizeLegacyQuestion(question),
+      origem: "bloco",
+      questaoId: question.id,
+      numeroNoBloco: index + 1
+    }));
+    const fallback = normalizedQuestions[0] || {};
+
+    return {
+      tipo: "bloco",
+      blocoId,
+      titulo: block?.titulo || fallback.blocoTitulo || fallback.tituloTextoApoio || "Bloco baseado em texto",
+      textoApoio: block?.textoApoio || fallback.textoApoio || "",
+      imagensApoio: block?.imagensApoio?.length ? block.imagensApoio : (fallback.imagensApoio || []),
+      anoEscolar: block?.anoEscolar || fallback.anoEscolar || fallback.ano_escolar || prova.anoEscolar || prova.ano || "",
+      disciplina: block?.disciplina || fallback.disciplina || prova.disciplina || "",
+      questoes: normalizedQuestions
+    };
   }));
+  const blocoItemsById = new Map(blocoItems.map(item => [item.blocoId, item]));
 
-  return [...bancoNormalized, ...temporarias];
+  const temporariaItems = (prova.questoesTemporarias || []).map((question, index) => ({
+    tipo: "questao",
+    questao: {
+      ...normalizeLegacyQuestion({
+        id: question.questaoId || question.id || `${prova.id || "prova"}-legada-${index}`,
+        ...question
+      }),
+      origem: "temporaria",
+      questaoId: question.questaoId || question.id || null
+    }
+  }));
+  const temporariaItemsById = new Map(temporariaItems.map((item, index) => [
+    item.questao.tempId || item.questao.id || `temp-index-${index}`,
+    item
+  ]));
+
+  if (Array.isArray(prova.itensProva) && prova.itensProva.length) {
+    const ordered = [...prova.itensProva]
+      .sort((a, b) => Number(a.ordem || 0) - Number(b.ordem || 0))
+      .map(item => {
+        if (item.tipo === "questao") return bancoItemsById.get(item.id);
+        if (item.tipo === "bloco") return blocoItemsById.get(item.id);
+        if (item.tipo === "temporaria") return temporariaItemsById.get(item.id);
+        return null;
+      })
+      .filter(Boolean);
+
+    if (ordered.length) {
+      return ordered;
+    }
+  }
+
+  return [...bancoItems, ...blocoItems, ...temporariaItems];
 }
 
 export async function buildExportableProva(provaId) {
@@ -147,9 +254,11 @@ export async function buildExportableProva(provaId) {
     throw new Error("Prova nao encontrada.");
   }
 
-  const questoes = await resolveProvaQuestions(prova);
+  const conteudo = await resolveProvaContent(prova);
+  const questoes = conteudo.flatMap(item => item.tipo === "bloco" ? item.questoes : [item.questao]);
   return {
     ...prova,
+    conteudo,
     questoes
   };
 }

@@ -1,7 +1,7 @@
 import { ANOS_ESCOLARES, DISCIPLINAS, getAnoLabel, getDisciplinaLabel } from "../core/constants.js";
 import { requireProfessor } from "../core/session.js";
 import { deleteProva, listProvasByProfessor } from "../services/provas-service.js";
-import { renderEmptyState } from "../utils/ui.js";
+import { escapeHtml, renderEmptyState } from "../utils/ui.js";
 
 const usuario = requireProfessor();
 
@@ -11,6 +11,7 @@ const elements = {
   totalQuestoesTemporarias: document.getElementById("totalQuestoesTemporarias"),
   filtroAno: document.getElementById("filtroAno"),
   filtroDisciplina: document.getElementById("filtroDisciplina"),
+  filtroBusca: document.getElementById("filtroBusca"),
   listaProvas: document.getElementById("listaProvas")
 };
 
@@ -29,25 +30,42 @@ function getQuestionCount(prova) {
     return prova.questoes.length;
   }
 
-  return (prova.questoesBancoIds || []).length + (prova.questoesTemporarias || []).length;
+  if (Number(prova.totalQuestoes || 0) > 0) {
+    return Number(prova.totalQuestoes);
+  }
+
+  const blocos = (prova.blocosResumo || []).reduce((acc, bloco) => acc + Number(bloco.totalQuestoes || 0), 0);
+  return (prova.questoesBancoIds || []).length + (prova.questoesTemporarias || []).length + blocos;
 }
 
 function updateMetrics() {
   const totalProvas = state.provas.length;
   const banco = state.provas.reduce((acc, prova) => acc + ((prova.questoesBancoIds || []).length), 0);
-  const temporarias = state.provas.reduce((acc, prova) => acc + ((prova.questoesTemporarias || []).length), 0);
+  const blocos = state.provas.reduce((acc, prova) => acc + ((prova.blocosIds || []).length), 0);
 
   elements.totalProvas.textContent = String(totalProvas);
   elements.totalQuestoesBanco.textContent = String(banco);
-  elements.totalQuestoesTemporarias.textContent = String(temporarias);
+  elements.totalQuestoesTemporarias.textContent = String(blocos);
 }
 
 function renderProvas() {
   const ano = elements.filtroAno.value;
   const disciplina = elements.filtroDisciplina.value;
+  const busca = elements.filtroBusca.value.trim().toLowerCase();
   const filtered = state.provas.filter(prova => {
     if (ano && (prova.anoEscolar || prova.ano) !== ano) return false;
     if (disciplina && prova.disciplina !== disciplina) return false;
+    if (busca) {
+      const base = [
+        prova.titulo,
+        prova.nome,
+        prova.disciplina,
+        getDisciplinaLabel(prova.disciplina),
+        getAnoLabel(prova.anoEscolar || prova.ano || ""),
+        ...(prova.blocosResumo || []).map(bloco => bloco.titulo)
+      ].join(" ").toLowerCase();
+      if (!base.includes(busca)) return false;
+    }
     return true;
   });
 
@@ -60,19 +78,21 @@ function renderProvas() {
     const anoEscolar = prova.anoEscolar || prova.ano || "";
     const totalQuestoes = getQuestionCount(prova);
     const banco = (prova.questoesBancoIds || []).length;
+    const blocos = (prova.blocosIds || []).length;
     const temporarias = (prova.questoesTemporarias || []).length;
 
     return `
-      <article class="question-card">
+      <article class="question-card" style="padding:14px 16px;">
         <div class="question-card-header">
           <div>
-            <h3 class="question-card-title">${prova.titulo || prova.nome || "Prova sem título"}</h3>
+            <h3 class="question-card-title">${escapeHtml(prova.titulo || prova.nome || "Prova sem titulo")}</h3>
             <div class="tag-row">
-              <span class="tag tag-primary">${getDisciplinaLabel(prova.disciplina)}</span>
-              <span class="tag tag-neutral">${getAnoLabel(anoEscolar)}</span>
-              <span class="tag tag-success">${totalQuestoes} questões</span>
-              ${banco ? `<span class="tag tag-neutral">${banco} do banco</span>` : ""}
-              ${temporarias ? `<span class="tag tag-warning">${temporarias} temporárias</span>` : ""}
+              <span class="tag tag-primary">${escapeHtml(getDisciplinaLabel(prova.disciplina))}</span>
+              <span class="tag tag-neutral">${escapeHtml(getAnoLabel(anoEscolar))}</span>
+              <span class="tag tag-success">${totalQuestoes} questoes</span>
+              ${banco ? `<span class="tag tag-neutral">${banco} individuais</span>` : ""}
+              ${blocos ? `<span class="tag tag-primary">${blocos} bloco(s)</span>` : ""}
+              ${temporarias ? `<span class="tag tag-warning">${temporarias} temporarias</span>` : ""}
             </div>
           </div>
           <div class="list-actions">
@@ -97,11 +117,12 @@ function bindEvents() {
 
   elements.filtroAno.addEventListener("change", renderProvas);
   elements.filtroDisciplina.addEventListener("change", renderProvas);
+  elements.filtroBusca.addEventListener("input", renderProvas);
 
   document.addEventListener("click", async event => {
     const openButton = event.target.closest("[data-open-prova]");
     if (openButton) {
-      window.open(`professor-ver.html?id=${openButton.dataset.openProva}`, "_blank");
+      window.location.href = `professor-ver.html?id=${openButton.dataset.openProva}&source=provas`;
       return;
     }
 

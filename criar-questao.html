@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Criar Questao - Roboticaba Professor</title>
+<link rel="stylesheet" href="professor-styles.css">
+<link rel="stylesheet" href="assets/css/professor-app.css">
+<style>
+:root {
+  --robot-purple: #241044;
+  --robot-purple-soft: #f4efff;
+  --robot-green: #33e87d;
+}
+
+.question-builder-shell { max-width: 1440px; }
+[hidden] { display: none !important; }
+.hero-panel.builder-hero { grid-template-columns: 1fr; }
+.mode-badge { background: var(--robot-purple); color: #fff; }
+.choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.choice-card {
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: #fff;
+  padding: 22px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+.choice-card strong {
+  display: block;
+  color: var(--robot-purple);
+  font-size: 1.15rem;
+  margin-bottom: 8px;
+}
+.choice-card span {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.choice-card.is-active {
+  border-color: var(--robot-green);
+  background: linear-gradient(135deg, #fff, var(--robot-purple-soft));
+}
+.builder-grid {
+  display: grid;
+  grid-template-columns: minmax(340px, 0.76fr) minmax(0, 1.24fr);
+  gap: 20px;
+  align-items: start;
+}
+.sticky-panel { position: sticky; top: 18px; }
+.wide-field { grid-column: 1 / -1; }
+.compact-type-grid {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.type-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.type-pill:has(input:checked) {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: #f0f6ff;
+}
+.helper-box {
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.clean-preview,
+.image-alt-list,
+.saved-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.clean-preview-item,
+.image-alt-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+.image-alt-item img {
+  width: 108px;
+  height: 76px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+.alt-label {
+  min-width: 42px;
+  font-weight: 900;
+  color: var(--robot-purple);
+}
+.muted-small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.button-purple {
+  background: var(--robot-purple);
+  color: #fff;
+}
+.button-purple:hover { background: #16082f; }
+.block-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+.image-grid-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+.image-grid-preview img {
+  width: 110px;
+  height: 74px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+@media (max-width: 1120px) {
+  .builder-grid { grid-template-columns: 1fr; }
+  .sticky-panel { position: static; }
+}
+@media (max-width: 760px) {
+  .choice-grid { grid-template-columns: 1fr; }
+  .clean-preview-item,
+  .image-alt-item { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body class="dashboard-page">
+<div class="page-shell question-builder-shell">
+  <section class="hero-panel builder-hero">
+    <article class="hero-card">
+      <div class="panel-header">
+        <div>
+          <span class="hero-badge">Criacao de Questoes</span>
+          <h1 class="hero-title">O que voce deseja criar?</h1>
+          <p class="hero-text">Escolha um modo para mostrar apenas os campos necessarios. Os modos ficam separados para evitar mistura entre questao individual e bloco com texto base.</p>
+        </div>
+        <span class="tag mode-badge" id="modoAtualBadge">Modo atual: escolha uma opcao</span>
+      </div>
+      <div class="choice-grid" aria-label="Escolha obrigatoria do tipo de criacao">
+        <button class="choice-card" type="button" data-mode="individual">
+          <strong>Nova questao individual</strong>
+          <span>Crie uma questao independente com texto/imagem de apoio opcional, descritor e alternativas.</span>
+        </button>
+        <button class="choice-card" type="button" data-mode="bloco">
+          <strong>Novo bloco com texto base</strong>
+          <span>Cadastre um texto base e adicione varias questoes relacionadas antes de salvar o bloco completo.</span>
+        </button>
+      </div>
+      <div class="toolbar" style="margin-top:18px;">
+        <a class="button button-outline" href="professor-questoes.html">Ver banco de questoes</a>
+        <a class="button button-outline" href="professor.html">Voltar ao painel</a>
+      </div>
+    </article>
+  </section>
+
+  <section class="panel" id="emptyModePanel">
+    <div class="empty-panel">Escolha acima se voce quer criar uma questao individual ou um bloco de questoes baseadas em texto.</div>
+  </section>
+
+  <section id="individualModePanel" hidden>
+    <div class="builder-grid">
+      <aside class="panel sticky-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Modo: Questao individual</h2>
+            <p class="panel-subtitle">Texto e imagens de apoio sao opcionais neste modo.</p>
+          </div>
+        </div>
+        <div id="individualContext"></div>
+      </aside>
+      <main id="individualQuestionHost"></main>
+    </div>
+  </section>
+
+  <section id="blockModePanel" hidden>
+    <div class="builder-grid">
+      <aside class="panel sticky-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Modo: Bloco de questoes baseadas em texto</h2>
+            <p class="panel-subtitle">Primeiro preencha o texto base. Depois adicione as questoes do bloco.</p>
+          </div>
+        </div>
+        <div id="blockContext"></div>
+        <div class="block-actions">
+        <button class="button button-primary" type="button" id="btnAdicionarQuestaoBloco">Adicionar questao ao bloco</button>
+        <button class="button button-purple" type="button" id="btnSalvarBlocoCompleto">Salvar bloco completo</button>
+        <button class="button button-danger" type="button" id="btnExcluirBloco" hidden>Excluir bloco</button>
+        <button class="button button-outline" type="button" id="btnLimparBloco">Limpar formulario</button>
+        </div>
+        <div id="feedbackBloco" class="feedback" hidden></div>
+      </aside>
+      <main class="proof-stack">
+        <section id="blockQuestionPanel" hidden></section>
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">Questoes adicionadas ao bloco</h2>
+              <p class="panel-subtitle">Essas questoes serao salvas juntas ao clicar em Salvar bloco completo.</p>
+            </div>
+            <span class="tag tag-success" id="contadorBloco">0 questoes</span>
+          </div>
+          <div id="listaQuestoesBloco" class="saved-list"></div>
+        </section>
+      </main>
+    </div>
+  </section>
+</div>
+
+<template id="contextTemplate">
+  <div class="grid-fields">
+    <div class="form-field wide-field" data-block-title-field hidden>
+      <label>Titulo do texto</label>
+      <input data-field="tituloTexto" placeholder="Ex.: A jabuticabeira da escola">
+    </div>
+    <div class="form-field">
+      <label>Ano escolar</label>
+      <select data-field="anoEscolar"></select>
+    </div>
+    <div class="form-field">
+      <label>Disciplina</label>
+      <select data-field="disciplina"></select>
+    </div>
+    <div class="form-field wide-field">
+      <label>Texto de apoio</label>
+      <textarea data-field="textoApoio" placeholder="Opcional na questao individual. Obrigatorio no bloco."></textarea>
+    </div>
+    <div class="form-field wide-field">
+      <label>Imagens de apoio</label>
+      <input data-field="imagensApoio" type="file" accept="image/*" multiple>
+      <div data-field="previewImagensApoio" class="image-grid-preview"></div>
+      <div data-field="imagensApoioExistentes" class="image-grid-preview"></div>
+    </div>
+  </div>
+</template>
+
+<template id="questionTemplate">
+  <section class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title" data-title>Nova questao</h2>
+        <p class="panel-subtitle">A questao tem descritor, formato de alternativas e um tipo por vez.</p>
+      </div>
+    </div>
+    <form data-question-form>
+      <div class="form-field">
+        <label>Tipo de questao</label>
+        <div class="compact-type-grid">
+          <label class="type-pill"><input type="radio" name="tipo" value="multipla_texto" checked> Multipla escolha com texto</label>
+          <label class="type-pill"><input type="radio" name="tipo" value="multipla_imagem"> Multipla escolha com imagem</label>
+          <label class="type-pill"><input type="radio" name="tipo" value="resposta_escrita"> Resposta escrita</label>
+        </div>
+      </div>
+
+      <div class="grid-fields" style="margin-top:18px;">
+        <div class="form-field wide-field">
+          <label>Enunciado</label>
+          <textarea data-field="enunciado" placeholder="Digite o enunciado completo" required></textarea>
+        </div>
+        <div class="form-field" data-descritor-wrapper hidden>
+          <label>Descritor</label>
+          <select data-field="descritor"><option value="">Selecione</option></select>
+        </div>
+        <div class="form-field">
+          <label>Formato das alternativas</label>
+          <select data-field="formatoAlternativas"></select>
+        </div>
+        <div class="form-field">
+          <label>Nivel de dificuldade</label>
+          <select data-field="nivelDificuldade">
+            <option value="">Opcional</option>
+            <option value="baixa">Baixa</option>
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+          </select>
+        </div>
+      </div>
+
+      <section class="panel" style="padding:18px; margin-top:18px;" data-descritor-panel hidden>
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title" style="font-size:1rem;">Sugestao de descritor</h3>
+            <p class="panel-subtitle">A sugestao precisa ser confirmada pelo professor.</p>
+          </div>
+          <button class="button-inline button-outline" type="button" data-action="sugerir">Sugerir descritor</button>
+        </div>
+        <div data-field="descritorFeedback" class="feedback" hidden></div>
+        <label class="checkbox-row" style="margin-top:12px;">
+          <input type="checkbox" data-field="descritorConfirmado">
+          <span>Confirmo o descritor selecionado para esta questao.</span>
+        </label>
+      </section>
+
+      <section class="panel" style="padding:18px; margin-top:18px;" data-panel="texto">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title" style="font-size:1rem;">Alternativas em texto</h3>
+            <p class="panel-subtitle">Uma alternativa por linha. Marcadores sao limpos automaticamente.</p>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Alternativas</label>
+          <textarea data-field="alternativasTexto" placeholder="a) Primeira&#10;b) Segunda&#10;c) Terceira&#10;d) Quarta"></textarea>
+        </div>
+        <div data-field="alternativasTextoPreview" class="clean-preview"></div>
+      </section>
+
+      <section class="panel" style="padding:18px; margin-top:18px;" data-panel="imagem" hidden>
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title" style="font-size:1rem;">Alternativas com imagem</h3>
+            <p class="panel-subtitle">Cada imagem adicionada vira uma alternativa separada, na ordem de selecao.</p>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Adicionar imagens</label>
+          <input data-field="alternativasImagem" type="file" accept="image/*" multiple>
+        </div>
+        <div data-field="alternativasImagemPreview" class="image-alt-list"></div>
+      </section>
+
+      <section class="panel" style="padding:18px; margin-top:18px;" data-panel="escrita" hidden>
+        <div class="form-field">
+          <label>Resposta esperada</label>
+          <textarea data-field="respostaEsperada" placeholder="Explique o que a resposta escrita deve conter."></textarea>
+        </div>
+      </section>
+
+      <div data-field="feedbackQuestao" class="feedback" hidden></div>
+      <div class="modal-actions" style="margin-top:18px;">
+        <button class="button button-outline" type="button" data-action="limpar">Limpar formulario</button>
+        <button class="button button-purple" type="submit" data-action="salvar">Salvar questao</button>
+        <button class="button button-danger" type="button" data-action="excluir" hidden>Excluir questao</button>
+      </div>
+    </form>
+  </section>
+</template>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script type="module" src="assets/js/pages/criar-questao.js"></script>
+</body>
+</html>

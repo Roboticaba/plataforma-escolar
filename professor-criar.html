@@ -10,10 +10,10 @@
 <div class="page-shell">
   <section class="hero-panel">
     <article class="hero-card">
-      <span class="hero-badge">Arquitetura hibrida de conteudo</span>
-      <h1 class="hero-title">Monte provas usando o Banco de Questoes ou criando novas questoes no fluxo.</h1>
+      <span class="hero-badge">Provas com questoes e blocos</span>
+      <h1 class="hero-title">Monte provas com questoes individuais e blocos baseados em texto.</h1>
       <p class="hero-text">
-        As questoes reutilizaveis entram na prova por ID. As questoes criadas no momento podem ficar so nesta prova ou tambem ir para o banco global.
+        O texto base fica no bloco e aparece uma unica vez antes das questoes relacionadas, inclusive na visualizacao e na exportacao.
       </p>
     </article>
     <aside class="hero-side-card">
@@ -21,6 +21,10 @@
         <div class="metric-card">
           <div class="metric-label">Questoes do banco nesta prova</div>
           <div class="metric-value" id="resumoBanco">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Blocos com texto base</div>
+          <div class="metric-value" id="resumoBlocos">0</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Questoes temporarias</div>
@@ -72,14 +76,23 @@
         </div>
 
         <div class="question-toolbar">
-          <button type="button" class="button button-primary" id="btnAbrirBanco">Adicionar do Banco de Questoes</button>
+          <button type="button" class="button button-primary" id="btnAbrirBanco">Adicionar questoes ou blocos</button>
           <button type="button" class="button button-secondary" id="btnAbrirNovaQuestao">Criar Nova Questao</button>
         </div>
 
         <div class="proof-stack">
           <div class="panel" style="padding:18px;">
-            <h3 class="proof-section-title">Questoes do Banco selecionadas</h3>
+            <h3 class="proof-section-title">Ordem da prova</h3>
+            <p class="panel-subtitle">A prova seguira exatamente a ordem em que voce adicionar questoes e blocos.</p>
+            <div id="listaOrdemProva" class="selection-list"></div>
+          </div>
+          <div class="panel" style="padding:18px;">
+            <h3 class="proof-section-title">Questoes individuais selecionadas</h3>
             <div id="listaBancoSelecionadas" class="selection-list"></div>
+          </div>
+          <div class="panel" style="padding:18px;">
+            <h3 class="proof-section-title">Blocos baseados em texto selecionados</h3>
+            <div id="listaBlocosSelecionados" class="selection-list"></div>
           </div>
           <div class="panel" style="padding:18px;">
             <h3 class="proof-section-title">Questoes temporarias desta prova</h3>
@@ -103,23 +116,23 @@
       </div>
       <div class="question-card">
         <div class="tag-row">
-          <span class="tag tag-success">Questoes do banco</span>
+          <span class="tag tag-success">Questoes individuais</span>
           <span class="tag tag-neutral">Salvas por ID</span>
         </div>
         <p class="panel-subtitle">A prova guarda referencias em <code>questoesBancoIds</code>.</p>
       </div>
       <div class="question-card">
         <div class="tag-row">
-          <span class="tag tag-warning">Questoes temporarias</span>
-          <span class="tag tag-neutral">Embutidas na prova</span>
+          <span class="tag tag-primary">Blocos com texto</span>
+          <span class="tag tag-neutral">Texto uma vez</span>
         </div>
-        <p class="panel-subtitle">Questoes exclusivas da prova vao para <code>questoesTemporarias</code>.</p>
+        <p class="panel-subtitle">A prova guarda referencias em <code>blocosIds</code> e carrega todas as questoes do bloco.</p>
       </div>
       <div class="question-card">
         <div class="tag-row">
           <span class="tag tag-primary">Exportacao pronta</span>
         </div>
-        <p class="panel-subtitle">O novo schema prepara PDF/Word com texto de apoio, imagens e alternativas estruturadas.</p>
+        <p class="panel-subtitle">PDF/Word exibem o texto base do bloco antes das questoes, sem repetir em cada item.</p>
       </div>
     </aside>
   </div>
@@ -130,7 +143,7 @@
     <div class="modal-header">
       <div>
         <h2 class="panel-title">Banco de Questoes</h2>
-        <p class="panel-subtitle">Filtre, pesquise e selecione multiplas questoes para anexar a prova.</p>
+        <p class="panel-subtitle">Selecione questoes individuais ou blocos completos para anexar a prova.</p>
       </div>
       <button class="close-button" type="button" data-close-modal="banco">&times;</button>
     </div>

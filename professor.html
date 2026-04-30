@@ -98,17 +98,52 @@ function fecharConfig() {
   document.getElementById("modalConfig").classList.remove("active");
 }
 
-function salvarConfig() {
-  var config = {
-    nomeEscola: document.getElementById("cfgNomeEscola").value,
-    endereco: document.getElementById("cfgEndereco").value,
-    logoUrl: logoData,
-    nomeProfessor: document.getElementById("cfgNomeProfessor").value,
-    textoLivre: document.getElementById("cfgTextoLivre").value
-  };
-  localStorage.setItem("configProfessor", JSON.stringify(config));
-  alert("Configurações salvas!");
-  fecharConfig();
+async function enviarLogoCloudinary(fileOrDataUrl) {
+  if (!fileOrDataUrl) return "";
+  if (typeof fileOrDataUrl === "string" && !fileOrDataUrl.startsWith("data:")) {
+    return fileOrDataUrl;
+  }
+
+  var formData = new FormData();
+  formData.append("file", fileOrDataUrl);
+  formData.append("upload_preset", window.CLOUDINARY_UPLOAD_PRESET || "alunos_upload");
+
+  var response = await fetch("https://api.cloudinary.com/v1_1/" + (window.CLOUDINARY_CLOUD_NAME || "dflo5rpxy") + "/image/upload", {
+    method: "POST",
+    body: formData
+  });
+  var data = await response.json();
+
+  if (!response.ok || !data.secure_url) {
+    throw new Error((data.error && data.error.message) || "Erro ao enviar logo.");
+  }
+
+  return data.secure_url;
+}
+
+async function salvarConfig() {
+  try {
+    var configAnterior = JSON.parse(localStorage.getItem("configProfessor") || "null") || {};
+    var logoUrl = logoData || configAnterior.logoUrl || "";
+
+    if (logoUrl && logoUrl.startsWith("data:")) {
+      logoUrl = await enviarLogoCloudinary(logoUrl);
+    }
+
+    var config = {
+      nomeEscola: document.getElementById("cfgNomeEscola").value,
+      endereco: document.getElementById("cfgEndereco").value,
+      logoUrl: logoUrl,
+      nomeProfessor: document.getElementById("cfgNomeProfessor").value,
+      textoLivre: document.getElementById("cfgTextoLivre").value
+    };
+    logoData = logoUrl;
+    localStorage.setItem("configProfessor", JSON.stringify(config));
+    alert("Configurações salvas!");
+    fecharConfig();
+  } catch (error) {
+    alert(error.message || "Erro ao salvar configurações.");
+  }
 }
 
 function carregarConfig() {
@@ -118,6 +153,7 @@ function carregarConfig() {
     document.getElementById("cfgEndereco").value = config.endereco || "";
     document.getElementById("cfgNomeProfessor").value = config.nomeProfessor || "";
     document.getElementById("cfgTextoLivre").value = config.textoLivre || "";
+    logoData = config.logoUrl || "";
     if (config.logoUrl) {
       document.getElementById("previewLogo").innerHTML = '<img src="' + config.logoUrl + '" style="max-height:80px;">';
     }

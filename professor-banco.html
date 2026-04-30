@@ -11,9 +11,9 @@
   <section class="hero-panel">
     <article class="hero-card">
       <span class="hero-badge">Banco de Provas</span>
-      <h1 class="hero-title">Visualize todas as provas criadas e entenda de onde veio cada questão.</h1>
+      <h1 class="hero-title">Visualize todas as provas criadas e veja questoes individuais e blocos.</h1>
       <p class="hero-text">
-        O painel já diferencia quantas questões vieram do Banco de Questões e quantas foram criadas como temporárias durante a montagem da prova.
+        O painel diferencia questoes individuais, blocos baseados em texto e questoes temporarias.
       </p>
     </article>
     <aside class="hero-side-card">
@@ -23,11 +23,11 @@
           <div class="metric-value" id="totalProvas">0</div>
         </div>
         <div class="metric-card">
-          <div class="metric-label">Questões do banco usadas</div>
+          <div class="metric-label">Questoes individuais usadas</div>
           <div class="metric-value" id="totalQuestoesBanco">0</div>
         </div>
         <div class="metric-card">
-          <div class="metric-label">Questões temporárias usadas</div>
+          <div class="metric-label">Blocos usados</div>
           <div class="metric-value" id="totalQuestoesTemporarias">0</div>
         </div>
       </div>
@@ -44,14 +44,15 @@
     <div class="filters-row">
       <select id="filtroAno"></select>
       <select id="filtroDisciplina"></select>
+      <input id="filtroBusca" placeholder="Buscar por titulo, disciplina ou bloco">
     </div>
   </section>
 
   <section class="panel">
     <div class="panel-header">
       <div>
-        <h2 class="panel-title">Catálogo de Provas</h2>
-        <p class="panel-subtitle">Abra a visualização detalhada ou exclua provas que não serão mais usadas.</p>
+        <h2 class="panel-title">Catalogo de Provas</h2>
+        <p class="panel-subtitle">Abra a visualizacao detalhada ou exclua provas que nao serao mais usadas.</p>
       </div>
     </div>
     <div id="listaProvas" class="question-list"></div>

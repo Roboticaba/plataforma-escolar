@@ -13,6 +13,9 @@ const state = {
   bancoQuestoes: [],
   selectedQuestionIds: [],
   selectedQuestionDetails: [],
+  selectedBlockIds: [],
+  selectedBlockDetails: [],
+  selectedItems: [],
   temporaryQuestions: [],
   turmas: [],
   filters: {
@@ -30,8 +33,11 @@ const elements = {
   disciplina: document.getElementById("disciplina"),
   turma: document.getElementById("turma"),
   listaBancoSelecionadas: document.getElementById("listaBancoSelecionadas"),
+  listaOrdemProva: document.getElementById("listaOrdemProva"),
+  listaBlocosSelecionados: document.getElementById("listaBlocosSelecionados"),
   listaTemporarias: document.getElementById("listaTemporarias"),
   resumoBanco: document.getElementById("resumoBanco"),
+  resumoBlocos: document.getElementById("resumoBlocos"),
   resumoTemporarias: document.getElementById("resumoTemporarias"),
   resumoTotal: document.getElementById("resumoTotal"),
   btnSalvarProva: document.getElementById("btnSalvarProva"),
@@ -183,10 +189,129 @@ async function getQuestionFormPayload() {
   };
 }
 
+function buildBancoGroups() {
+  const blocks = new Map();
+  const individuais = [];
+
+  state.bancoQuestoes.forEach(question => {
+    if (!question.blocoId) {
+      individuais.push(question);
+      return;
+    }
+
+    const block = blocks.get(question.blocoId) || {
+      blocoId: question.blocoId,
+      titulo: question.blocoTitulo || question.tituloTextoApoio || "Bloco baseado em texto",
+      textoApoio: question.textoApoio || "",
+      imagensApoio: question.imagensApoio || [],
+      anoEscolar: question.anoEscolar || question.ano_escolar || "",
+      disciplina: question.disciplina || "",
+      questoes: []
+    };
+
+    block.questoes.push(question);
+    block.anoEscolar = block.anoEscolar || question.anoEscolar || question.ano_escolar || "";
+    block.disciplina = block.disciplina || question.disciplina || "";
+    block.textoApoio = block.textoApoio || question.textoApoio || "";
+    block.imagensApoio = block.imagensApoio.length ? block.imagensApoio : (question.imagensApoio || []);
+    blocks.set(question.blocoId, block);
+  });
+
+  return {
+    individuais,
+    blocos: [...blocks.values()].map(block => ({
+      ...block,
+      questoes: block.questoes.sort((a, b) => (a.ordemBloco || 0) - (b.ordemBloco || 0)),
+      totalQuestoes: block.questoes.length
+    }))
+  };
+}
+
+function getBlockQuestionCount() {
+  return state.selectedBlockDetails.reduce((acc, block) => acc + (block.totalQuestoes || block.questoes?.length || 0), 0);
+}
+
+function appendSelectedItem(tipo, id) {
+  const exists = state.selectedItems.some(item => item.tipo === tipo && item.id === id);
+  if (!exists) {
+    state.selectedItems.push({ tipo, id });
+  }
+}
+
+function removeSelectedItem(tipo, id) {
+  state.selectedItems = state.selectedItems.filter(item => !(item.tipo === tipo && item.id === id));
+}
+
+function getItemDetails(item) {
+  if (item.tipo === "questao") {
+    const question = state.selectedQuestionDetails.find(detail => detail.id === item.id);
+    return question ? {
+      title: question.enunciado,
+      tags: ["Questao individual", getDisciplinaLabel(question.disciplina), getAnoLabel(question.anoEscolar || question.ano_escolar)],
+      count: 1
+    } : null;
+  }
+
+  if (item.tipo === "bloco") {
+    const block = state.selectedBlockDetails.find(detail => detail.blocoId === item.id);
+    return block ? {
+      title: block.titulo,
+      tags: ["Bloco baseado em texto", getDisciplinaLabel(block.disciplina), `${block.totalQuestoes || block.questoes?.length || 0} questoes`],
+      count: block.totalQuestoes || block.questoes?.length || 0
+    } : null;
+  }
+
+  const question = state.temporaryQuestions.find(detail => detail.tempId === item.id);
+  return question ? {
+    title: question.enunciado,
+    tags: ["Questao temporaria", getDisciplinaLabel(question.disciplina), getAnoLabel(question.anoEscolar || question.ano_escolar)],
+    count: 1
+  } : null;
+}
+
+function getOrderedProofItems() {
+  const validItems = state.selectedItems.filter(item => {
+    if (item.tipo === "questao") return state.selectedQuestionIds.includes(item.id);
+    if (item.tipo === "bloco") return state.selectedBlockIds.includes(item.id);
+    if (item.tipo === "temporaria") return state.temporaryQuestions.some(question => question.tempId === item.id);
+    return false;
+  });
+  state.selectedItems = validItems;
+  return validItems;
+}
+
 function renderSelectionSummary() {
   elements.resumoBanco.textContent = String(state.selectedQuestionIds.length);
+  elements.resumoBlocos.textContent = String(state.selectedBlockIds.length);
   elements.resumoTemporarias.textContent = String(state.temporaryQuestions.length);
-  elements.resumoTotal.textContent = String(state.selectedQuestionIds.length + state.temporaryQuestions.length);
+  elements.resumoTotal.textContent = String(state.selectedQuestionIds.length + getBlockQuestionCount() + state.temporaryQuestions.length);
+
+  const orderedItems = getOrderedProofItems();
+  if (!orderedItems.length) {
+    elements.listaOrdemProva.innerHTML = renderEmptyState("Adicione questoes ou blocos para montar a ordem da prova.");
+  } else {
+    let questionNumber = 1;
+    elements.listaOrdemProva.innerHTML = orderedItems.map((item, index) => {
+      const detail = getItemDetails(item);
+      if (!detail) return "";
+      const start = questionNumber;
+      questionNumber += detail.count;
+      const numbering = detail.count > 1 ? `Questoes ${start} a ${questionNumber - 1}` : `Questao ${start}`;
+      return `
+        <article class="selection-card" style="${item.tipo === "bloco" ? "border-left:4px solid #7c3aed;" : ""}">
+          <div class="selection-card-header">
+            <div>
+              <h3 class="selection-card-title">${index + 1}. ${escapeHtml(detail.title)}</h3>
+              <div class="tag-row">
+                <span class="tag tag-success">${escapeHtml(numbering)}</span>
+                ${detail.tags.map(tag => `<span class="tag tag-neutral">${escapeHtml(tag)}</span>`).join("")}
+              </div>
+            </div>
+          </div>
+        </article>
+      `;
+    }).join("");
+  }
 
   if (!state.selectedQuestionDetails.length) {
     elements.listaBancoSelecionadas.innerHTML = renderEmptyState("Nenhuma questao do banco adicionada a prova.");
@@ -204,6 +329,27 @@ function renderSelectionSummary() {
             </div>
           </div>
           <button type="button" class="button-inline button-danger" data-remove-banco="${question.id}">Remover</button>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  if (!state.selectedBlockDetails.length) {
+    elements.listaBlocosSelecionados.innerHTML = renderEmptyState("Nenhum bloco baseado em texto adicionado a prova.");
+  } else {
+    elements.listaBlocosSelecionados.innerHTML = state.selectedBlockDetails.map(block => `
+      <article class="selection-card">
+        <div class="selection-card-header">
+          <div>
+            <h3 class="selection-card-title">${escapeHtml(block.titulo)}</h3>
+            <div class="tag-row">
+              <span class="tag tag-primary">${escapeHtml(getDisciplinaLabel(block.disciplina))}</span>
+              <span class="tag tag-neutral">${escapeHtml(getAnoLabel(block.anoEscolar))}</span>
+              <span class="tag tag-success">Bloco baseado em texto</span>
+              <span class="tag tag-neutral">${block.totalQuestoes || block.questoes?.length || 0} questoes</span>
+            </div>
+          </div>
+          <button type="button" class="button-inline button-danger" data-remove-bloco="${block.blocoId}">Remover</button>
         </div>
       </article>
     `).join("");
@@ -231,32 +377,67 @@ function renderSelectionSummary() {
   }
 }
 
-function getFilteredBancoQuestions() {
-  return state.bancoQuestoes.filter(item => {
+function matchesBancoFilters(item) {
     if (state.filters.anoEscolar && item.anoEscolar !== state.filters.anoEscolar && item.ano_escolar !== state.filters.anoEscolar) return false;
     if (state.filters.disciplina && item.disciplina !== state.filters.disciplina) return false;
     if (state.filters.descritor && item.descritor !== state.filters.descritor) return false;
     if (state.filters.search) {
-      const searchBase = [item.enunciado, item.textoApoio, item.descritor, item.descritorDescricao].join(" ").toLowerCase();
+      const searchBase = [item.enunciado, item.textoApoio, item.titulo, item.blocoTitulo, item.descritor, item.descritorDescricao].join(" ").toLowerCase();
       if (!searchBase.includes(state.filters.search.toLowerCase())) return false;
     }
     return true;
-  });
+}
+
+function getFilteredBancoContent() {
+  const { individuais, blocos } = buildBancoGroups();
+  return {
+    individuais: individuais.filter(matchesBancoFilters),
+    blocos: blocos.filter(block => {
+      const blockMatches = matchesBancoFilters({
+        ...block,
+        enunciado: block.questoes.map(question => question.enunciado).join(" "),
+        descritor: ""
+      });
+      const hasMatchingQuestion = block.questoes.some(matchesBancoFilters);
+      return blockMatches || hasMatchingQuestion;
+    })
+  };
 }
 
 function renderBancoModal() {
-  const filtered = getFilteredBancoQuestions();
-  elements.contadorBancoSelecionado.textContent = `${state.selectedQuestionIds.length} selecionada(s) para a prova`;
+  const { individuais, blocos } = getFilteredBancoContent();
+  elements.contadorBancoSelecionado.textContent = `${state.selectedQuestionIds.length} questao(oes) e ${state.selectedBlockIds.length} bloco(s) selecionado(s)`;
 
-  if (!filtered.length) {
-    elements.listaBancoQuestoes.innerHTML = renderEmptyState("Nenhuma questao encontrada no Banco de Questoes.");
+  if (!individuais.length && !blocos.length) {
+    elements.listaBancoQuestoes.innerHTML = renderEmptyState("Nenhuma questao ou bloco encontrado no Banco de Questoes.");
     return;
   }
 
-  elements.listaBancoQuestoes.innerHTML = filtered.map(question => {
+  const blockCards = blocos.map(block => {
+    const checked = state.selectedBlockIds.includes(block.blocoId);
+    return `
+      <label class="question-card checkbox-row" style="padding:14px;">
+        <input type="checkbox" data-select-block="${block.blocoId}" ${checked ? "checked" : ""}>
+        <div style="flex:1;">
+          <div class="question-card-header" style="margin-bottom:6px;">
+            <h3 class="question-card-title">${escapeHtml(block.titulo)}</h3>
+          </div>
+          <div class="tag-row">
+            <span class="tag tag-success">Bloco baseado em texto</span>
+            <span class="tag tag-primary">${escapeHtml(getDisciplinaLabel(block.disciplina))}</span>
+            <span class="tag tag-neutral">${escapeHtml(getAnoLabel(block.anoEscolar))}</span>
+            <span class="tag tag-neutral">${block.totalQuestoes} questoes</span>
+          </div>
+          <p class="panel-subtitle" style="margin-top:8px;">${escapeHtml((block.textoApoio || "").slice(0, 180))}${block.textoApoio?.length > 180 ? "..." : ""}</p>
+        </div>
+      </label>
+    `;
+  }).join("");
+
+  const questionCards = individuais.map(question => {
     const checked = state.selectedQuestionIds.includes(question.id);
     return `
-      <label class="question-card checkbox-row">
+      <label class="question-card checkbox-row" style="padding:14px;">
         <input type="checkbox" data-select-question="${question.id}" ${checked ? "checked" : ""}>
         <div style="flex:1;">
           <div class="question-card-header" style="margin-bottom:6px;">
@@ -272,10 +453,17 @@ function renderBancoModal() {
       </label>
     `;
   }).join("");
+
+  elements.listaBancoQuestoes.innerHTML = `
+    ${blockCards ? `<h3 class="proof-section-title" style="margin:0 0 10px;">Blocos baseados em texto</h3>${blockCards}` : ""}
+    ${questionCards ? `<h3 class="proof-section-title" style="margin:18px 0 10px;">Questoes individuais</h3>${questionCards}` : ""}
+  `;
 }
 
 async function refreshSelectedQuestionDetails() {
-  state.selectedQuestionDetails = state.bancoQuestoes.filter(item => state.selectedQuestionIds.includes(item.id));
+  const { individuais, blocos } = buildBancoGroups();
+  state.selectedQuestionDetails = individuais.filter(item => state.selectedQuestionIds.includes(item.id));
+  state.selectedBlockDetails = blocos.filter(item => state.selectedBlockIds.includes(item.blocoId));
   renderSelectionSummary();
   renderBancoModal();
 }
@@ -332,10 +520,16 @@ async function handleCreateQuestion(event) {
     if (salvarNoBanco) {
       const question = await createQuestion(payload, usuario);
       state.selectedQuestionIds = [...new Set([...state.selectedQuestionIds, question.id])];
+      appendSelectedItem("questao", question.id);
       await loadBancoQuestoes();
       showFeedback(elements.feedbackQuestao, "success", "Questao criada e salva no Banco de Questoes.");
     } else {
-      state.temporaryQuestions.push(normalizeTemporaryQuestion(payload, usuario));
+      const tempQuestion = {
+        ...normalizeTemporaryQuestion(payload, usuario),
+        tempId: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      };
+      state.temporaryQuestions.push(tempQuestion);
+      appendSelectedItem("temporaria", tempQuestion.tempId);
       renderSelectionSummary();
       showFeedback(elements.feedbackQuestao, "success", "Questao criada apenas para esta prova.");
     }
@@ -375,16 +569,29 @@ async function handleSaveProva(event) {
       tempoMinutos: form.get("tempoMinutos"),
       valorTotal: form.get("valorTotal"),
       questoesBancoIds: state.selectedQuestionIds,
-      questoesTemporarias: state.temporaryQuestions
+      blocosIds: state.selectedBlockIds,
+      blocosResumo: state.selectedBlockDetails.map(block => ({
+        blocoId: block.blocoId,
+        titulo: block.titulo,
+        totalQuestoes: block.totalQuestoes || block.questoes?.length || 0
+      })),
+      questoesTemporarias: state.temporaryQuestions,
+      itensProva: getOrderedProofItems()
     }, usuario);
 
-    showFeedback(elements.feedbackProva, "success", "Prova salva com sucesso.");
+    showFeedback(elements.feedbackProva, "success", "Prova salva com sucesso. Atualizando o Banco de Provas...");
     elements.formProva.reset();
     state.selectedQuestionIds = [];
     state.selectedQuestionDetails = [];
+    state.selectedBlockIds = [];
+    state.selectedBlockDetails = [];
+    state.selectedItems = [];
     state.temporaryQuestions = [];
     renderSelectionSummary();
     await loadTurmas();
+    setTimeout(() => {
+      window.location.href = "professor-banco.html";
+    }, 700);
   } catch (error) {
     showFeedback(elements.feedbackProva, "error", error.message || "Erro ao salvar prova.");
   } finally {
@@ -444,13 +651,29 @@ function bindEvents() {
   });
 
   elements.listaBancoQuestoes.addEventListener("change", event => {
+    const blockInput = event.target.closest("[data-select-block]");
+    if (blockInput) {
+      const blockId = blockInput.dataset.selectBlock;
+      if (blockInput.checked) {
+        state.selectedBlockIds = [...new Set([...state.selectedBlockIds, blockId])];
+        appendSelectedItem("bloco", blockId);
+      } else {
+        state.selectedBlockIds = state.selectedBlockIds.filter(item => item !== blockId);
+        removeSelectedItem("bloco", blockId);
+      }
+      refreshSelectedQuestionDetails();
+      return;
+    }
+
     const input = event.target.closest("[data-select-question]");
     if (!input) return;
     const questionId = input.dataset.selectQuestion;
     if (input.checked) {
       state.selectedQuestionIds = [...new Set([...state.selectedQuestionIds, questionId])];
+      appendSelectedItem("questao", questionId);
     } else {
       state.selectedQuestionIds = state.selectedQuestionIds.filter(item => item !== questionId);
+      removeSelectedItem("questao", questionId);
     }
     refreshSelectedQuestionDetails();
   });
@@ -459,6 +682,15 @@ function bindEvents() {
     const button = event.target.closest("[data-remove-banco]");
     if (!button) return;
     state.selectedQuestionIds = state.selectedQuestionIds.filter(item => item !== button.dataset.removeBanco);
+    removeSelectedItem("questao", button.dataset.removeBanco);
+    refreshSelectedQuestionDetails();
+  });
+
+  elements.listaBlocosSelecionados.addEventListener("click", event => {
+    const button = event.target.closest("[data-remove-bloco]");
+    if (!button) return;
+    state.selectedBlockIds = state.selectedBlockIds.filter(item => item !== button.dataset.removeBloco);
+    removeSelectedItem("bloco", button.dataset.removeBloco);
     refreshSelectedQuestionDetails();
   });
 
@@ -466,7 +698,11 @@ function bindEvents() {
     const button = event.target.closest("[data-remove-temp]");
     if (!button) return;
     const index = Number(button.dataset.removeTemp);
+    const tempId = state.temporaryQuestions[index]?.tempId;
     state.temporaryQuestions.splice(index, 1);
+    if (tempId) {
+      removeSelectedItem("temporaria", tempId);
+    }
     renderSelectionSummary();
   });
 }
