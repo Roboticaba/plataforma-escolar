@@ -59,6 +59,114 @@ export function sanitizeText(value) {
   return String(value || "").trim();
 }
 
+function buildEmptyBnccFields() {
+  return {
+    codigoHabilidade: "",
+    habilidade: "",
+    componenteCurricular: "",
+    unidadeTematica: "",
+    objetoConhecimento: "",
+    praticaLinguagem: "",
+    campoAtuacao: "",
+    areaConhecimento: ""
+  };
+}
+
+function normalizeBnccPayload(payload = {}, descritorInfo = null) {
+  const payloadBncc = payload?.bncc && typeof payload.bncc === "object" ? payload.bncc : {};
+  const descritorBncc = descritorInfo?.bncc && typeof descritorInfo.bncc === "object" ? descritorInfo.bncc : {};
+
+  return {
+    codigoHabilidade: sanitizeText(
+      payload.codigoHabilidadeBncc ||
+      payload.habilidadeCodigoBncc ||
+      payload.codigoBncc ||
+      payloadBncc.codigoHabilidade ||
+      payloadBncc.codigoHabilidadeBncc ||
+      payloadBncc.habilidadeCodigoBncc ||
+      payloadBncc.codigoBncc ||
+      descritorBncc.codigoHabilidade ||
+      descritorInfo?.codigoHabilidadeBncc ||
+      ""
+    ),
+    habilidade: sanitizeText(payload.habilidadeBncc || payloadBncc.habilidade || payloadBncc.habilidadeBncc || descritorBncc.habilidade || descritorInfo?.habilidadeBncc || ""),
+    componenteCurricular: sanitizeText(payload.componenteCurricularBncc || payloadBncc.componenteCurricular || payloadBncc.componenteCurricularBncc || descritorBncc.componenteCurricular || descritorInfo?.componenteCurricularBncc || ""),
+    unidadeTematica: sanitizeText(payload.unidadeTematicaBncc || payloadBncc.unidadeTematica || payloadBncc.unidadeTematicaBncc || descritorBncc.unidadeTematica || descritorInfo?.unidadeTematicaBncc || ""),
+    objetoConhecimento: sanitizeText(payload.objetoConhecimentoBncc || payloadBncc.objetoConhecimento || payloadBncc.objetoConhecimentoBncc || descritorBncc.objetoConhecimento || descritorInfo?.objetoConhecimentoBncc || ""),
+    praticaLinguagem: sanitizeText(payload.praticaLinguagemBncc || payloadBncc.praticaLinguagem || payloadBncc.praticaLinguagemBncc || descritorBncc.praticaLinguagem || descritorInfo?.praticaLinguagemBncc || ""),
+    campoAtuacao: sanitizeText(payload.campoAtuacaoBncc || payloadBncc.campoAtuacao || payloadBncc.campoAtuacaoBncc || descritorBncc.campoAtuacao || descritorInfo?.campoAtuacaoBncc || ""),
+    areaConhecimento: sanitizeText(payload.areaConhecimentoBncc || payloadBncc.areaConhecimento || payloadBncc.areaConhecimentoBncc || descritorBncc.areaConhecimento || descritorInfo?.areaConhecimentoBncc || "")
+  };
+}
+
+function buildBnccRecordFields(payload = {}, descritorInfo = null) {
+  const bncc = {
+    ...buildEmptyBnccFields(),
+    ...normalizeBnccPayload(payload, descritorInfo)
+  };
+
+  return {
+    bncc,
+    codigoHabilidadeBncc: bncc.codigoHabilidade,
+    habilidadeBncc: bncc.habilidade,
+    componenteCurricularBncc: bncc.componenteCurricular,
+    unidadeTematicaBncc: bncc.unidadeTematica,
+    objetoConhecimentoBncc: bncc.objetoConhecimento,
+    praticaLinguagemBncc: bncc.praticaLinguagem,
+    campoAtuacaoBncc: bncc.campoAtuacao,
+    areaConhecimentoBncc: bncc.areaConhecimento
+  };
+}
+
+function buildClassificationRecordFields(payload = {}, bnccFields = {}, usuario = null) {
+  const suggestion = payload?.descritorSugestaoIA && typeof payload.descritorSugestaoIA === "object"
+    ? payload.descritorSugestaoIA
+    : {};
+  const confirmed = Boolean(payload.classificacao_confirmada ?? payload.classificacaoConfirmada ?? payload.descritorConfirmadoPeloProfessor ?? false);
+  const codigoSugerido = sanitizeText(payload.bncc_sugerido || payload.bnccSugerido || suggestion.codigo_bncc || bnccFields.codigoHabilidadeBncc || "");
+  const codigoConfirmado = sanitizeText(payload.bncc_confirmado || payload.bnccConfirmado || (confirmed ? (codigoSugerido || bnccFields.codigoHabilidadeBncc) : ""));
+  const habilidade = sanitizeText(payload.habilidade_bncc || payload.habilidadeBncc || suggestion.habilidade_bncc || suggestion.habilidade || bnccFields.habilidadeBncc || "");
+  const categoria = sanitizeText(payload.categoria_bncc || payload.categoriaBncc || suggestion.categoria_bncc || suggestion.categoria || "");
+  const saeb = sanitizeText(payload.saeb_equivalente || payload.saebEquivalente || suggestion.saeb_equivalente || suggestion.saeb || payload.descritor || "");
+  const parana = sanitizeText(payload.parana_equivalente || payload.paranaEquivalente || suggestion.parana_equivalente || suggestion.parana || saeb);
+  const confianca = sanitizeText(payload.confianca_classificacao || payload.confiancaClassificacao || suggestion.confianca_classificacao || suggestion.confianca || "baixa");
+  const pontuacao = Number(payload.pontuacao_classificacao ?? payload.pontuacaoClassificacao ?? suggestion.pontuacao_classificacao ?? suggestion.pontuacao ?? 0);
+  const justificativa = sanitizeText(payload.justificativa_classificacao || payload.justificativaClassificacao || suggestion.justificativa || "");
+  const dataConfirmacao = payload.data_confirmacao || payload.dataConfirmacao || (confirmed ? new Date() : null);
+
+  return {
+    bncc_sugerido: codigoSugerido,
+    bncc_confirmado: codigoConfirmado,
+    habilidade_bncc: habilidade,
+    categoria_bncc: categoria,
+    saeb_equivalente: saeb,
+    parana_equivalente: parana,
+    confianca_classificacao: confianca,
+    pontuacao_classificacao: pontuacao,
+    justificativa_classificacao: justificativa,
+    classificacao_confirmada: confirmed,
+    data_confirmacao: dataConfirmacao,
+    professor_id: sanitizeText(payload.professor_id || payload.professorId || usuario?.uid || payload.autorId || payload.autor || "")
+  };
+}
+
+function normalizeClassificationRecordFields(question = {}) {
+  return {
+    bncc_sugerido: sanitizeText(question.bncc_sugerido || question.bnccSugerido || question.codigoHabilidadeBncc || ""),
+    bncc_confirmado: sanitizeText(question.bncc_confirmado || question.bnccConfirmado || ""),
+    habilidade_bncc: sanitizeText(question.habilidade_bncc || question.habilidadeBncc || ""),
+    categoria_bncc: sanitizeText(question.categoria_bncc || question.categoriaBncc || ""),
+    saeb_equivalente: sanitizeText(question.saeb_equivalente || question.saebEquivalente || question.descritor || ""),
+    parana_equivalente: sanitizeText(question.parana_equivalente || question.paranaEquivalente || ""),
+    confianca_classificacao: sanitizeText(question.confianca_classificacao || question.confiancaClassificacao || "baixa"),
+    pontuacao_classificacao: Number(question.pontuacao_classificacao ?? question.pontuacaoClassificacao ?? 0),
+    justificativa_classificacao: sanitizeText(question.justificativa_classificacao || question.justificativaClassificacao || ""),
+    classificacao_confirmada: Boolean(question.classificacao_confirmada ?? question.classificacaoConfirmada ?? false),
+    data_confirmacao: question.data_confirmacao || question.dataConfirmacao || null,
+    professor_id: sanitizeText(question.professor_id || question.professorId || question.autorId || question.autor || "")
+  };
+}
+
 export function limparAlternativas(texto) {
   return String(texto || "")
     .split(/\r?\n/)
@@ -184,7 +292,23 @@ export function buildQuestionSearchText(payload) {
     payload.disciplina,
     payload.anoEscolar,
     payload.descritor,
-    payload.descritorDescricao
+    payload.descritorDescricao,
+    payload.codigoHabilidadeBncc,
+    payload.habilidadeBncc,
+    payload.componenteCurricularBncc,
+    payload.unidadeTematicaBncc,
+    payload.objetoConhecimentoBncc,
+    payload.praticaLinguagemBncc,
+    payload.campoAtuacaoBncc,
+    payload.areaConhecimentoBncc,
+    payload.bncc?.codigoHabilidade,
+    payload.bncc?.habilidade,
+    payload.bncc?.componenteCurricular,
+    payload.bncc?.unidadeTematica,
+    payload.bncc?.objetoConhecimento,
+    payload.bncc?.praticaLinguagem,
+    payload.bncc?.campoAtuacao,
+    payload.bncc?.areaConhecimento
   ]
     .filter(Boolean)
     .join(" ")
@@ -251,6 +375,8 @@ export function buildQuestionRecord(payload, usuario) {
     ? []
     : normalizeAlternativesByType(tipoNormalizado, payload.alternativas, payload.respostaCorreta);
   const descritorInfo = getDescritorInfo(payload.disciplina, payload.anoEscolar, payload.descritor);
+  const bnccFields = buildBnccRecordFields(payload, descritorInfo);
+  const classificationFields = buildClassificationRecordFields(payload, bnccFields, usuario);
 
   return {
     tipo: tipoNormalizado,
@@ -266,6 +392,8 @@ export function buildQuestionRecord(payload, usuario) {
     descritorConfirmado: payload.descritor || "",
     professorAlterou: Boolean((payload.descritorSugerido || payload.descritorSugestaoIA?.descritor) && payload.descritor && (payload.descritorSugerido || payload.descritorSugestaoIA?.descritor) !== payload.descritor),
     confiancaDescritor: Number(payload.confiancaDescritor ?? payload.descritorSugestaoIA?.confianca ?? 0),
+    ...bnccFields,
+    ...classificationFields,
     formatoAlternativas: normalizeAlternativeFormat(payload.formatoAlternativas),
     textoApoio: sanitizeText(payload.textoApoio),
     tituloTextoApoio: sanitizeText(payload.tituloTextoApoio || payload.tituloTexto || ""),
@@ -291,10 +419,30 @@ export function buildQuestionRecord(payload, usuario) {
       audio: ""
     },
     origemCriacao: sanitizeText(payload.origemCriacao || "individual"),
+    importacaoId: sanitizeText(payload.importacaoId),
+    visibilidade: sanitizeText(payload.visibilidade || "privada"),
+    statusRevisao: sanitizeText(payload.statusRevisao || "revisada_professor"),
+    fonte: payload.fonte && typeof payload.fonte === "object"
+      ? {
+          nome: sanitizeText(payload.fonte.nome),
+          url: sanitizeText(payload.fonte.url),
+          observacao: sanitizeText(payload.fonte.observacao),
+          licenca: sanitizeText(payload.fonte.licenca)
+        }
+      : {
+          nome: "",
+          url: "",
+          observacao: "",
+          licenca: ""
+        },
     blocoId: sanitizeText(payload.blocoId),
     blocoTitulo: sanitizeText(payload.blocoTitulo || payload.tituloTextoApoio || ""),
     ordemBloco: Number(payload.ordemBloco || 0),
-    searchText: buildQuestionSearchText(payload)
+    searchText: buildQuestionSearchText({
+      ...payload,
+      descritorDescricao: payload.descritorDescricao || descritorInfo?.nome || "",
+      ...bnccFields
+    })
   };
 }
 
@@ -303,6 +451,8 @@ export function normalizeLegacyQuestion(question = {}) {
   const alternativas = Array.isArray(question.alternativas)
     ? normalizeAlternatives(question.alternativas, question.resposta_correta)
     : [];
+  const bnccFields = buildBnccRecordFields(question);
+  const classificationFields = normalizeClassificationRecordFields(question);
 
   return {
     id: question.id,
@@ -319,6 +469,8 @@ export function normalizeLegacyQuestion(question = {}) {
     descritorConfirmado: question.descritorConfirmado || question.descritor || "",
     professorAlterou: Boolean(question.professorAlterou),
     confiancaDescritor: Number(question.confiancaDescritor ?? question.descritorSugestaoIA?.confianca ?? 0),
+    ...bnccFields,
+    ...classificationFields,
     formatoAlternativas: normalizeAlternativeFormat(question.formatoAlternativas),
     textoApoio: question.textoApoio || question.textoAntes || "",
     tituloTextoApoio: question.tituloTextoApoio || question.blocoTitulo || "",
@@ -336,6 +488,10 @@ export function normalizeLegacyQuestion(question = {}) {
     atualizadoEm: question.atualizadoEm || question.criadoEm || question.data_criacao || null,
     recurso: question.recurso || { imagem: "", imagens: [], audio: "" },
     origemCriacao: question.origemCriacao || "banco",
+    importacaoId: question.importacaoId || "",
+    visibilidade: question.visibilidade || "privada",
+    statusRevisao: question.statusRevisao || "revisada_professor",
+    fonte: question.fonte || { nome: "", url: "", observacao: "", licenca: "" },
     blocoId: question.blocoId || "",
     blocoTitulo: question.blocoTitulo || question.tituloTextoApoio || "",
     ordemBloco: Number(question.ordemBloco || 0),

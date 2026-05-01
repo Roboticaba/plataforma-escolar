@@ -18,8 +18,58 @@ export const DISCIPLINAS = [
   { value: "robotica", label: "Robótica" }
 ];
 
+function sanitizeBnccValue(value) {
+  return String(value || "").trim();
+}
+
+function normalizeBnccMetadata(metadata = {}) {
+  const raw = metadata?.bncc && typeof metadata.bncc === "object"
+    ? metadata.bncc
+    : metadata;
+
+  return {
+    codigoHabilidade: sanitizeBnccValue(raw.codigoHabilidade || raw.codigoHabilidadeBncc || raw.habilidadeCodigoBncc || raw.codigoBncc || raw.codigo || ""),
+    habilidade: sanitizeBnccValue(raw.habilidade || raw.habilidadeBncc || ""),
+    componenteCurricular: sanitizeBnccValue(raw.componenteCurricular || raw.componenteCurricularBncc || ""),
+    unidadeTematica: sanitizeBnccValue(raw.unidadeTematica || raw.unidadeTematicaBncc || ""),
+    objetoConhecimento: sanitizeBnccValue(raw.objetoConhecimento || raw.objetoConhecimentoBncc || ""),
+    praticaLinguagem: sanitizeBnccValue(raw.praticaLinguagem || raw.praticaLinguagemBncc || ""),
+    campoAtuacao: sanitizeBnccValue(raw.campoAtuacao || raw.campoAtuacaoBncc || ""),
+    areaConhecimento: sanitizeBnccValue(raw.areaConhecimento || raw.areaConhecimentoBncc || "")
+  };
+}
+
+function attachBnccFields(base, metadata = {}) {
+  const bncc = normalizeBnccMetadata(metadata);
+  return {
+    ...base,
+    bncc,
+    codigoHabilidadeBncc: bncc.codigoHabilidade,
+    habilidadeBncc: bncc.habilidade,
+    componenteCurricularBncc: bncc.componenteCurricular,
+    unidadeTematicaBncc: bncc.unidadeTematica,
+    objetoConhecimentoBncc: bncc.objetoConhecimento,
+    praticaLinguagemBncc: bncc.praticaLinguagem,
+    campoAtuacaoBncc: bncc.campoAtuacao,
+    areaConhecimentoBncc: bncc.areaConhecimento
+  };
+}
+
 function criarDescritores(items) {
-  return items.map(([codigo, nome]) => ({ codigo, nome }));
+  return items.map(item => {
+    if (Array.isArray(item)) {
+      const [codigo, nome, metadata = {}] = item;
+      return attachBnccFields({ codigo, nome }, metadata);
+    }
+
+    return attachBnccFields(
+      {
+        codigo: item?.codigo || "",
+        nome: item?.nome || ""
+      },
+      item || {}
+    );
+  });
 }
 
 export const DESCRITORES = {
@@ -180,6 +230,20 @@ export function getDescritores(disciplina, anoEscolar) {
 export function getDescritorDescricao(disciplina, anoEscolar, codigo) {
   const item = getDescritores(disciplina, anoEscolar).find(entry => entry.codigo === codigo);
   return item ? item.nome : "";
+}
+
+export function getDescritorBnccFields(disciplina, anoEscolar, codigo) {
+  const item = getDescritores(disciplina, anoEscolar).find(entry => entry.codigo === codigo);
+  return item?.bncc || {
+    codigoHabilidade: "",
+    habilidade: "",
+    componenteCurricular: "",
+    unidadeTematica: "",
+    objetoConhecimento: "",
+    praticaLinguagem: "",
+    campoAtuacao: "",
+    areaConhecimento: ""
+  };
 }
 
 export function getDisciplinaLabel(value) {

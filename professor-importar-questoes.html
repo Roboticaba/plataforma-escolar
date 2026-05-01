@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Importar Questoes - Roboticaba Professor</title>
+<link rel="stylesheet" href="professor-styles.css">
+<link rel="stylesheet" href="assets/css/professor-app.css">
+<style>
+.import-shell { max-width: 1440px; }
+[hidden] { display: none !important; }
+.import-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.import-stack {
+  display: grid;
+  gap: 16px;
+}
+.import-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.95fr) minmax(0, 1.25fr);
+  gap: 20px;
+}
+.sticky-panel { position: sticky; top: 18px; }
+.review-list { display: grid; gap: 16px; }
+.review-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface-soft);
+  padding: 18px;
+}
+.review-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.review-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.review-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.review-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+.review-content-stack {
+  display: grid;
+  gap: 14px;
+}
+.review-large-field textarea,
+.review-large-field input {
+  width: 100%;
+}
+.review-large-field textarea {
+  min-height: 108px;
+}
+.review-large-field textarea[data-field="textoApoio"],
+.review-large-field textarea[data-field="imagensApoio"] {
+  min-height: 88px;
+}
+.review-alternatives {
+  display: grid;
+  gap: 10px;
+}
+.review-alt-row {
+  display: grid;
+  grid-template-columns: auto 90px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+.review-alt-row input[type="text"] {
+  width: 100%;
+}
+.review-alt-label {
+  font-weight: 700;
+  color: var(--ink);
+}
+.review-upload-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+.review-upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.review-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+.review-preview-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+.review-preview-card img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+.review-toggle-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -2px;
+}
+.review-controls-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-items: stretch;
+  margin-top: 14px;
+}
+.review-control-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  justify-items: stretch;
+}
+.review-control-field label {
+  font-size: 12px;
+  font-weight: 700;
+}
+.review-control-field select,
+.review-control-field .review-checkbox,
+.review-control-field .button-inline {
+  min-height: 44px;
+}
+.review-control-field select {
+  width: 100%;
+  max-width: 100%;
+}
+.review-control-field-descritor select {
+  max-width: 250px;
+  justify-self: center;
+}
+.review-control-field .button-inline {
+  width: 100%;
+  justify-content: center;
+}
+.review-checkbox {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 0 12px;
+}
+.review-summary-box {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+.review-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.review-summary-item {
+  display: grid;
+  gap: 4px;
+}
+.review-summary-item strong {
+  font-size: 12px;
+}
+.small-textarea { min-height: 96px; }
+.import-full-width {
+  grid-column: 1 / -1 !important;
+}
+.stat-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.stat-chip {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 700;
+}
+.modal-shell {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.52);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+.modal-card {
+  width: min(920px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  border-radius: 24px;
+  background: #fff;
+  border: 1px solid var(--line);
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.18);
+}
+.modal-header-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+.modal-steps {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+.modal-json-panel {
+  display: grid;
+  gap: 12px;
+}
+.modal-json-panel textarea {
+  width: 100%;
+  min-height: 260px;
+  font-family: Consolas, monospace;
+}
+@media (max-width: 1120px) {
+  .import-layout { grid-template-columns: 1fr; }
+  .sticky-panel { position: static; }
+  .import-form-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .review-controls-row { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 720px) {
+  .import-form-grid { grid-template-columns: 1fr; }
+  .review-alt-row { grid-template-columns: 1fr; }
+  .review-controls-row { grid-template-columns: 1fr; }
+  .modal-shell { padding: 16px; }
+  .modal-card { padding: 18px; }
+}
+</style>
+</head>
+<body class="dashboard-page">
+<div class="page-shell import-shell">
+  <section class="hero-panel">
+    <article class="hero-card">
+      <span class="hero-badge">Importacao de Questoes</span>
+      <h1 class="hero-title">Cole o material bruto e organize a revisao em minutos.</h1>
+      <p class="hero-text">Sem IA paga dentro da plataforma. Voce pode usar o parser local ou organizar o texto em uma IA externa e colar o JSON aqui para revisar antes de salvar.</p>
+      <div class="toolbar" style="margin-top:18px;">
+        <a class="button button-outline" href="professor-questoes.html">Banco de questoes</a>
+        <a class="button button-outline" href="professor.html">Voltar ao painel</a>
+      </div>
+    </article>
+    <aside class="hero-side-card">
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-label">Detectadas</div>
+          <div class="metric-value" id="metricDetectadas">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Prontas para salvar</div>
+          <div class="metric-value" id="metricProntas">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Com descritor confirmado</div>
+          <div class="metric-value" id="metricDescritor">0</div>
+        </div>
+      </div>
+      <div class="question-card">
+        <div class="tag-row">
+          <span class="tag tag-warning">Roadmap ativo</span>
+          <span class="tag tag-neutral">Custo zero</span>
+        </div>
+        <p class="panel-subtitle">Fluxo atual: parser local ou IA externa, revisao manual obrigatoria e salvamento somente das questoes confirmadas.</p>
+      </div>
+    </aside>
+  </section>
+
+  <div class="import-layout">
+    <aside class="panel sticky-panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Dados da importacao</h2>
+          <p class="panel-subtitle">Esses campos ajudam o parser e ja alimentam o schema do roadmap.</p>
+        </div>
+      </div>
+      <form id="formImportacao" class="import-form-grid">
+        <div class="form-field wide-field">
+          <label>Titulo da importacao</label>
+          <input id="importTitulo" placeholder="Ex.: Prova diagnostica - 4o ano">
+        </div>
+        <div class="form-field">
+          <label>Ano escolar</label>
+          <select id="importAnoEscolar"></select>
+        </div>
+        <div class="form-field">
+          <label>Disciplina</label>
+          <select id="importDisciplina"></select>
+        </div>
+        <div class="form-field wide-field">
+          <label>Nome da fonte</label>
+          <input id="importFonteNome" placeholder="Ex.: Caderno da escola / material autoral">
+        </div>
+        <div class="form-field import-full-width">
+          <label>Texto bruto</label>
+          <textarea id="importTextoBruto" placeholder="Cole aqui as questoes, alternativas e, se houver, o gabarito." style="min-height:320px;"></textarea>
+        </div>
+        <div class="form-field import-full-width">
+          <label>URL da fonte (opcional)</label>
+          <input id="importFonteUrl" placeholder="https://">
+        </div>
+        <div class="form-field import-full-width">
+          <label>Observacoes da fonte</label>
+          <textarea id="importFonteObservacao" class="small-textarea" placeholder="Ex.: prova digitada manualmente a partir de material impresso."></textarea>
+        </div>
+      </form>
+      <div class="review-toolbar">
+        <button class="button button-primary" type="button" id="btnOrganizarImportacao">Organizar questoes</button>
+        <button class="button button-outline" type="button" id="btnOrganizarIAExterna">Organizar questoes com IA externa</button>
+        <button class="button button-outline" type="button" id="btnLimparImportacao">Limpar</button>
+        <button class="button button-success" type="button" id="btnSalvarImportacao" disabled>Salvar revisadas</button>
+      </div>
+      <div id="feedbackImportacao" class="feedback" hidden></div>
+      <div class="stat-row">
+        <span class="stat-chip" id="chipTituloDetectado">Titulo detectado: -</span>
+        <span class="stat-chip" id="chipTextoBase">Texto base: nao detectado</span>
+      </div>
+    </aside>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Revisao assistida</h2>
+          <p class="panel-subtitle">Revise item por item antes de salvar. Nada entra automaticamente no banco.</p>
+        </div>
+        <div class="review-toolbar" style="margin-top:0;">
+          <button class="button button-outline" type="button" id="btnConfirmarTodasImportacao" disabled>Confirmar todas</button>
+        </div>
+      </div>
+      <div id="listaImportada" class="review-list"></div>
+    </section>
+  </div>
+</div>
+
+<div id="modalIAExterna" class="modal-shell" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tituloModalIAExterna">
+    <div class="modal-header-row">
+      <div>
+        <span class="hero-badge">IA externa</span>
+        <h2 id="tituloModalIAExterna" class="panel-title" style="margin-top:10px;">Organizar questoes com IA externa</h2>
+        <p class="panel-subtitle">Esta funcao nao usa IA dentro da plataforma e nao gera custo.</p>
+      </div>
+      <button type="button" class="button button-outline" id="btnFecharModalIAExterna">Fechar</button>
+    </div>
+
+    <div class="question-card">
+      <ol class="modal-steps">
+        <li>Cole aqui o texto bruto da prova.</li>
+        <li>Clique em "Copiar prompt + texto e abrir IA".</li>
+        <li>Cole tudo na IA aberta.</li>
+        <li>Copie o JSON gerado.</li>
+        <li>Volte aqui, cole o JSON e revise as questoes antes de salvar.</li>
+      </ol>
+    </div>
+
+    <div class="modal-json-panel">
+      <div class="form-field">
+        <label for="campoTextoBrutoIA">Cole aqui o texto bruto da prova</label>
+        <textarea id="campoTextoBrutoIA" placeholder="Cole aqui o texto da prova para enviar a uma IA externa."></textarea>
+      </div>
+      <div class="review-toolbar" style="margin-top:0;">
+        <button type="button" class="button button-primary" id="btnCopiarPromptIA">Copiar prompt + texto e abrir IA</button>
+      </div>
+      <div class="form-field">
+        <label for="campoJsonIA">Cole aqui o JSON gerado pela IA</label>
+        <textarea id="campoJsonIA" placeholder='Cole aqui o JSON devolvido pela IA externa.'></textarea>
+      </div>
+      <div class="review-toolbar" style="margin-top:0;">
+        <button type="button" class="button button-success" id="btnValidarJsonIA">Validar e visualizar JSON</button>
+      </div>
+    </div>
+
+    <div id="feedbackModalIA" class="feedback" hidden></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script type="module" src="assets/js/pages/professor-importar-questoes.js"></script>
+</body>
+</html>

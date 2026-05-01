@@ -289,7 +289,7 @@
           <textarea data-field="enunciado" placeholder="Digite o enunciado completo" required></textarea>
         </div>
         <div class="form-field" data-descritor-wrapper hidden>
-          <label>Descritor</label>
+          <label>SAEB/Parana equivalente</label>
           <select data-field="descritor"><option value="">Selecione</option></select>
         </div>
         <div class="form-field">
@@ -310,15 +310,23 @@
       <section class="panel" style="padding:18px; margin-top:18px;" data-descritor-panel hidden>
         <div class="panel-header">
           <div>
-            <h3 class="panel-title" style="font-size:1rem;">Sugestao de descritor</h3>
-            <p class="panel-subtitle">A sugestao precisa ser confirmada pelo professor.</p>
+            <h3 class="panel-title" style="font-size:1rem;">Classificacao BNCC</h3>
+            <p class="panel-subtitle">A BNCC e a classificacao principal; SAEB e Parana aparecem como equivalencia.</p>
           </div>
-          <button class="button-inline button-outline" type="button" data-action="sugerir">Sugerir descritor</button>
+          <button class="button-inline button-outline" type="button" data-action="sugerir">Sugerir BNCC</button>
         </div>
         <div data-field="descritorFeedback" class="feedback" hidden></div>
+        <div class="form-field" style="margin-top:12px;">
+          <label>Habilidade BNCC</label>
+          <select data-field="bnccConfirmado"><option value="">Selecione</option></select>
+        </div>
+        <div data-field="bnccResumo" class="helper-box">Nenhuma classificacao sugerida ainda.</div>
+        <div class="toolbar" style="margin-top:12px;">
+          <button class="button-inline button-primary" type="button" data-action="confirmar-bncc">Confirmar classificacao</button>
+        </div>
         <label class="checkbox-row" style="margin-top:12px;">
           <input type="checkbox" data-field="descritorConfirmado">
-          <span>Confirmo o descritor selecionado para esta questao.</span>
+          <span>Confirmo a classificacao e as equivalencias desta questao.</span>
         </label>
       </section>
 

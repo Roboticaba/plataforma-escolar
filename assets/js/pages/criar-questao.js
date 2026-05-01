@@ -16,6 +16,7 @@ import {
 } from "../services/questions-service.js";
 import { uploadImagemCloudinary, uploadMultiplasImagensCloudinary } from "../services/cloudinary-service.js";
 import { analisarDescritorQuestao } from "../services/descritor-ai-service.js";
+import { listarHabilidades } from "../services/classificador-bncc-service.js";
 import { db } from "../core/firebase-app.js";
 import { clearFeedback, escapeHtml, renderEmptyState, setLoading, showFeedback } from "../utils/ui.js";
 
@@ -160,7 +161,10 @@ function createQuestionController(host, submitLabel, title) {
     nivelDificuldade: host.querySelector("[data-field='nivelDificuldade']"),
     descritorPanel: host.querySelector("[data-descritor-panel]"),
     btnSugerir: host.querySelector("[data-action='sugerir']"),
+    btnConfirmarBncc: host.querySelector("[data-action='confirmar-bncc']"),
     descritorFeedback: host.querySelector("[data-field='descritorFeedback']"),
+    bnccConfirmado: host.querySelector("[data-field='bnccConfirmado']"),
+    bnccResumo: host.querySelector("[data-field='bnccResumo']"),
     descritorConfirmado: host.querySelector("[data-field='descritorConfirmado']"),
     alternativasTextoPanel: host.querySelector("[data-panel='texto']"),
     alternativasTexto: host.querySelector("[data-field='alternativasTexto']"),
@@ -177,7 +181,8 @@ function createQuestionController(host, submitLabel, title) {
     imageAlternatives: [],
     correctIndex: "",
     descritorSugestao: null,
-    editingId: ""
+    editingId: "",
+    classificacaoConfirmada: false
   };
 
   controller.title.textContent = title;
@@ -194,6 +199,8 @@ function createQuestionController(host, submitLabel, title) {
   controller.alternativasTexto.addEventListener("input", () => renderTextAlternatives(controller));
   controller.alternativasImagem.addEventListener("change", () => appendImageAlternatives(controller));
   controller.btnSugerir.addEventListener("click", () => suggestDescritor(controller, getActiveContext()));
+  controller.btnConfirmarBncc?.addEventListener("click", () => confirmBnccClassification(controller, getActiveContext()));
+  controller.bnccConfirmado?.addEventListener("change", () => syncBnccSelection(controller, getActiveContext()));
   controller.descritor.addEventListener("change", () => {
     if (controller.descritor.value) controller.descritorConfirmado.checked = true;
   });
@@ -235,6 +242,82 @@ function updateQuestionDescritores(controller, context) {
     .map(item => `<option value="${item.codigo}">${item.codigo} - ${item.nome}</option>`)
     .join("");
   controller.descritor.value = current;
+  updateBnccOptions(controller, context);
+  updateBnccSummary(controller, context);
+}
+
+function updateBnccOptions(controller, context) {
+  const current = controller.bnccConfirmado?.value || "";
+  const habilidades = listarHabilidades({ disciplina: context.disciplina, ano: context.anoEscolar });
+  if (controller.bnccConfirmado) {
+    controller.bnccConfirmado.innerHTML = '<option value="">Selecione</option>' + habilidades
+      .map(item => `<option value="${item.codigo_bncc}">${item.codigo_bncc} - ${item.habilidade}</option>`)
+      .join("");
+    controller.bnccConfirmado.value = current;
+  }
+}
+
+function updateBnccSummary(controller, context, fallback = null) {
+  if (!controller.bnccResumo) return;
+  const habilidades = listarHabilidades({ disciplina: context.disciplina, ano: context.anoEscolar });
+  const selected = habilidades.find(item => item.codigo_bncc === controller.bnccConfirmado?.value);
+  const source = selected ? {
+    codigo_bncc: selected.codigo_bncc,
+    habilidade_bncc: selected.habilidade,
+    categoria_bncc: selected.categoria,
+    saeb_equivalente: selected.saeb,
+    parana_equivalente: selected.parana,
+    confianca_classificacao: controller.descritorSugestao?.confianca_classificacao || (controller.classificacaoConfirmada ? "alta" : "baixa"),
+    justificativa: controller.descritorSugestao?.justificativa || "Classificacao selecionada manualmente."
+  } : (fallback || controller.descritorSugestao);
+
+  if (!source?.codigo_bncc) {
+    controller.bnccResumo.innerHTML = "Nenhuma classificacao sugerida ainda.";
+    return;
+  }
+
+  controller.bnccResumo.innerHTML = `
+    <strong>${escapeHtml(source.codigo_bncc)}</strong> - ${escapeHtml(source.habilidade_bncc || source.habilidade || "")}
+    <br>Categoria: ${escapeHtml(source.categoria_bncc || source.categoria || "")}
+    <br>SAEB: ${escapeHtml(source.saeb_equivalente || source.saeb || "-")} | Parana: ${escapeHtml(source.parana_equivalente || source.parana || "-")}
+    <br>Confianca: ${escapeHtml(source.confianca_classificacao || source.confianca || "baixa")}
+    <br>Justificativa: ${escapeHtml(source.justificativa || "")}
+  `;
+}
+
+function syncBnccSelection(controller, context) {
+  const habilidades = listarHabilidades({ disciplina: context.disciplina, ano: context.anoEscolar });
+  const selected = habilidades.find(item => item.codigo_bncc === controller.bnccConfirmado?.value);
+  if (!selected) {
+    updateBnccSummary(controller, context);
+    return;
+  }
+
+  if (!controller.descritor.value && (selected.saeb || selected.parana)) {
+    controller.descritor.value = selected.saeb || selected.parana;
+  }
+  controller.classificacaoConfirmada = false;
+  updateBnccSummary(controller, context, {
+    codigo_bncc: selected.codigo_bncc,
+    habilidade_bncc: selected.habilidade,
+    categoria_bncc: selected.categoria,
+    saeb_equivalente: selected.saeb,
+    parana_equivalente: selected.parana,
+    confianca_classificacao: controller.descritorSugestao?.confianca_classificacao || "media",
+    justificativa: controller.descritorSugestao?.justificativa || "Classificacao BNCC ajustada manualmente pelo professor."
+  });
+}
+
+function confirmBnccClassification(controller, context) {
+  if (!controller.bnccConfirmado?.value) {
+    showFeedback(controller.descritorFeedback, "error", "Selecione uma habilidade BNCC antes de confirmar.");
+    return;
+  }
+
+  controller.classificacaoConfirmada = true;
+  controller.descritorConfirmado.checked = true;
+  updateBnccSummary(controller, context);
+  showFeedback(controller.descritorFeedback, "success", "Classificacao BNCC confirmada para esta questao.");
 }
 
 function renderTextAlternatives(controller) {
@@ -336,6 +419,8 @@ function resetQuestionController(controller) {
   controller.imageAlternatives = [];
   controller.correctIndex = "";
   controller.descritorSugestao = null;
+  controller.classificacaoConfirmada = false;
+  if (controller.bnccConfirmado) controller.bnccConfirmado.value = "";
   controller.editingId = "";
   controller.btnExcluir.hidden = true;
   clearFeedback(controller.feedback);
@@ -345,6 +430,7 @@ function resetQuestionController(controller) {
   updateQuestionDescritores(controller, getActiveContext());
   renderTextAlternatives(controller);
   renderImageAlternatives(controller);
+  updateBnccSummary(controller, getActiveContext(), controller.descritorSugestao);
 }
 
 async function handleDeleteQuestion(controller) {
@@ -389,18 +475,26 @@ async function suggestDescritor(controller, context) {
   });
 
   controller.descritorSugestao = result;
+  controller.classificacaoConfirmada = false;
 
-  if (!result || !result.descritor) {
-    showFeedback(controller.descritorFeedback, "error", "Nao foi possivel sugerir um descritor. Escolha manualmente.");
+  if (!result || !result.codigo_bncc) {
+    updateBnccSummary(controller, context, result);
+    showFeedback(controller.descritorFeedback, "error", "Nao foi possivel sugerir uma habilidade BNCC. Ajuste manualmente.");
     return;
   }
 
-  controller.descritor.value = result.descritor;
+  if (result.descritor) {
+    controller.descritor.value = result.descritor;
+  }
+  if (controller.bnccConfirmado) {
+    controller.bnccConfirmado.value = result.codigo_bncc;
+  }
   controller.descritorConfirmado.checked = false;
+  updateBnccSummary(controller, context, result);
   showFeedback(
     controller.descritorFeedback,
     "success",
-    `Descritor sugerido: ${result.descritor} - ${result.descricao} (confianca ${Math.round((result.confianca || 0) * 100)}%). ${result.justificativa || ""}`
+    `BNCC sugerida: ${result.codigo_bncc} - ${result.habilidade_bncc || result.descricao}. SAEB: ${result.saeb_equivalente || "-"}. Parana: ${result.parana_equivalente || "-"}. ${result.justificativa || ""}`
   );
 }
 
@@ -408,6 +502,8 @@ function buildQuestionDraft(controller, context) {
   const tipo = getSelectedTipo(controller);
   const selectedDescritor = getDescritores(context.disciplina, context.anoEscolar)
     .find(item => item.codigo === controller.descritor.value);
+  const selectedBncc = listarHabilidades({ disciplina: context.disciplina, ano: context.anoEscolar })
+    .find(item => item.codigo_bncc === controller.bnccConfirmado?.value);
   let alternativas = [];
 
   if (tipo === "multipla_texto") {
@@ -448,6 +544,30 @@ function buildQuestionDraft(controller, context) {
     descritorConfirmado: controller.descritor.value,
     professorAlterou: Boolean(controller.descritorSugestao?.descritor && controller.descritor.value && controller.descritorSugestao.descritor !== controller.descritor.value),
     confiancaDescritor: Number(controller.descritorSugestao?.confianca || 0),
+    bncc_sugerido: controller.descritorSugestao?.codigo_bncc || "",
+    bncc_confirmado: controller.bnccConfirmado?.value || "",
+    habilidade_bncc: selectedBncc?.habilidade || controller.descritorSugestao?.habilidade_bncc || "",
+    categoria_bncc: selectedBncc?.categoria || controller.descritorSugestao?.categoria_bncc || "",
+    saeb_equivalente: selectedBncc?.saeb || controller.descritorSugestao?.saeb_equivalente || controller.descritor.value || "",
+    parana_equivalente: selectedBncc?.parana || controller.descritorSugestao?.parana_equivalente || selectedBncc?.saeb || controller.descritor.value || "",
+    confianca_classificacao: controller.descritorSugestao?.confianca_classificacao || (controller.bnccConfirmado?.value ? "media" : "baixa"),
+    pontuacao_classificacao: Number(controller.descritorSugestao?.pontuacao_classificacao || 0),
+    justificativa_classificacao: controller.descritorSugestao?.justificativa || "",
+    classificacao_confirmada: Boolean(controller.classificacaoConfirmada && controller.bnccConfirmado?.value),
+    data_confirmacao: controller.classificacaoConfirmada && controller.bnccConfirmado?.value ? new Date() : null,
+    professor_id: usuario.uid,
+    bncc: {
+      codigoHabilidade: controller.bnccConfirmado?.value || controller.descritorSugestao?.codigo_bncc || "",
+      habilidade: selectedBncc?.habilidade || controller.descritorSugestao?.habilidade_bncc || "",
+      componenteCurricular: getDisciplinaLabel(context.disciplina),
+      unidadeTematica: "",
+      objetoConhecimento: "",
+      praticaLinguagem: "",
+      campoAtuacao: "",
+      areaConhecimento: ""
+    },
+    codigoHabilidadeBncc: controller.bnccConfirmado?.value || controller.descritorSugestao?.codigo_bncc || "",
+    habilidadeBncc: selectedBncc?.habilidade || controller.descritorSugestao?.habilidade_bncc || "",
     nivelDificuldade: controller.nivelDificuldade.value,
     formatoAlternativas: controller.formatoAlternativas.value,
     autor: usuario.uid,
@@ -512,6 +632,17 @@ function fillQuestionController(controller, question) {
   controller.formatoAlternativas.value = question.formatoAlternativas || DEFAULT_ALTERNATIVE_FORMAT;
   controller.nivelDificuldade.value = question.nivelDificuldade || "";
   controller.descritor.value = question.descritor || "";
+  if (controller.bnccConfirmado) controller.bnccConfirmado.value = question.bncc_confirmado || question.bncc_sugerido || question.codigoHabilidadeBncc || "";
+  controller.classificacaoConfirmada = Boolean(question.classificacao_confirmada);
+  controller.descritorSugestao = question.descritorSugestaoIA || (question.bncc_sugerido ? {
+    codigo_bncc: question.bncc_sugerido,
+    habilidade_bncc: question.habilidade_bncc || question.habilidadeBncc || "",
+    categoria_bncc: question.categoria_bncc || "",
+    saeb_equivalente: question.saeb_equivalente || "",
+    parana_equivalente: question.parana_equivalente || "",
+    confianca_classificacao: question.confianca_classificacao || "baixa",
+    justificativa: question.justificativa_classificacao || ""
+  } : null);
   controller.descritorConfirmado.checked = question.descritorConfirmadoPeloProfessor !== false;
   controller.respostaEsperada.value = question.respostaEsperada || "";
   controller.correctIndex = typeof question.resposta_correta === "number"
@@ -538,6 +669,7 @@ function fillQuestionController(controller, question) {
   updateQuestionType(controller);
   renderTextAlternatives(controller);
   renderImageAlternatives(controller);
+  updateBnccSummary(controller, getActiveContext(), controller.descritorSugestao);
 }
 
 function fillContext(controller, questionOrBlock) {
