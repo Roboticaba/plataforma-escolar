@@ -130,7 +130,11 @@ function sanitizeNullableText(value) {
 }
 
 function normalizeDiscipline(value) {
-  const text = sanitizeText(value).toLowerCase();
+  const text = sanitizeText(value)
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+
   if (!text) return "";
   if (text.includes("portugues") || text.includes("lingua portuguesa")) return "portugues";
   if (text.includes("matematica")) return "matematica";

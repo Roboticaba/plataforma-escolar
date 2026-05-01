@@ -638,12 +638,19 @@ function closeExternalImportModal() {
 
 async function handleCopiarPromptIA() {
   clearFeedback(elements.feedbackModalIA);
+  const iaWindow = window.open("https://chat.openai.com", "_blank", "noopener");
+
   try {
     syncMainRawTextFromModal();
     const message = await copiarPromptIA(elements.campoTextoBrutoIA.value);
-    window.open("https://chat.openai.com", "_blank", "noopener");
-    showFeedback(elements.feedbackModalIA, "success", message);
+    const avisoJanela = iaWindow
+      ? ""
+      : ' Se a aba da IA nao abriu automaticamente, use este link: <a href="https://chat.openai.com" target="_blank" rel="noopener">abrir IA</a>.';
+    showFeedback(elements.feedbackModalIA, "success", `${message}${avisoJanela}`);
   } catch (error) {
+    if (iaWindow && !iaWindow.closed) {
+      iaWindow.close();
+    }
     showFeedback(elements.feedbackModalIA, "error", error.message || "Nao foi possivel copiar o prompt.");
   }
 }
