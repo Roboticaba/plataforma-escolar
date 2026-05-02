@@ -4,13 +4,8 @@ import { clearFeedback, escapeHtml, renderEmptyState, setLoading, showFeedback }
 import { getAlternativeLabel } from "../services/questions-service.js";
 import { uploadImagemCloudinary, uploadMultiplasImagensCloudinary } from "../services/cloudinary-service.js";
 import {
-  enrichImportedQuestionsWithLocalDescriptors,
-  parseQuestoesImportadas
-} from "../services/importacao-questoes-service.js";
-import {
-  confirmarQuestaoImportada,
+  comecaComoJsonImportado,
   copiarPromptIA,
-  removerQuestaoImportada,
   renderizarPreviewQuestoes,
   salvarQuestoesConfirmadas,
   validarJSONImportado
@@ -20,8 +15,10 @@ const usuario = requireProfessor();
 
 const state = {
   importedQuestions: [],
-  importMode: "texto_local",
-  autoValidateTimer: null,
+  autoDetectTimer: null,
+  detectedInputKind: "",
+  sourceLabel: "",
+  lastLoadedFileName: "",
   parseInfo: {
     tituloDetectado: "",
     textoBaseDetectado: ""
@@ -37,25 +34,20 @@ const elements = {
   fonteUrl: document.getElementById("importFonteUrl"),
   fonteObservacao: document.getElementById("importFonteObservacao"),
   textoBruto: document.getElementById("importTextoBruto"),
-  btnOrganizar: document.getElementById("btnOrganizarImportacao"),
-  btnOrganizarIAExterna: document.getElementById("btnOrganizarIAExterna"),
-  btnConfirmarTodas: document.getElementById("btnConfirmarTodasImportacao"),
-  btnLimpar: document.getElementById("btnLimparImportacao"),
+  areaArquivo: document.getElementById("importArquivoArea"),
+  arquivoInput: document.getElementById("importArquivoJson"),
+  statusDeteccao: document.getElementById("importStatusDeteccao"),
+  ajudaPrompt: document.getElementById("painelAjudaPrompt"),
+  btnCopiarPromptIA: document.getElementById("btnCopiarPromptIA"),
   btnSalvar: document.getElementById("btnSalvarImportacao"),
+  btnLimpar: document.getElementById("btnLimparImportacao"),
   feedback: document.getElementById("feedbackImportacao"),
   listaImportada: document.getElementById("listaImportada"),
   metricDetectadas: document.getElementById("metricDetectadas"),
   metricProntas: document.getElementById("metricProntas"),
   metricDescritor: document.getElementById("metricDescritor"),
   chipTituloDetectado: document.getElementById("chipTituloDetectado"),
-  chipTextoBase: document.getElementById("chipTextoBase"),
-  modalIAExterna: document.getElementById("modalIAExterna"),
-  btnFecharModalIAExterna: document.getElementById("btnFecharModalIAExterna"),
-  btnCopiarPromptIA: document.getElementById("btnCopiarPromptIA"),
-  campoTextoBrutoIA: document.getElementById("campoTextoBrutoIA"),
-  campoJsonIA: document.getElementById("campoJsonIA"),
-  btnValidarJsonIA: document.getElementById("btnValidarJsonIA"),
-  feedbackModalIA: document.getElementById("feedbackModalIA")
+  chipTextoBase: document.getElementById("chipTextoBase")
 };
 
 function populateSelect(select, options, placeholder) {
@@ -96,7 +88,6 @@ function updateMetrics() {
   elements.metricProntas.textContent = String(prontas);
   elements.metricDescritor.textContent = String(comDescritor);
   elements.btnSalvar.disabled = !prontas;
-  elements.btnConfirmarTodas.disabled = !detectadas;
 }
 
 function updateParseInfo() {
@@ -106,8 +97,18 @@ function updateParseInfo() {
     : "Texto base: nao detectado";
 }
 
+function updateDetectionStatus(message, type = "neutral") {
+  elements.statusDeteccao.textContent = message;
+  elements.statusDeteccao.dataset.status = type;
+}
+
+function updatePromptPanel() {
+  const shouldShow = state.detectedInputKind === "texto_bruto" && elements.textoBruto.value.trim();
+  elements.ajudaPrompt.hidden = !shouldShow;
+}
+
 function buildDescritorOptions(question) {
-  return '<option value="">Selecione</option>' + getDescritores(question.disciplina, question.anoEscolar)
+  return "<option value=\"\">Selecione</option>" + getDescritores(question.disciplina, question.anoEscolar)
     .map(item => `<option value="${item.codigo}" ${item.codigo === question.descritor ? "selected" : ""}>${item.codigo} - ${escapeHtml(item.nome)}</option>`)
     .join("");
 }
@@ -152,7 +153,7 @@ function renderSupportTextField(question, index) {
 function renderTextAlternativeRows(question, index) {
   const rows = getAlternativeRows(question);
   if (!rows.length) {
-    return '<div class="helper-box">Nenhuma alternativa encontrada.</div>';
+    return "<div class=\"helper-box\">Nenhuma alternativa encontrada.</div>";
   }
 
   return `
@@ -171,7 +172,7 @@ function renderTextAlternativeRows(question, index) {
 function renderImageAlternativeRows(question, index) {
   const rows = getAlternativeRows(question);
   if (!rows.length) {
-    return '<div class="helper-box">Nenhuma imagem de alternativa encontrada.</div>';
+    return "<div class=\"helper-box\">Nenhuma imagem de alternativa encontrada.</div>";
   }
 
   return `
@@ -188,7 +189,7 @@ function renderImageAlternativeRows(question, index) {
                   <button type="button" class="button-inline button-danger" data-remove-alt-image="${index}" data-alt-index="${row.index}">Remover imagem</button>
                 </div>
               </div>
-            ` : '<div class="helper-box">Nenhuma imagem enviada nesta alternativa.</div>'}
+            ` : "<div class=\"helper-box\">Nenhuma imagem enviada nesta alternativa.</div>"}
             <div class="review-upload-actions">
               <input type="file" accept="image/*" data-alt-image-upload="${index}" data-alt-index="${row.index}">
               <input type="hidden" data-alt-image-url="${row.index}" value="${escapeHtml(row.imagemUrl)}">
@@ -220,7 +221,7 @@ function renderSupportImageField(question, index) {
               </div>
             `).join("")}
           </div>
-        ` : '<div class="helper-box">Nenhuma imagem de apoio detectada.</div>'}
+        ` : "<div class=\"helper-box\">Nenhuma imagem de apoio detectada.</div>"}
         <div class="review-upload-actions">
           <input type="file" accept="image/*" multiple data-support-image-upload="${index}">
         </div>
@@ -252,6 +253,7 @@ function renderClassificationSummary(question) {
   const habilidade = suggestion.habilidade || question.habilidade_bncc || "Nao informada";
   const saeb = suggestion.saeb || question.saeb_equivalente || "Nao informado";
   const parana = suggestion.parana || question.parana_equivalente || "Nao informado";
+  const conteudo = suggestion.conteudo || question.conteudo || "Nao informado";
   const categoria = suggestion.categoria || question.categoria_bncc || "Nao informada";
   const confianca = suggestion.confianca || question.confianca_classificacao || "baixa";
   const justificativa = suggestion.justificativa || question.justificativa_classificacao || "Sem justificativa.";
@@ -266,8 +268,9 @@ function renderClassificationSummary(question) {
         <div class="review-summary-item"><strong>Gabarito</strong><span>${escapeHtml(getGabaritoLabel(question))}</span></div>
         <div class="review-summary-item"><strong>Codigo BNCC</strong><span>${escapeHtml(bncc)}</span></div>
         <div class="review-summary-item"><strong>Habilidade</strong><span>${escapeHtml(habilidade)}</span></div>
-        <div class="review-summary-item"><strong>SAEB</strong><span>${escapeHtml(saeb)}</span></div>
-        <div class="review-summary-item"><strong>Parana</strong><span>${escapeHtml(parana)}</span></div>
+        <div class="review-summary-item"><strong>Descritor SAEB</strong><span>${escapeHtml(saeb)}</span></div>
+        <div class="review-summary-item"><strong>Descritor Parana</strong><span>${escapeHtml(parana)}</span></div>
+        <div class="review-summary-item"><strong>Conteudo</strong><span>${escapeHtml(conteudo)}</span></div>
         <div class="review-summary-item"><strong>Categoria</strong><span>${escapeHtml(categoria)}</span></div>
         <div class="review-summary-item"><strong>Confianca</strong><span>${escapeHtml(confianca)}</span></div>
       </div>
@@ -276,11 +279,46 @@ function renderClassificationSummary(question) {
   `;
 }
 
+function getQuestionAlerts(question) {
+  const alerts = new Set(Array.isArray(question.importWarnings) ? question.importWarnings : []);
+
+  if (!question.enunciado.trim()) {
+    alerts.add("enunciado ausente");
+  }
+
+  if (question.tipo === "resposta_escrita") {
+    if (!question.respostaEsperada.trim()) {
+      alerts.add("resposta correta ausente");
+    }
+  } else {
+    if ((question.alternativas || []).length < 2) {
+      alerts.add("alternativas ausentes");
+    }
+    if (question.respostaCorreta === "") {
+      alerts.add("resposta correta ausente");
+    }
+  }
+
+  return [...alerts];
+}
+
+function renderQuestionAlerts(question) {
+  const alerts = getQuestionAlerts(question);
+  if (!alerts.length) return "";
+
+  return `
+    <div class="feedback feedback-warning" data-question-alerts>
+      ${alerts.map(alert => `<div>${escapeHtml(alert)}</div>`).join("")}
+    </div>
+  `;
+}
+
 function renderImportPreview() {
   if (!state.importedQuestions.length) {
-    elements.listaImportada.innerHTML = renderEmptyState("Cole o texto e clique em Organizar questoes ou use a IA externa para abrir a revisao assistida.");
+    elements.listaImportada.innerHTML = renderEmptyState("Cole um JSON, solte um arquivo .json ou cole o texto bruto para preparar o prompt da IA externa.");
     updateMetrics();
     updateParseInfo();
+    updatePromptPanel();
     return;
   }
 
@@ -293,24 +331,23 @@ function renderImportPreview() {
             <span class="tag tag-primary">${escapeHtml(getDisciplineLabel(question.disciplina, question.disciplinaOriginal || ""))}</span>
             <span class="tag tag-neutral">${escapeHtml(getYearLabel(question.anoEscolar, question.anoOriginal || ""))}</span>
             <span class="tag ${question.tipo === "resposta_escrita" ? "tag-warning" : "tag-success"}">${escapeHtml(question.tipo)}</span>
-            <span class="tag tag-neutral">${escapeHtml(state.importMode === "ia_externa" ? "IA externa" : "Parser local")}</span>
+            <span class="tag tag-neutral">${escapeHtml(state.sourceLabel || "IA externa")}</span>
           </div>
         </div>
         <div class="review-card-actions">
           <label class="checkbox-row review-checkbox">
             <input type="checkbox" data-field="confirmadoParaSalvar" ${question.confirmadoParaSalvar ? "checked" : ""}>
-            Pronta para salvar
+            Incluir no salvamento
           </label>
           <label class="checkbox-row review-checkbox">
             <input type="checkbox" data-field="confirmadoDescritor" ${question.descritorConfirmadoPeloProfessor ? "checked" : ""}>
             Descritor confirmado
           </label>
-          <button type="button" class="button-inline button-outline" data-confirm-question="${index}">Confirmar</button>
-          <button type="button" class="button-inline button-danger" data-remove-question="${index}">Remover</button>
         </div>
       </header>
 
       <div class="review-content-stack">
+        ${renderQuestionAlerts(question)}
         ${renderClassificationSummary(question)}
         ${renderSupportTextField(question, index)}
         ${renderSupportImageField(question, index)}
@@ -331,7 +368,7 @@ function renderImportPreview() {
         </div>
 
         <div class="form-field review-large-field" data-escrita-wrapper="${index}" ${question.tipo === "resposta_escrita" ? "" : "hidden"}>
-          <label>Resposta esperada</label>
+          <label>Resposta correta / esperada</label>
           <textarea data-field="respostaEsperada">${escapeHtml(question.respostaEsperada || "")}</textarea>
         </div>
       </div>
@@ -362,14 +399,24 @@ function renderImportPreview() {
           <select data-field="descritor">${buildDescritorOptions(question)}</select>
         </div>
       </div>
+
       <div class="review-controls-row">
         <div class="review-control-field">
-          <label>Recalcular descritor</label>
-          <button type="button" class="button-inline button-outline" data-refresh-descriptor="${index}">Recalcular descritor</button>
+          <label>BNCC</label>
+          <input type="text" data-field="bncc_sugerido" value="${escapeHtml(question.bncc_sugerido || "")}" placeholder="Codigo BNCC">
         </div>
-      </div>
-      <div class="muted-small" style="margin-top:10px;">
-        Sugestao local: ${escapeHtml(question.descritorSugestaoIA?.justificativa || "sem sugestao")}
+        <div class="review-control-field">
+          <label>Habilidade BNCC</label>
+          <input type="text" data-field="habilidade_bncc" value="${escapeHtml(question.habilidade_bncc || "")}" placeholder="Habilidade">
+        </div>
+        <div class="review-control-field">
+          <label>Conteudo</label>
+          <input type="text" data-field="conteudo" value="${escapeHtml(question.conteudo || "")}" placeholder="Conteudo">
+        </div>
+        <div class="review-control-field">
+          <label>Tipo importado</label>
+          <input type="text" value="${escapeHtml(question.tipoQuestaoImportado || "")}" disabled>
+        </div>
       </div>
     </article>
   `).join("");
@@ -377,6 +424,7 @@ function renderImportPreview() {
   bindQuestionReviewEvents();
   updateMetrics();
   updateParseInfo();
+  updatePromptPanel();
 }
 
 function syncQuestionFromCard(index) {
@@ -384,22 +432,32 @@ function syncQuestionFromCard(index) {
   if (!card) return;
 
   const question = state.importedQuestions[index];
-  question.enunciado = card.querySelector('[data-field="enunciado"]').value.trim();
-  question.tipo = card.querySelector('[data-field="tipo"]').value;
-  question.disciplina = card.querySelector('[data-field="disciplina"]').value;
-  question.anoEscolar = card.querySelector('[data-field="anoEscolar"]').value;
-  question.descritor = card.querySelector('[data-field="descritor"]').value;
+  question.enunciado = card.querySelector("[data-field=\"enunciado\"]").value.trim();
+  question.tipo = card.querySelector("[data-field=\"tipo\"]").value;
+  question.disciplina = card.querySelector("[data-field=\"disciplina\"]").value;
+  question.anoEscolar = card.querySelector("[data-field=\"anoEscolar\"]").value;
+  question.descritor = card.querySelector("[data-field=\"descritor\"]").value;
+  question.bncc_sugerido = card.querySelector("[data-field=\"bncc_sugerido\"]").value.trim();
+  question.habilidade_bncc = card.querySelector("[data-field=\"habilidade_bncc\"]").value.trim();
+  question.conteudo = card.querySelector("[data-field=\"conteudo\"]").value.trim();
   question.descritorDescricao = getDescritores(question.disciplina, question.anoEscolar)
     .find(item => item.codigo === question.descritor)?.nome || "";
-  question.textoApoio = card.querySelector('[data-field="textoApoio"]')?.value.trim() || "";
-  question.confirmadoParaSalvar = card.querySelector('[data-field="confirmadoParaSalvar"]').checked;
-  question.descritorConfirmadoPeloProfessor = card.querySelector('[data-field="confirmadoDescritor"]').checked;
+  question.textoApoio = card.querySelector("[data-field=\"textoApoio\"]")?.value.trim() || "";
+  question.confirmadoParaSalvar = card.querySelector("[data-field=\"confirmadoParaSalvar\"]").checked;
+  question.descritorConfirmadoPeloProfessor = card.querySelector("[data-field=\"confirmadoDescritor\"]").checked;
   question.classificacao_confirmada = question.confirmadoParaSalvar;
   question.data_confirmacao = question.confirmadoParaSalvar ? (question.data_confirmacao || new Date()) : null;
   question.professor_id = question.confirmadoParaSalvar ? usuario.uid : question.professor_id;
 
+  if (question.descritorSugestaoIA && typeof question.descritorSugestaoIA === "object") {
+    question.descritorSugestaoIA.codigo_bncc = question.bncc_sugerido;
+    question.descritorSugestaoIA.habilidade = question.habilidade_bncc;
+    question.descritorSugestaoIA.habilidade_bncc = question.habilidade_bncc;
+    question.descritorSugestaoIA.conteudo = question.conteudo;
+  }
+
   if (question.tipo === "resposta_escrita") {
-    question.respostaEsperada = card.querySelector('[data-field="respostaEsperada"]').value.trim();
+    question.respostaEsperada = card.querySelector("[data-field=\"respostaEsperada\"]").value.trim();
     question.alternativas = [];
     question.respostaCorreta = "";
     question.imagensApoio = question.imagensApoio || [];
@@ -433,6 +491,15 @@ function syncQuestionFromCard(index) {
   const checkedAlternative = card.querySelector(`input[name="correctAlternative-${index}"]:checked`);
   question.respostaCorreta = checkedAlternative ? checkedAlternative.value : "";
   question.respostaEsperada = "";
+
+  const alertsContainer = card.querySelector("[data-question-alerts]");
+  const alertsMarkup = renderQuestionAlerts(question);
+  if (alertsContainer) {
+    alertsContainer.outerHTML = alertsMarkup || "<div data-question-alerts hidden></div>";
+  } else if (alertsMarkup) {
+    const stack = card.querySelector(".review-content-stack");
+    stack?.insertAdjacentHTML("afterbegin", alertsMarkup);
+  }
 }
 
 function bindQuestionReviewEvents() {
@@ -446,58 +513,19 @@ function bindQuestionReviewEvents() {
       });
     });
 
-    const typeSelect = card.querySelector('[data-field="tipo"]');
+    const typeSelect = card.querySelector("[data-field=\"tipo\"]");
     typeSelect.addEventListener("change", () => {
       syncQuestionFromCard(index);
       renderImportPreview();
     });
 
-    card.querySelector('[data-field="disciplina"]').addEventListener("change", () => {
+    card.querySelector("[data-field=\"disciplina\"]").addEventListener("change", () => {
       syncQuestionFromCard(index);
       renderImportPreview();
     });
 
-    card.querySelector('[data-field="anoEscolar"]').addEventListener("change", () => {
+    card.querySelector("[data-field=\"anoEscolar\"]").addEventListener("change", () => {
       syncQuestionFromCard(index);
-      renderImportPreview();
-    });
-  });
-
-  elements.listaImportada.querySelectorAll("[data-confirm-question]").forEach(button => {
-    button.addEventListener("click", () => {
-      const index = Number(button.dataset.confirmQuestion);
-      state.importedQuestions = confirmarQuestaoImportada(state.importedQuestions, index).map((question, currentIndex) => currentIndex === index
-        ? {
-            ...question,
-            professor_id: usuario.uid
-          }
-        : question);
-      renderImportPreview();
-    });
-  });
-
-  elements.listaImportada.querySelectorAll("[data-remove-question]").forEach(button => {
-    button.addEventListener("click", () => {
-      const index = Number(button.dataset.removeQuestion);
-      state.importedQuestions = removerQuestaoImportada(state.importedQuestions, index);
-      renderImportPreview();
-    });
-  });
-
-  elements.listaImportada.querySelectorAll("[data-refresh-descriptor]").forEach(button => {
-    button.addEventListener("click", async () => {
-      const index = Number(button.dataset.refreshDescriptor);
-      syncQuestionFromCard(index);
-      const question = state.importedQuestions[index];
-      const [enriched] = await enrichImportedQuestionsWithLocalDescriptors([question]);
-      state.importedQuestions[index] = {
-        ...question,
-        ...enriched,
-        confirmadoParaSalvar: false,
-        classificacao_confirmada: false,
-        data_confirmacao: null,
-        descritorConfirmadoPeloProfessor: false
-      };
       renderImportPreview();
     });
   });
@@ -607,57 +635,9 @@ function bindQuestionReviewEvents() {
   });
 }
 
-function syncModalRawText() {
-  if (!elements.campoTextoBrutoIA) return;
-  elements.campoTextoBrutoIA.value = elements.textoBruto.value.trim();
-}
-
-function syncMainRawTextFromModal() {
-  const valor = elements.campoTextoBrutoIA?.value || "";
-  elements.textoBruto.value = valor;
-}
-
-function resetExternalImportModal() {
-  clearFeedback(elements.feedbackModalIA);
-  if (state.autoValidateTimer) {
-    clearTimeout(state.autoValidateTimer);
-    state.autoValidateTimer = null;
-  }
-  syncModalRawText();
-  elements.campoJsonIA.value = "";
-}
-
-function openExternalImportModal() {
-  resetExternalImportModal();
-  elements.modalIAExterna.hidden = false;
-}
-
-function closeExternalImportModal() {
-  elements.modalIAExterna.hidden = true;
-}
-
-async function handleCopiarPromptIA() {
-  clearFeedback(elements.feedbackModalIA);
-  const iaWindow = window.open("https://chat.openai.com", "_blank", "noopener");
-
-  try {
-    syncMainRawTextFromModal();
-    const message = await copiarPromptIA(elements.campoTextoBrutoIA.value);
-    const avisoJanela = iaWindow
-      ? ""
-      : ' Se a aba da IA nao abriu automaticamente, use este link: <a href="https://chat.openai.com" target="_blank" rel="noopener">abrir IA</a>.';
-    showFeedback(elements.feedbackModalIA, "success", `${message}${avisoJanela}`);
-  } catch (error) {
-    if (iaWindow && !iaWindow.closed) {
-      iaWindow.close();
-    }
-    showFeedback(elements.feedbackModalIA, "error", error.message || "Nao foi possivel copiar o prompt.");
-  }
-}
-
-function applySuggestedContext(questions) {
-  if (!questions.length) return;
-  const first = questions[0];
+function applySuggestedContext(questoes, meta = {}) {
+  if (!questoes.length) return;
+  const first = questoes[0];
 
   if (!elements.disciplina.value && first.disciplina) {
     elements.disciplina.value = first.disciplina;
@@ -668,123 +648,120 @@ function applySuggestedContext(questions) {
   }
 
   if (!elements.titulo.value.trim()) {
-    elements.titulo.value = "Importacao organizada com IA externa";
+    elements.titulo.value = meta.tituloBloco || state.lastLoadedFileName.replace(/\.json$/i, "") || "Importacao com IA externa";
   }
 }
 
-function processarJsonIA({ fecharModal = false, mostrarErroAmigavel = false } = {}) {
+function resetImportedQuestions() {
+  state.importedQuestions = [];
+  state.parseInfo = { tituloDetectado: "", textoBaseDetectado: "" };
+}
+
+function aplicarResultadoJson(resultado, sourceLabel) {
+  const questoes = renderizarPreviewQuestoes(resultado);
+  state.importedQuestions = questoes;
+  state.detectedInputKind = "json";
+  state.sourceLabel = sourceLabel;
+  state.parseInfo = {
+    tituloDetectado: resultado.meta?.tituloBloco || (sourceLabel === "arquivo .json" ? state.lastLoadedFileName : "IA externa"),
+    textoBaseDetectado: resultado.meta?.textoBase || "JSON validado e pronto para revisao"
+  };
+
+  applySuggestedContext(questoes, resultado.meta || {});
+  updateDetectionStatus(`${questoes.length} questao(oes) detectada(s) automaticamente via ${sourceLabel}.`, "success");
+    showFeedback(elements.feedback, "success", `${questoes.length} questao(oes) pronta(s) para revisao. Edite o que quiser e clique apenas em "Salvar questões" no final.`);
+  renderImportPreview();
+}
+
+function handleRawTextDetected() {
+  resetImportedQuestions();
+  state.detectedInputKind = "texto_bruto";
+  state.sourceLabel = "";
+  state.parseInfo = {
+    tituloDetectado: elements.titulo.value.trim(),
+    textoBaseDetectado: ""
+  };
   clearFeedback(elements.feedback);
-
-  try {
-    const dados = validarJSONImportado(elements.campoJsonIA.value);
-    const questoes = renderizarPreviewQuestoes(dados);
-
-    state.importedQuestions = questoes;
-    state.importMode = "ia_externa";
-    state.parseInfo = {
-      tituloDetectado: "IA externa",
-      textoBaseDetectado: "JSON validado e pronto para revisao"
-    };
-
-    applySuggestedContext(questoes);
-    syncMainRawTextFromModal();
-    renderImportPreview();
-    showFeedback(elements.feedbackModalIA, "success", `JSON valido. Questoes encontradas: ${questoes.length}.`);
-    showFeedback(elements.feedback, "success", `${questoes.length} questao(oes) recebida(s) da IA externa. Revise, confirme e salve apenas o que estiver correto.`);
-
-    if (fecharModal) {
-      closeExternalImportModal();
-    }
-
-    return true;
-  } catch (error) {
-    if (mostrarErroAmigavel) {
-      showFeedback(elements.feedbackModalIA, "error", "O conteudo colado ainda nao parece ser um JSON valido. Confira se a IA respondeu somente com JSON.");
-    } else {
-      showFeedback(elements.feedbackModalIA, "error", error.message || "Erro ao validar o JSON importado.");
-    }
-    return false;
-  }
+  updateDetectionStatus("Texto bruto detectado. Clique em \"Copiar prompt para IA\" e depois cole a resposta da IA aqui no mesmo campo.", "warning");
+  renderImportPreview();
 }
 
-function handleValidarJsonIA() {
-  clearFeedback(elements.feedbackModalIA);
-  processarJsonIA({ fecharModal: true, mostrarErroAmigavel: true });
-}
+function processarEntradaImportacao(sourceLabel = "colagem") {
+  const valor = elements.textoBruto.value.trim();
 
-function agendarValidacaoAutomaticaJsonIA() {
-  if (state.autoValidateTimer) {
-    clearTimeout(state.autoValidateTimer);
-  }
-
-  const valor = elements.campoJsonIA.value.trim();
   if (!valor) {
-    clearFeedback(elements.feedbackModalIA);
+    resetImportedQuestions();
+    state.detectedInputKind = "";
+    state.sourceLabel = "";
+    clearFeedback(elements.feedback);
+    updateDetectionStatus("Cole qualquer conteudo ou solte um arquivo .json para iniciar.", "neutral");
+    renderImportPreview();
     return;
   }
 
-  state.autoValidateTimer = setTimeout(() => {
-    processarJsonIA({ fecharModal: false, mostrarErroAmigavel: true });
+  const comecaComoJson = comecaComoJsonImportado(valor);
+  if (comecaComoJson) {
+    try {
+      const resultado = validarJSONImportado(valor);
+      aplicarResultadoJson(resultado, sourceLabel);
+      return;
+    } catch (error) {
+      resetImportedQuestions();
+      state.detectedInputKind = "json_invalido";
+      state.sourceLabel = sourceLabel;
+      showFeedback(elements.feedback, "error", error.message || "Nao foi possivel interpretar o JSON.");
+      updateDetectionStatus("O conteudo parece JSON, mas ainda ha um problema na estrutura. Veja o erro abaixo.", "error");
+      renderImportPreview();
+      return;
+    }
+  }
+
+  handleRawTextDetected();
+}
+
+function agendarDeteccaoAutomatica(sourceLabel = "colagem") {
+  if (state.autoDetectTimer) {
+    clearTimeout(state.autoDetectTimer);
+  }
+
+  state.autoDetectTimer = setTimeout(() => {
+    processarEntradaImportacao(sourceLabel);
   }, 500);
 }
 
-async function handleOrganizarImportacao() {
+async function handleCopiarPrompt() {
   clearFeedback(elements.feedback);
-  const context = getImportContext();
-
-  if (!context.anoEscolar || !context.disciplina) {
-    showFeedback(elements.feedback, "error", "Selecione ano escolar e disciplina antes de organizar.");
-    return;
-  }
-
-  if (!context.textoOriginal.trim()) {
-    showFeedback(elements.feedback, "error", "Cole o texto bruto da importacao.");
-    return;
-  }
-
-  setLoading(elements.btnOrganizar, true, "Organizar questoes", "Organizando...");
 
   try {
-    const parsed = parseQuestoesImportadas(context.textoOriginal, context);
-    const enriched = await enrichImportedQuestionsWithLocalDescriptors(parsed.questions);
-
-    state.importedQuestions = enriched.map(question => ({
-      ...question,
-      confirmadoParaSalvar: false,
-      classificacao_confirmada: false,
-      data_confirmacao: null,
-      professor_id: ""
-    }));
-    state.importMode = "texto_local";
-    state.parseInfo = {
-      tituloDetectado: parsed.tituloDetectado,
-      textoBaseDetectado: parsed.textoBaseDetectado
-    };
-
-    if (!enriched.length) {
-      showFeedback(elements.feedback, "error", "Nenhuma questao foi detectada. Revise o texto colado.");
-    } else {
-      showFeedback(elements.feedback, "success", `${enriched.length} questao(oes) organizada(s). Revise antes de salvar.`);
-    }
-
-    renderImportPreview();
+    const message = await copiarPromptIA(elements.textoBruto.value);
+    const iaWindow = window.open("https://chat.openai.com", "_blank", "noopener");
+    const avisoJanela = iaWindow
+      ? ""
+      : ' Se a aba da IA nao abriu automaticamente, use este link: <a href="https://chat.openai.com" target="_blank" rel="noopener">abrir IA</a>.';
+    showFeedback(elements.feedback, "success", `${message}${avisoJanela}`);
   } catch (error) {
-    showFeedback(elements.feedback, "error", error.message || "Erro ao organizar a importacao.");
-  } finally {
-    setLoading(elements.btnOrganizar, false, "Organizar questoes", "Organizando...");
+    showFeedback(elements.feedback, "error", error.message || "Nao foi possivel copiar o prompt.");
   }
 }
 
 function validateImportedQuestions() {
-  const confirmadas = state.importedQuestions.filter(question => question.confirmadoParaSalvar);
+  const selecionadas = state.importedQuestions.filter(question => question.confirmadoParaSalvar);
 
-  if (!confirmadas.length) {
-    throw new Error("Confirme pelo menos uma questao antes de salvar.");
+  if (!selecionadas.length) {
+    throw new Error("Selecione pelo menos uma questao para salvar.");
   }
 
-  confirmadas.forEach((question, index) => {
+  selecionadas.forEach((question, index) => {
     if (!question.enunciado.trim()) {
-      throw new Error(`A questao confirmada ${index + 1} esta sem enunciado.`);
+      throw new Error(`A questao selecionada ${index + 1} esta sem enunciado.`);
+    }
+
+    if (!question.anoEscolar) {
+      throw new Error(`Informe o ano escolar da questao ${index + 1}.`);
+    }
+
+    if (!question.disciplina) {
+      throw new Error(`Informe a disciplina da questao ${index + 1}.`);
     }
 
     if (disciplinaPrecisaDescritor(question.disciplina) && (!question.descritor || !question.descritorConfirmadoPeloProfessor)) {
@@ -792,7 +769,7 @@ function validateImportedQuestions() {
     }
 
     if (question.tipo === "resposta_escrita" && !question.respostaEsperada.trim()) {
-      throw new Error(`Informe a resposta esperada da questao ${index + 1}.`);
+      throw new Error(`Informe a resposta correta da questao ${index + 1}.`);
     }
 
     if (question.tipo !== "resposta_escrita") {
@@ -809,7 +786,7 @@ function validateImportedQuestions() {
 
 async function handleSalvarImportacao() {
   clearFeedback(elements.feedback);
-  setLoading(elements.btnSalvar, true, "Salvar revisadas", "Salvando...");
+  setLoading(elements.btnSalvar, true, "Salvar questões", "Salvando...");
 
   try {
     validateImportedQuestions();
@@ -817,60 +794,97 @@ async function handleSalvarImportacao() {
     const result = await salvarQuestoesConfirmadas(context, state.importedQuestions, usuario);
     showFeedback(elements.feedback, "success", `${result.totalSalvas} questao(oes) salva(s) no banco do professor.`);
     state.importedQuestions = [];
-    state.importMode = "texto_local";
+    state.detectedInputKind = "";
+    state.sourceLabel = "";
     renderImportPreview();
   } catch (error) {
     showFeedback(elements.feedback, "error", error.message || "Erro ao salvar a importacao.");
   } finally {
-    setLoading(elements.btnSalvar, false, "Salvar revisadas", "Salvando...");
+    setLoading(elements.btnSalvar, false, "Salvar questões", "Salvando...");
   }
-}
-
-function handleConfirmarTodasImportacao() {
-  state.importedQuestions = state.importedQuestions.map(question => ({
-    ...question,
-    confirmadoParaSalvar: true,
-    classificacao_confirmada: true,
-    data_confirmacao: question.data_confirmacao || new Date(),
-    professor_id: usuario.uid,
-    descritorConfirmadoPeloProfessor: !disciplinaPrecisaDescritor(question.disciplina) || Boolean(question.descritor)
-  }));
-  renderImportPreview();
 }
 
 function handleLimparImportacao() {
   elements.formImportacao.reset();
-  state.importedQuestions = [];
-  state.importMode = "texto_local";
-  state.parseInfo = { tituloDetectado: "", textoBaseDetectado: "" };
+  resetImportedQuestions();
+  state.detectedInputKind = "";
+  state.sourceLabel = "";
+  state.lastLoadedFileName = "";
   clearFeedback(elements.feedback);
-  resetExternalImportModal();
+  updateDetectionStatus("Cole qualquer conteudo ou solte um arquivo .json para iniciar.", "neutral");
   renderImportPreview();
+}
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Nao foi possivel ler o arquivo enviado."));
+    reader.readAsText(file, "utf-8");
+  });
+}
+
+async function handleJsonFile(file) {
+  if (!file) return;
+
+  if (!/\.json$/i.test(file.name)) {
+    showFeedback(elements.feedback, "error", "Envie apenas arquivos com extensao .json.");
+    return;
+  }
+
+  try {
+    const content = await readFileAsText(file);
+    state.lastLoadedFileName = file.name;
+    elements.textoBruto.value = content;
+    if (!elements.titulo.value.trim()) {
+      elements.titulo.value = file.name.replace(/\.json$/i, "");
+    }
+    processarEntradaImportacao("arquivo .json");
+  } catch (error) {
+    showFeedback(elements.feedback, "error", error.message || "Erro ao ler arquivo .json.");
+  } finally {
+    elements.arquivoInput.value = "";
+  }
+}
+
+function bindDropzoneEvents() {
+  if (!elements.areaArquivo) return;
+
+  ["dragenter", "dragover"].forEach(eventName => {
+    elements.areaArquivo.addEventListener(eventName, event => {
+      event.preventDefault();
+      elements.areaArquivo.classList.add("is-dragover");
+    });
+  });
+
+  ["dragleave", "drop"].forEach(eventName => {
+    elements.areaArquivo.addEventListener(eventName, event => {
+      event.preventDefault();
+      if (eventName === "drop") {
+        const file = event.dataTransfer?.files?.[0];
+        handleJsonFile(file);
+      }
+      elements.areaArquivo.classList.remove("is-dragover");
+    });
+  });
 }
 
 function bindEvents() {
   populateSelect(elements.anoEscolar, ANOS_ESCOLARES, "Selecione");
   populateSelect(elements.disciplina, DISCIPLINAS, "Selecione");
-  elements.btnOrganizar.addEventListener("click", handleOrganizarImportacao);
-  elements.btnOrganizarIAExterna.addEventListener("click", openExternalImportModal);
-  elements.btnConfirmarTodas.addEventListener("click", handleConfirmarTodasImportacao);
+
+  elements.textoBruto.addEventListener("input", () => agendarDeteccaoAutomatica("colagem"));
+  elements.textoBruto.addEventListener("paste", () => setTimeout(() => agendarDeteccaoAutomatica("colagem"), 50));
+  elements.btnCopiarPromptIA.addEventListener("click", handleCopiarPrompt);
   elements.btnSalvar.addEventListener("click", handleSalvarImportacao);
   elements.btnLimpar.addEventListener("click", handleLimparImportacao);
-  elements.btnFecharModalIAExterna.addEventListener("click", closeExternalImportModal);
-  elements.btnCopiarPromptIA.addEventListener("click", handleCopiarPromptIA);
-  elements.btnValidarJsonIA.addEventListener("click", handleValidarJsonIA);
-  elements.campoTextoBrutoIA.addEventListener("input", syncMainRawTextFromModal);
-  elements.campoJsonIA.addEventListener("input", agendarValidacaoAutomaticaJsonIA);
-  elements.campoJsonIA.addEventListener("paste", () => setTimeout(agendarValidacaoAutomaticaJsonIA, 50));
-  elements.modalIAExterna.addEventListener("click", event => {
-    if (event.target === elements.modalIAExterna) {
-      closeExternalImportModal();
-    }
-  });
+  elements.arquivoInput.addEventListener("change", event => handleJsonFile(event.target.files?.[0]));
+  bindDropzoneEvents();
 }
 
 function init() {
   bindEvents();
+  updateDetectionStatus("Cole qualquer conteudo ou solte um arquivo .json para iniciar.", "neutral");
   renderImportPreview();
 }
 

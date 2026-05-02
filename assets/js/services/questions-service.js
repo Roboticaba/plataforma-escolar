@@ -286,6 +286,7 @@ export function buildQuestionSearchText(payload) {
     payload.tituloTextoApoio,
     payload.blocoTitulo,
     payload.textoApoio,
+    payload.conteudo,
     payload.enunciado,
     alternativasTexto,
     payload.respostaEsperada,
@@ -407,6 +408,7 @@ export function buildQuestionRecord(payload, usuario) {
       ? sanitizeText(payload.respostaEsperada || payload.respostaEsperadaTexto)
       : "",
     nivelDificuldade: sanitizeText(payload.nivelDificuldade),
+    conteudo: sanitizeText(payload.conteudo),
     autor: usuario.uid,
     autorId: usuario.uid,
     autorNome: usuario.nome || "",
@@ -480,6 +482,7 @@ export function normalizeLegacyQuestion(question = {}) {
     resposta_correta: typeof question.resposta_correta === "number" ? question.resposta_correta : alternativas.findIndex(item => item.correta),
     respostaEsperada: question.respostaEsperada || "",
     nivelDificuldade: question.nivelDificuldade || "",
+    conteudo: question.conteudo || "",
     autor: question.autor || question.autorId || "",
     autorId: question.autorId || question.autor || "",
     autorNome: question.autorNome || "",

@@ -43,80 +43,63 @@ Para cada questao, identifique:
 10. codigo_bncc_sugerido
 11. descritor_saeb_sugerido
 12. descritor_parana_sugerido, se houver equivalencia
-13. categoria
-14. justificativa_da_classificacao
-15. confianca:
+13. conteudo
+14. categoria
+15. justificativa_da_classificacao
+16. confianca:
    - alta
    - media
    - baixa
 
-REGRAS DE CLASSIFICACAO:
-
-LINGUA PORTUGUESA:
-- "segundo o texto", "de acordo com o texto" -> informacao explicita / SAEB D01
-- "significa", "expressao", "sentido da palavra" -> vocabulario / SAEB D03
-- "inferir", "concluir", "provavelmente", "imaginar", "sugere que" -> inferencia / SAEB D04
-- "tema", "assunto principal", "ideia central" -> tema / SAEB D06
-- "por que", "motivo", "causa", "consequencia" -> causa e consequencia / SAEB D08
-- "finalidade", "objetivo", "serve para" -> finalidade / SAEB D09
-- "opiniao", "fato" -> fato e opiniao / SAEB D11
-- "texto 1", "texto 2", "comparando" -> comparacao de textos / SAEB D15
-- "humor", "ironia", "engracado" -> humor/ironia / SAEB D13
-- "pontuacao", "exclamacao", "interrogacao", "reticencias" -> efeito de pontuacao / SAEB D14
-
-MATEMATICA:
-- "+", "somar", "juntar", "ao todo", "total" -> adicao
-- "-", "tirar", "sobrou", "restou", "perdeu" -> subtracao
-- "vezes", "dobro", "triplo", "grupos iguais" -> multiplicacao
-- "dividir", "repartir igualmente", "metade" -> divisao
-- "R$", "reais", "centavos", "troco", "preco" -> sistema monetario
-- "hora", "minuto", "duracao", "inicio", "termino" -> tempo
-- "metro", "litro", "grama", "quilo" -> medidas
-- "tabela", "linha", "coluna" -> tabelas
-- "grafico", "barras", "colunas" -> graficos
-- "fracao", "metade", "terca parte", "um quarto" -> fracoes
-- "porcentagem", "%", "25%", "50%", "100%" -> porcentagem
-
 FORMATO DE SAIDA:
 
-Responda SOMENTE com JSON valido, sem explicacoes antes ou depois.
+Voce pode responder em qualquer um destes formatos JSON validos:
+- array direto
+- { "questoes": [...] }
+- { "data": { "questoes": [...] } }
 
-[
-  {
-    "numero_questao": 1,
-    "disciplina": "Lingua Portuguesa",
-    "ano_sugerido": "5o ano",
-    "texto_apoio": "",
-    "enunciado": "",
-    "alternativas": [
-      {
-        "letra": "A",
-        "texto": ""
-      },
-      {
-        "letra": "B",
-        "texto": ""
-      },
-      {
-        "letra": "C",
-        "texto": ""
-      },
-      {
-        "letra": "D",
-        "texto": ""
-      }
-    ],
-    "gabarito": null,
-    "tipo_questao": "multipla_escolha",
-    "codigo_bncc_sugerido": "",
-    "habilidade_bncc_sugerida": "",
-    "descritor_saeb_sugerido": "",
-    "descritor_parana_sugerido": "",
-    "categoria": "",
-    "justificativa_da_classificacao": "",
-    "confianca": ""
-  }
-]
+REGRAS OBRIGATORIAS DE RESPOSTA:
+- Nao escreva nenhuma introducao.
+- Nao escreva nenhuma explicacao.
+- Nao escreva titulos.
+- Nao escreva markdown.
+- Nao use blocos com crases.
+- Nao use emojis.
+- Nao escreva observacoes finais.
+- Nao ofereca proximos passos.
+- Responda somente com JSON.
+- Use apenas aspas duplas validas de JSON.
+
+MODELO EXATO DE ESTRUTURA:
+{
+  "questoes": [
+    {
+      "numero_questao": 1,
+      "disciplina": "Lingua Portuguesa",
+      "ano_sugerido": "5o ano",
+      "texto_apoio": "",
+      "enunciado": "",
+      "alternativas": [
+        { "letra": "A", "texto": "" },
+        { "letra": "B", "texto": "" },
+        { "letra": "C", "texto": "" },
+        { "letra": "D", "texto": "" }
+      ],
+      "gabarito": null,
+      "tipo_questao": "multipla_escolha",
+      "codigo_bncc_sugerido": "",
+      "habilidade_bncc_sugerida": "",
+      "descritor_saeb_sugerido": "",
+      "descritor_parana_sugerido": "",
+      "conteudo": "",
+      "categoria": "",
+      "justificativa_da_classificacao": "",
+      "confianca": ""
+    }
+  ]
+}
+
+Se a sua resposta contiver qualquer texto fora do JSON, ela estara errada.
 
 Agora aguarde eu enviar o texto bruto.`;
 
@@ -132,7 +115,7 @@ function sanitizeNullableText(value) {
 function normalizeDiscipline(value) {
   const text = sanitizeText(value)
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
   if (!text) return "";
@@ -159,22 +142,381 @@ function normalizeConfidence(value) {
   return CONFIANCAS_ACEITAS.has(text) ? text : "baixa";
 }
 
-function normalizeAlternatives(alternativas) {
-  if (!Array.isArray(alternativas)) return [];
+function normalizeQuestionTypeValue(value, alternativas = []) {
+  const normalized = sanitizeText(value).toLowerCase();
+  if (TIPOS_QUESTAO_ACEITOS.has(normalized)) {
+    return normalized;
+  }
+  return alternativas.length >= 2 ? "multipla_escolha" : "dissertativa";
+}
 
-  return alternativas.map((alternativa, index) => {
-    if (typeof alternativa === "string") {
-      return {
-        letra: String.fromCharCode(65 + index),
-        texto: sanitizeText(alternativa)
-      };
+function removeMarkdownFence(text) {
+  return text
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "");
+}
+
+function normalizeImportInputStart(text) {
+  return removeMarkdownFence(String(text || ""))
+    .replace(/^\uFEFF/, "")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .trimStart();
+}
+
+function extractJsonCandidate(text) {
+  const cleaned = normalizeImportInputStart(text).trim()
+    .replace(/[\u201C\u201D]/g, "\"")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/\u00A0/g, " ")
+    .replace(/[\u2028\u2029]/g, "\n")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "");
+
+  const firstObject = cleaned.indexOf("{");
+  const firstArray = cleaned.indexOf("[");
+  const firstTokenIndex = [firstObject, firstArray]
+    .filter(index => index >= 0)
+    .sort((a, b) => a - b)[0];
+  const lastObject = cleaned.lastIndexOf("}");
+  const lastArray = cleaned.lastIndexOf("]");
+  const lastTokenIndex = Math.max(lastObject, lastArray);
+
+  if (firstTokenIndex >= 0 && lastTokenIndex > firstTokenIndex) {
+    return cleaned.slice(firstTokenIndex, lastTokenIndex + 1).trim();
+  }
+
+  return cleaned.trim();
+}
+
+export function comecaComoJsonImportado(texto) {
+  const normalized = normalizeImportInputStart(texto);
+  return normalized.startsWith("{") || normalized.startsWith("[");
+}
+
+function escapeInvalidLineBreaksInsideStrings(text) {
+  let inString = false;
+  let escaped = false;
+  let output = "";
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (char === "\"" && !escaped) {
+      inString = !inString;
+      output += char;
+      escaped = false;
+      continue;
     }
 
-    return {
-      letra: sanitizeText(alternativa?.letra || String.fromCharCode(65 + index)).toUpperCase(),
-      texto: sanitizeText(alternativa?.texto)
-    };
-  }).filter(item => item.letra && item.texto);
+    if (inString && (char === "\n" || char === "\r")) {
+      output += "\\n";
+      escaped = false;
+      continue;
+    }
+
+    output += char;
+    escaped = char === "\\" && !escaped;
+    if (char !== "\\") {
+      escaped = false;
+    }
+  }
+
+  return output;
+}
+
+function normalizarTextoJsonImportado(texto) {
+  return extractJsonCandidate(texto)
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .trim();
+}
+
+function normalizarJsonFlexivel(bruto) {
+  const semComentarios = bruto
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("\n")
+    .map(linha => linha.replace(/(^|[^:])\/\/.*$/g, "$1"))
+    .join("\n");
+
+  return escapeInvalidLineBreaksInsideStrings(semComentarios)
+    .replace(/\bNone\b/g, "null")
+    .replace(/\bTrue\b/g, "true")
+    .replace(/\bFalse\b/g, "false")
+    .replace(/([{,]\s*)'([^'\\]*(?:\\.[^'\\]*)*)'\s*:/g, "$1\"$2\":")
+    .replace(/:\s*'([^'\\]*(?:\\.[^'\\]*)*)'/g, ": \"$1\"")
+    .replace(/,\s*([}\]])/g, "$1")
+    .trim();
+}
+
+function buildJsonParseError(error) {
+  const detail = sanitizeText(error?.message);
+  return detail
+    ? `Nao foi possivel ler o JSON. Problema identificado: ${detail}.`
+    : "Nao foi possivel ler o JSON.";
+}
+
+function getFirstFilledValue(...values) {
+  const found = values.find(value => {
+    if (Array.isArray(value)) return value.length > 0;
+    if (value && typeof value === "object") return Object.keys(value).length > 0;
+    return sanitizeText(value) !== "";
+  });
+  return found;
+}
+
+function normalizeKeyAlias(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function getAliasValue(source, aliases = []) {
+  if (!source || typeof source !== "object" || Array.isArray(source)) {
+    return undefined;
+  }
+
+  const aliasSet = new Set(aliases.map(normalizeKeyAlias));
+  for (const [key, value] of Object.entries(source)) {
+    if (aliasSet.has(normalizeKeyAlias(key))) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function getNestedAliasValue(source, aliasGroups = []) {
+  for (const aliases of aliasGroups) {
+    const value = getAliasValue(source, aliases);
+    if (typeof value !== "undefined") {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function stripAlternativePrefix(texto = "") {
+  return sanitizeText(texto)
+    .replace(/^(alternativa\s+)?[A-D]\)?[\s:.-]*/i, "")
+    .replace(/^\(?[A-D]\)?[\s:.-]*/i, "")
+    .trim();
+}
+
+function normalizeAlternativeLetter(value, fallbackIndex = 0) {
+  const cleaned = sanitizeText(value).toUpperCase();
+  const letterMatch = cleaned.match(/[A-D]/);
+  if (letterMatch) return letterMatch[0];
+  return String.fromCharCode(65 + fallbackIndex);
+}
+
+function normalizeAlternatives(rawQuestao) {
+  if (Array.isArray(rawQuestao)) {
+    return rawQuestao.map((alternativa, index) => {
+      if (typeof alternativa === "string") {
+        const inferredLetter = normalizeAlternativeLetter(alternativa, index);
+        return {
+          letra: inferredLetter,
+          texto: stripAlternativePrefix(alternativa)
+        };
+      }
+
+      return {
+        letra: normalizeAlternativeLetter(
+          getFirstFilledValue(
+            alternativa?.letra,
+            alternativa?.label,
+            alternativa?.opcao,
+            alternativa?.opção,
+            alternativa?.id
+          ),
+          index
+        ),
+        texto: sanitizeText(
+          getFirstFilledValue(
+            alternativa?.texto,
+            alternativa?.alternativa,
+            alternativa?.conteudo,
+            alternativa?.conteúdo,
+            alternativa?.valor,
+            alternativa?.value
+          )
+        )
+      };
+    }).filter(item => item.texto);
+  }
+
+  const alternativas = getNestedAliasValue(rawQuestao, [
+    ["alternativas", "opcoes", "opções", "choices", "alternatives"]
+  ]);
+
+  if (Array.isArray(alternativas)) {
+    return alternativas.map((alternativa, index) => {
+      if (typeof alternativa === "string") {
+        const inferredLetter = normalizeAlternativeLetter(alternativa, index);
+        return {
+          letra: inferredLetter,
+          texto: stripAlternativePrefix(alternativa)
+        };
+      }
+
+      return {
+        letra: normalizeAlternativeLetter(
+          getFirstFilledValue(
+            alternativa?.letra,
+            alternativa?.label,
+            alternativa?.opcao,
+            alternativa?.opção,
+            alternativa?.id
+          ),
+          index
+        ),
+        texto: sanitizeText(
+          getFirstFilledValue(
+            alternativa?.texto,
+            alternativa?.alternativa,
+            alternativa?.conteudo,
+            alternativa?.conteúdo,
+            alternativa?.valor,
+            alternativa?.value
+          )
+        )
+      };
+    }).filter(item => item.texto);
+  }
+
+  if (alternativas && typeof alternativas === "object") {
+    return Object.entries(alternativas)
+      .map(([key, value], index) => ({
+        letra: normalizeAlternativeLetter(key, index),
+        texto: sanitizeText(value)
+      }))
+      .filter(item => item.texto);
+  }
+
+  const alternativasSoltas = ["A", "B", "C", "D", "E"]
+    .map((letra, index) => ({
+      letra,
+      texto: sanitizeText(getAliasValue(rawQuestao, [
+        `alternativa${letra}`,
+        `alternativa_${letra}`,
+        `opcao${letra}`,
+        `opcao_${letra}`
+      ]))
+    }))
+    .filter(item => item.texto);
+
+  if (alternativasSoltas.length) {
+    return alternativasSoltas;
+  }
+
+  return [];
+}
+
+function normalizeCorrectAnswerToken(value) {
+  const text = sanitizeText(value);
+  if (!text) return "";
+
+  const upper = text.toUpperCase();
+  const letterMatch = upper.match(/\b([A-D])\b/);
+  if (letterMatch) return letterMatch[1];
+
+  const simpleLetter = upper.match(/^[A-D]\)?$/);
+  if (simpleLetter) return simpleLetter[0].replace(")", "");
+
+  const altLetter = upper.match(/ALTERNATIVA\s*([A-D])/);
+  if (altLetter) return altLetter[1];
+
+  const letraLetter = upper.match(/LETRA\s*([A-D])/);
+  if (letraLetter) return letraLetter[1];
+
+  const numeric = upper.match(/^\d+$/);
+  if (numeric) return numeric[0];
+
+  return upper;
+}
+
+function resolveTypeFromData(rawType, alternativas, answerValue) {
+  const normalizedType = normalizeQuestionTypeValue(rawType, alternativas);
+  if (normalizedType) return normalizedType;
+  if (alternativas.length >= 2) return "multipla_escolha";
+  if (sanitizeText(answerValue)) return "dissertativa";
+  return "dissertativa";
+}
+
+function normalizarQuestao(rawQuestao, index = 0, meta = {}) {
+  if (!rawQuestao || typeof rawQuestao !== "object" || Array.isArray(rawQuestao)) {
+    throw new Error(`A questao ${index + 1} nao esta em um objeto valido.`);
+  }
+
+  const alternativas = normalizeAlternatives(rawQuestao);
+  const respostaBruta = getNestedAliasValue(rawQuestao, [
+    ["respostaCorreta", "resposta_correta", "correta", "gabarito", "alternativa_correta", "resposta"]
+  ]);
+  const tipoQuestao = resolveTypeFromData(
+    getNestedAliasValue(rawQuestao, [["tipo", "tipo_questao", "tipoQuestao"]]),
+    alternativas,
+    respostaBruta
+  );
+  const textoApoio = sanitizeText(
+    getNestedAliasValue(rawQuestao, [["textoApoio", "texto_apoio", "texto_base", "textoBase", "suporte", "contexto"]]) ||
+    meta.textoBase
+  );
+  const enunciado = sanitizeText(
+    getNestedAliasValue(rawQuestao, [["enunciado", "pergunta", "comando", "textoQuestao", "texto_questao"]])
+  );
+  const normalized = {
+    numero_questao: Number(
+      getNestedAliasValue(rawQuestao, [["numero", "numero_questao", "questao", "questão", "id"]]) ?? index + 1
+    ) || index + 1,
+    disciplina: sanitizeNullableText(
+      getNestedAliasValue(rawQuestao, [["disciplina", "componente", "materia", "área", "area"]]) || meta.disciplina
+    ),
+    ano_sugerido: sanitizeNullableText(
+      getNestedAliasValue(rawQuestao, [["ano", "ano_sugerido", "serie", "série", "etapa"]]) || meta.ano
+    ),
+    texto_apoio: sanitizeNullableText(textoApoio),
+    enunciado: maybeRemoveDuplicatedSupportText(enunciado, textoApoio),
+    alternativas,
+    gabarito: sanitizeNullableText(normalizeCorrectAnswerToken(respostaBruta)),
+    tipo_questao: tipoQuestao,
+    codigo_bncc_sugerido: sanitizeNullableText(
+      getNestedAliasValue(rawQuestao, [["codigo_bncc", "codigo_bncc_sugerido"]]) ||
+      (typeof getAliasValue(rawQuestao, ["bncc"]) === "string" ? getAliasValue(rawQuestao, ["bncc"]) : "") ||
+      (typeof getAliasValue(rawQuestao, ["bncc"]) === "object"
+        ? getNestedAliasValue(getAliasValue(rawQuestao, ["bncc"]), [["codigo", "codigo_bncc", "codigoHabilidade"]])
+        : "")
+    ),
+    habilidade_bncc_sugerida: sanitizeNullableText(
+      getNestedAliasValue(rawQuestao, [["habilidade_bncc", "habilidade_bncc_sugerida"]]) ||
+      (typeof getAliasValue(rawQuestao, ["bncc"]) === "object"
+        ? getNestedAliasValue(getAliasValue(rawQuestao, ["bncc"]), [["habilidade", "habilidade_bncc"]])
+        : "")
+    ),
+    descritor_saeb_sugerido: sanitizeNullableText(
+      getNestedAliasValue(rawQuestao, [["descritor", "descritor_saeb", "descritor_saeb_sugerido"]])
+    ),
+    descritor_parana_sugerido: sanitizeNullableText(
+      getNestedAliasValue(rawQuestao, [["descritor_parana", "descritor_parana_sugerido"]])
+    ),
+    conteudo: sanitizeNullableText(
+      getNestedAliasValue(rawQuestao, [["conteudo", "conteúdo", "objeto_conhecimento", "objetoDeConhecimento"]]) || meta.conteudo
+    ),
+    categoria: sanitizeNullableText(
+      getNestedAliasValue(rawQuestao, [["categoria", "eixo", "unidade_tematica", "unidadeTematica"]])
+    ),
+    justificativa_da_classificacao: sanitizeNullableText(
+      getNestedAliasValue(rawQuestao, [["justificativa_da_classificacao", "justificativa", "explicacao", "explicação"]])
+    ),
+    confianca: normalizeConfidence(getNestedAliasValue(rawQuestao, [["confianca", "confiança"]]))
+  };
+
+  const warnings = [];
+  if (!normalized.enunciado) warnings.push("enunciado ausente");
+  if (normalized.tipo_questao === "multipla_escolha" && normalized.alternativas.length < 2) warnings.push("alternativas ausentes");
+  if (!sanitizeText(normalized.gabarito)) warnings.push("resposta correta ausente");
+  normalized.importWarnings = warnings;
+
+  return normalized;
 }
 
 function inferInternalType(tipoQuestao, alternativas) {
@@ -202,6 +544,9 @@ function resolveCorrectAnswerIndex(gabarito, alternativas) {
   const letterIndex = alternativas.findIndex(item => item.letra === token);
   if (letterIndex >= 0) return String(letterIndex);
 
+  const textIndex = alternativas.findIndex(item => sanitizeText(item.texto).toUpperCase() === token);
+  if (textIndex >= 0) return String(textIndex);
+
   if (/^\d+$/.test(token)) {
     const numeric = Number(token);
     if (numeric >= 1 && numeric <= alternativas.length) {
@@ -224,10 +569,119 @@ function buildSuggestionObject(question) {
     saeb_equivalente: sanitizeText(question.descritor_saeb_sugerido),
     parana: sanitizeText(question.descritor_parana_sugerido),
     parana_equivalente: sanitizeText(question.descritor_parana_sugerido),
+    conteudo: sanitizeText(question.conteudo),
     confianca: normalizeConfidence(question.confianca),
     confianca_classificacao: normalizeConfidence(question.confianca),
     pontuacao: 0,
     justificativa: sanitizeText(question.justificativa_da_classificacao)
+  };
+}
+
+function findQuestionArrayCandidate(dados) {
+  if (Array.isArray(dados)) {
+    return { questoes: dados, meta: {} };
+  }
+
+  if (!dados || typeof dados !== "object") {
+    return null;
+  }
+
+  const direct = getNestedAliasValue(dados, [
+    ["questoes", "questões", "items", "questions"]
+  ]);
+
+  if (Array.isArray(direct)) {
+    return { questoes: direct, meta: dados };
+  }
+
+  const nestedContainers = [
+    getAliasValue(dados, ["data"]),
+    getAliasValue(dados, ["resultado", "result"]),
+    getAliasValue(dados, ["payload"])
+  ].filter(Boolean);
+
+  for (const container of nestedContainers) {
+    const nested = getNestedAliasValue(container, [["questoes", "questões", "items", "questions"]]);
+    if (Array.isArray(nested)) {
+      return {
+        questoes: nested,
+        meta: {
+          ...dados,
+          ...(container && typeof container === "object" ? container : {})
+        }
+      };
+    }
+  }
+
+  return null;
+}
+
+function extractQuestionsPayload(dados) {
+  const candidate = findQuestionArrayCandidate(dados);
+  if (candidate) return candidate;
+
+  throw new Error("Nenhuma lista de questoes foi encontrada. Use um array direto ou um objeto com questoes em chaves como questoes, questões, data, resultado, items ou questions.");
+}
+
+function maybeRemoveDuplicatedSupportText(enunciado, textoApoio) {
+  const cleanStatement = sanitizeText(enunciado);
+  const cleanSupport = sanitizeText(textoApoio);
+  if (!cleanStatement || !cleanSupport) return cleanStatement;
+
+  const normalizedStatement = cleanStatement
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const normalizedSupport = cleanSupport
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  if (normalizedStatement.startsWith(normalizedSupport)) {
+    return cleanStatement.slice(cleanSupport.length).replace(/^[-:.\s]+/, "").trim();
+  }
+
+  return cleanStatement;
+}
+
+function buildImportMetadata(meta = {}, questoes = []) {
+  const bloco = meta.bloco && typeof meta.bloco === "object" ? meta.bloco : {};
+  const textoBase = sanitizeText(
+    getFirstFilledValue(
+      meta.texto_base,
+      meta.textoBase,
+      meta.texto_apoio,
+      meta.textoApoio,
+      bloco.texto_base,
+      bloco.texto_apoio,
+      bloco.textoApoio
+    ) || ""
+  );
+  const tituloBloco = sanitizeText(
+    getFirstFilledValue(
+      meta.titulo_bloco,
+      meta.tituloBloco,
+      meta.titulo,
+      bloco.titulo,
+      bloco.titulo_bloco
+    ) || ""
+  );
+  const disciplina = sanitizeText(getFirstFilledValue(meta.disciplina, bloco.disciplina) || "");
+  const ano = sanitizeText(getFirstFilledValue(meta.ano_sugerido, meta.ano, bloco.ano_sugerido, bloco.ano) || "");
+  const conteudo = sanitizeText(getFirstFilledValue(meta.conteudo, bloco.conteudo) || "");
+  const shouldCreateBlock = Boolean(textoBase && questoes.length > 1);
+  const blocoId = shouldCreateBlock
+    ? `import-ia-bloco-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    : "";
+
+  return {
+    textoBase,
+    tituloBloco,
+    disciplina,
+    ano,
+    conteudo,
+    blocoId,
+    shouldCreateBlock
   };
 }
 
@@ -251,49 +705,21 @@ export async function copiarPromptIA(textoBruto = "") {
   const conteudo = textoBruto ? montarPromptComTextoBruto(textoBruto) : PROMPT_ORGANIZAR_QUESTOES_IA;
   await navigator.clipboard.writeText(conteudo);
   return textoBruto
-    ? "Prompt e texto copiados. Cole na IA aberta, copie o JSON gerado e volte aqui."
+    ? "Prompt e texto copiados. Cole na IA externa, depois volte e cole a resposta aqui no mesmo campo."
     : "Prompt copiado! Agora cole em uma IA externa junto com o texto bruto da prova.";
 }
 
-function normalizarTextoJsonImportado(texto) {
-  let bruto = sanitizeText(texto)
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .replace(/[“”]/g, '"')
-    .replace(/[‘’]/g, "'")
-    .replace(/^﻿/, "")
-    .trim();
-
-  const inicioArray = bruto.indexOf("[");
-  const fimArray = bruto.lastIndexOf("]");
-  if (inicioArray >= 0 && fimArray > inicioArray) {
-    bruto = bruto.slice(inicioArray, fimArray + 1);
-  }
-
-  return bruto;
-}
-
-function normalizarJsonFlexivel(bruto) {
-  const semComentarios = bruto
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .split("\n")
-    .map(linha => linha.replace(/(^|[^:])\/\/.*$/g, "$1"))
-    .join("\n");
-
-  return semComentarios
-    .replace(/\bNone\b/g, "null")
-    .replace(/\bTrue\b/g, "true")
-    .replace(/\bFalse\b/g, "false")
-    .replace(/([{,]\s*)'([^'\\]*(?:\\.[^'\\]*)*)'\s*:/g, '$1"$2":')
-    .replace(/:\s*'([^'\\]*(?:\\.[^'\\]*)*)'/g, ': "$1"')
-    .replace(/,\s*([}\]])/g, "$1")
-    .trim();
+export function pareceJsonImportadoCompleto(texto) {
+  if (!comecaComoJsonImportado(texto)) return false;
+  const bruto = normalizarTextoJsonImportado(texto);
+  if (!bruto) return false;
+  return (bruto.startsWith("[") && bruto.endsWith("]")) || (bruto.startsWith("{") && bruto.endsWith("}"));
 }
 
 export function validarJSONImportado(texto) {
   const bruto = normalizarTextoJsonImportado(texto);
   if (!bruto) {
-    throw new Error("Cole o JSON organizado pela IA externa antes de validar.");
+    throw new Error("Cole o JSON organizado pela IA externa antes de continuar.");
   }
 
   const tentativas = [bruto, normalizarJsonFlexivel(bruto)];
@@ -311,67 +737,29 @@ export function validarJSONImportado(texto) {
   }
 
   if (ultimoErro) {
-    throw new Error("Nao foi possivel ler o JSON. Confira se a IA respondeu com um array de questoes e, se possivel, sem texto extra antes ou depois.");
+    throw new Error(buildJsonParseError(ultimoErro));
   }
 
-  return validarQuestoesImportadas(dados);
+  const { questoes, meta } = extractQuestionsPayload(dados);
+  return validarQuestoesImportadas(questoes, meta);
 }
 
-export function validarQuestoesImportadas(dados) {
+export function validarQuestoesImportadas(dados, meta = {}) {
   if (!Array.isArray(dados)) {
-    throw new Error("O JSON precisa ser um array de questoes.");
+    throw new Error("A estrutura de questoes precisa ser um array.");
   }
 
-  return dados.map((questao, index) => {
-    if (!questao || typeof questao !== "object" || Array.isArray(questao)) {
-      throw new Error(`A questao ${index + 1} nao esta em um objeto valido.`);
-    }
+  const importMeta = buildImportMetadata(meta, dados);
+  const questoes = dados.map((questao, index) => normalizarQuestao(questao, index, importMeta));
 
-    const tipoQuestao = sanitizeText(questao.tipo_questao).toLowerCase();
-    if (!sanitizeText(questao.enunciado)) {
-      throw new Error(`A questao ${index + 1} esta sem enunciado.`);
-    }
-
-    if (!TIPOS_QUESTAO_ACEITOS.has(tipoQuestao)) {
-      throw new Error(`A questao ${index + 1} possui tipo_questao invalido.`);
-    }
-
-    const alternativas = normalizeAlternatives(questao.alternativas);
-    if (tipoQuestao === "multipla_escolha" && !alternativas.length) {
-      throw new Error(`A questao ${index + 1} precisa de alternativas para multipla_escolha.`);
-    }
-
-    if (tipoQuestao === "multipla_escolha") {
-      alternativas.forEach((alternativa, altIndex) => {
-        if (!alternativa.letra || !alternativa.texto) {
-          throw new Error(`A alternativa ${altIndex + 1} da questao ${index + 1} precisa de letra e texto.`);
-        }
-      });
-    }
-
-    const confianca = normalizeConfidence(questao.confianca);
-
-    return {
-      numero_questao: Number(questao.numero_questao ?? index + 1) || index + 1,
-      disciplina: sanitizeNullableText(questao.disciplina),
-      ano_sugerido: sanitizeNullableText(questao.ano_sugerido),
-      texto_apoio: sanitizeNullableText(questao.texto_apoio),
-      enunciado: sanitizeText(questao.enunciado),
-      alternativas,
-      gabarito: sanitizeNullableText(questao.gabarito),
-      tipo_questao: tipoQuestao,
-      codigo_bncc_sugerido: sanitizeNullableText(questao.codigo_bncc_sugerido),
-      habilidade_bncc_sugerida: sanitizeNullableText(questao.habilidade_bncc_sugerida),
-      descritor_saeb_sugerido: sanitizeNullableText(questao.descritor_saeb_sugerido),
-      descritor_parana_sugerido: sanitizeNullableText(questao.descritor_parana_sugerido),
-      categoria: sanitizeNullableText(questao.categoria),
-      justificativa_da_classificacao: sanitizeNullableText(questao.justificativa_da_classificacao),
-      confianca
-    };
-  });
+  return {
+    questoes,
+    meta: importMeta,
+    total: questoes.length
+  };
 }
 
-export function normalizarQuestaoImportada(q) {
+export function normalizarQuestaoImportada(q, meta = {}, index = 0) {
   const alternativas = normalizeAlternatives(q.alternativas);
   const tipo = inferInternalType(q.tipo_questao, alternativas);
   const descricaoDisciplina = sanitizeText(q.disciplina);
@@ -380,23 +768,25 @@ export function normalizarQuestaoImportada(q) {
   const saeb = sanitizeText(q.descritor_saeb_sugerido);
   const parana = sanitizeText(q.descritor_parana_sugerido);
   const confianca = normalizeConfidence(q.confianca);
+  const textoApoio = sanitizeText(q.texto_apoio || meta.textoBase || "");
+  const conteudo = sanitizeText(q.conteudo || meta.conteudo || "");
 
   return {
     tempId: `import-ia-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    numeroOriginal: Number(q.numero_questao) || 0,
-    anoEscolar: normalizeSchoolYear(q.ano_sugerido),
-    disciplina: normalizeDiscipline(q.disciplina),
-    disciplinaOriginal: descricaoDisciplina,
-    anoOriginal: sanitizeText(q.ano_sugerido),
-    tituloTextoApoio: "",
-    textoApoio: sanitizeText(q.texto_apoio || ""),
+    numeroOriginal: Number(q.numero_questao) || index + 1,
+    anoEscolar: normalizeSchoolYear(q.ano_sugerido || meta.ano || ""),
+    disciplina: normalizeDiscipline(q.disciplina || meta.disciplina || ""),
+    disciplinaOriginal: descricaoDisciplina || sanitizeText(meta.disciplina || ""),
+    anoOriginal: sanitizeText(q.ano_sugerido || meta.ano || ""),
+    tituloTextoApoio: sanitizeText(meta.tituloBloco || ""),
+    textoApoio,
     enunciado: sanitizeText(q.enunciado || ""),
-    alternativas: alternativas.map((item, index) => ({
+    alternativas: alternativas.map((item, altIndex) => ({
       letra: item.letra,
       texto: item.texto,
       imagemUrl: "",
       correta: false,
-      ordem: index
+      ordem: altIndex
     })),
     gabaritoOriginal: sanitizeText(q.gabarito || ""),
     respostaCorreta: tipo === "multipla_texto" ? resolveCorrectAnswerIndex(q.gabarito, alternativas) : "",
@@ -411,10 +801,11 @@ export function normalizarQuestaoImportada(q) {
     confiancaDescritor: mapConfidenceToScore(confianca),
     formatoAlternativas: "(A)",
     nivelDificuldade: "",
-    blocoTitulo: "",
-    blocoId: "",
-    ordemBloco: (Number(q.numero_questao) || 1) - 1,
-    origemCriacao: "importacao_ia_externa",
+    conteudo,
+    blocoTitulo: sanitizeText(meta.tituloBloco || ""),
+    blocoId: meta.shouldCreateBlock ? meta.blocoId : "",
+    ordemBloco: index,
+    origemCriacao: meta.shouldCreateBlock ? "importacao_bloco" : "importacao_ia_externa",
     importacaoId: "",
     visibilidade: "privada",
     statusRevisao: "rascunho_importado",
@@ -427,16 +818,21 @@ export function normalizarQuestaoImportada(q) {
     parana_equivalente: parana,
     confianca_classificacao: confianca,
     justificativa_classificacao: sanitizeText(q.justificativa_da_classificacao || ""),
+    importWarnings: Array.isArray(q.importWarnings) ? [...q.importWarnings] : [],
     classificacao_confirmada: false,
     data_confirmacao: null,
     professor_id: "",
-    confirmadoParaSalvar: false,
+    confirmadoParaSalvar: true,
     criadoEm: new Date()
   };
 }
 
-export function renderizarPreviewQuestoes(questoes) {
-  return questoes.map(normalizarQuestaoImportada);
+export function renderizarPreviewQuestoes(payload) {
+  const pacote = Array.isArray(payload)
+    ? { questoes: payload, meta: {} }
+    : payload;
+
+  return (pacote.questoes || []).map((questao, index) => normalizarQuestaoImportada(questao, pacote.meta || {}, index));
 }
 
 export function confirmarQuestaoImportada(questoes, index) {
@@ -458,7 +854,7 @@ export function removerQuestaoImportada(questoes, index) {
 export async function salvarQuestoesConfirmadas(importacao, questoes, usuario) {
   const confirmadas = questoes.filter(questao => questao.confirmadoParaSalvar);
   if (!confirmadas.length) {
-    throw new Error("Confirme pelo menos uma questao antes de salvar.");
+    throw new Error("Selecione pelo menos uma questao para salvar.");
   }
 
   return salvarImportacaoRevisada(importacao, confirmadas, usuario);

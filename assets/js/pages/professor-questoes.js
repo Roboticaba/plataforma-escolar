@@ -112,6 +112,7 @@ function groupMatchesFilters(group) {
         item.textoApoio,
         item.tituloTextoApoio,
         item.blocoTitulo,
+        item.conteudo,
         item.descritor,
         item.descritorDescricao
       ].join(" ").toLowerCase();
@@ -168,6 +169,7 @@ function renderQuestionDetails(question, heading = "", options = {}) {
         <span class="tag tag-primary">${escapeHtml(getDisciplinaLabel(question.disciplina))}</span>
         <span class="tag tag-neutral">${escapeHtml(getQuestionTypeLabel(question.tipo))}</span>
         ${question.descritor ? `<span class="tag tag-neutral">${escapeHtml(question.descritor)}</span>` : ""}
+        ${question.conteudo ? `<span class="tag tag-neutral">${escapeHtml(question.conteudo)}</span>` : ""}
       </div>
       ${includeContext && question.textoApoio ? `<p class="panel-subtitle" style="white-space:pre-wrap;"><strong>Texto de apoio:</strong><br>${escapeHtml(question.textoApoio)}</p>` : ""}
       ${includeContext ? renderImageList(question.imagensApoio || []) : ""}
@@ -204,6 +206,7 @@ function renderQuestions() {
                 <span class="tag tag-primary">Bloco baseado em texto</span>
                 <span class="tag tag-neutral">${escapeHtml(getDisciplinaLabel(first.disciplina))}</span>
                 <span class="tag tag-neutral">${escapeHtml(getAnoLabel(first.anoEscolar || first.ano_escolar))}</span>
+                ${first.conteudo ? `<span class="tag tag-neutral">${escapeHtml(first.conteudo)}</span>` : ""}
                 <span class="tag tag-success">${group.questions.length} questao(oes)</span>
               </div>
             </div>
@@ -232,6 +235,7 @@ function renderQuestions() {
               <span class="tag tag-neutral">${escapeHtml(getAnoLabel(question.anoEscolar || question.ano_escolar))}</span>
               <span class="tag ${question.tipo === "resposta_escrita" ? "tag-warning" : "tag-success"}">${escapeHtml(getQuestionTypeLabel(question.tipo))}</span>
               ${question.descritor ? `<span class="tag tag-neutral">${escapeHtml(question.descritor)}</span>` : ""}
+              ${question.conteudo ? `<span class="tag tag-neutral">${escapeHtml(question.conteudo)}</span>` : ""}
             </div>
           </div>
           <span class="tag ${isMine(question) ? "tag-success" : "tag-neutral"}">${isMine(question) ? "Sua questao" : "Compartilhada"}</span>
