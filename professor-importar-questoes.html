@@ -268,9 +268,9 @@
 <div class="page-shell import-shell">
   <section class="hero-panel">
     <article class="hero-card">
-      <span class="hero-badge">Importacao de Questoes</span>
-      <h1 class="hero-title">Cole o material bruto e organize a revisao em minutos.</h1>
-      <p class="hero-text">Cole texto bruto, JSON ou envie um arquivo .json. A plataforma detecta o formato sozinha, monta a previa editavel e deixa apenas o salvamento para o final.</p>
+      <span class="hero-badge">Importar questoes</span>
+      <h1 class="hero-title">Cole o texto bruto da prova e organize as questoes em minutos.</h1>
+      <p class="hero-text">O sistema separa as questoes por regras locais, identifica texto de apoio, alternativas e gabarito, sugere a classificacao e deixa tudo editavel antes de salvar.</p>
       <div class="toolbar" style="margin-top:18px;">
         <a class="button button-outline" href="professor-questoes.html">Banco de questoes</a>
         <a class="button button-outline" href="professor.html">Voltar ao painel</a>
@@ -293,10 +293,10 @@
       </div>
       <div class="question-card">
         <div class="tag-row">
-          <span class="tag tag-warning">Roadmap ativo</span>
-          <span class="tag tag-neutral">Custo zero</span>
+          <span class="tag tag-warning">Fluxo local</span>
+          <span class="tag tag-neutral">Classificacao local</span>
         </div>
-        <p class="panel-subtitle">Fluxo atual: entrada unica, deteccao automatica, previa editavel e um unico clique final para salvar.</p>
+        <p class="panel-subtitle">Fluxo atual: colar texto bruto, organizar questoes, revisar a classificacao e salvar no banco.</p>
       </div>
     </aside>
   </section>
@@ -306,7 +306,7 @@
       <div class="panel-header">
         <div>
           <h2 class="panel-title">Dados da importacao</h2>
-          <p class="panel-subtitle">Esses campos ajudam o parser e ja alimentam o schema do roadmap.</p>
+          <p class="panel-subtitle">Preencha o contexto da prova, cole o texto bruto e clique em organizar.</p>
         </div>
       </div>
       <form id="formImportacao" class="import-form-grid">
@@ -327,28 +327,11 @@
           <input id="importFonteNome" placeholder="Ex.: Caderno da escola / material autoral">
         </div>
         <div class="form-field import-full-width">
-          <label>Importar questoes com IA externa</label>
-          <textarea id="importTextoBruto" placeholder="Cole aqui texto bruto da prova, JSON colado ou a resposta da IA externa." style="min-height:320px;"></textarea>
+          <label>Texto bruto da prova</label>
+          <textarea id="importTextoBruto" placeholder="Cole aqui o texto bruto da prova, com questoes, alternativas e gabarito se houver." style="min-height:320px;"></textarea>
         </div>
         <div class="form-field import-full-width">
-          <label>Arquivo .json</label>
-          <label id="importArquivoArea" class="import-dropzone">
-            <strong>Arraste um arquivo .json aqui ou clique para selecionar</strong>
-            <span class="muted-small">Formatos aceitos: array direto, {"questoes":[...]} e {"data":{"questoes":[...]}}.</span>
-            <input id="importArquivoJson" type="file" accept=".json,application/json" hidden>
-          </label>
-        </div>
-        <div class="form-field import-full-width">
-          <div id="importStatusDeteccao" class="import-status-box" data-status="neutral">Cole qualquer conteudo ou solte um arquivo .json para iniciar.</div>
-        </div>
-        <div id="painelAjudaPrompt" class="question-card prompt-help-card import-full-width" hidden>
-          <div>
-            <strong>Texto bruto detectado</strong>
-            <p class="panel-subtitle" style="margin-top:6px;">Copie o prompt, cole em uma IA externa e depois traga a resposta JSON para este mesmo campo. Quando o JSON entrar, a previa aparece automaticamente.</p>
-          </div>
-          <div class="review-toolbar" style="margin-top:0;">
-            <button class="button button-outline" type="button" id="btnCopiarPromptIA">Copiar prompt para IA</button>
-          </div>
+          <div id="importStatusDeteccao" class="import-status-box" data-status="neutral">Cole o texto bruto e clique em &quot;Organizar questoes&quot;.</div>
         </div>
         <div class="form-field import-full-width">
           <label>URL da fonte (opcional)</label>
@@ -360,6 +343,7 @@
         </div>
       </form>
       <div class="review-toolbar">
+        <button class="button" type="button" id="btnOrganizarImportacao">Organizar questoes</button>
         <button class="button button-outline" type="button" id="btnLimparImportacao">Limpar</button>
         <button class="button button-success" type="button" id="btnSalvarImportacao" disabled>Salvar questões</button>
       </div>
@@ -373,8 +357,8 @@
     <section class="panel">
       <div class="panel-header">
         <div>
-          <h2 class="panel-title">Revisao assistida</h2>
-          <p class="panel-subtitle">A previa aparece automaticamente quando o sistema detecta JSON valido. Edite o que precisar e salve apenas no final.</p>
+          <h2 class="panel-title">Previa editavel</h2>
+          <p class="panel-subtitle">Revise a separacao das questoes, ajuste a classificacao sugerida e salve apenas no final.</p>
         </div>
       </div>
       <div id="listaImportada" class="review-list"></div>
@@ -385,6 +369,6 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script type="module" src="assets/js/pages/professor-importar-questoes.js?v=20260501fix4"></script>
+<script type="module" src="assets/js/pages/professor-importar-questoes.js?v=20260502localrules5"></script>
 </body>
 </html>

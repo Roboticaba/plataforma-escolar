@@ -1,24 +1,15 @@
-import { ANOS_ESCOLARES, DISCIPLINAS, disciplinaPrecisaDescritor, getDescritores } from "../core/constants.js?v=20260501fix4";
-import { requireProfessor } from "../core/session.js?v=20260501fix4";
-import { clearFeedback, escapeHtml, renderEmptyState, setLoading, showFeedback } from "../utils/ui.js?v=20260501fix4";
-import { getAlternativeLabel } from "../services/questions-service.js?v=20260501fix4";
-import { uploadImagemCloudinary, uploadMultiplasImagensCloudinary } from "../services/cloudinary-service.js?v=20260501fix4";
-import {
-  comecaComoJsonImportado,
-  copiarPromptIA,
-  renderizarPreviewQuestoes,
-  salvarQuestoesConfirmadas,
-  validarJSONImportado
-} from "../services/importador-ia-externa-service.js?v=20260501fix4";
+import { ANOS_ESCOLARES, DISCIPLINAS, disciplinaPrecisaDescritor, getDescritores } from "../core/constants.js?v=20260502localrules5";
+import { requireProfessor } from "../core/session.js?v=20260502localrules5";
+import { clearFeedback, escapeHtml, renderEmptyState, setLoading, showFeedback } from "../utils/ui.js?v=20260502localrules5";
+import { getAlternativeLabel } from "../services/questions-service.js?v=20260502localrules5";
+import { uploadImagemCloudinary, uploadMultiplasImagensCloudinary } from "../services/cloudinary-service.js?v=20260502localrules5";
+import { organizarQuestoesParaRevisao, salvarImportacaoRevisada } from "../services/importacao-questoes-service.js?v=20260502localrules5";
 
 const usuario = requireProfessor();
 
 const state = {
   importedQuestions: [],
-  autoDetectTimer: null,
-  detectedInputKind: "",
   sourceLabel: "",
-  lastLoadedFileName: "",
   parseInfo: {
     tituloDetectado: "",
     textoBaseDetectado: ""
@@ -34,11 +25,8 @@ const elements = {
   fonteUrl: document.getElementById("importFonteUrl"),
   fonteObservacao: document.getElementById("importFonteObservacao"),
   textoBruto: document.getElementById("importTextoBruto"),
-  areaArquivo: document.getElementById("importArquivoArea"),
-  arquivoInput: document.getElementById("importArquivoJson"),
   statusDeteccao: document.getElementById("importStatusDeteccao"),
-  ajudaPrompt: document.getElementById("painelAjudaPrompt"),
-  btnCopiarPromptIA: document.getElementById("btnCopiarPromptIA"),
+  btnOrganizar: document.getElementById("btnOrganizarImportacao"),
   btnSalvar: document.getElementById("btnSalvarImportacao"),
   btnLimpar: document.getElementById("btnLimparImportacao"),
   feedback: document.getElementById("feedbackImportacao"),
@@ -66,7 +54,7 @@ function getYearLabel(value, fallback = "") {
 
 function getImportContext() {
   return {
-    titulo: elements.titulo.value.trim() || state.parseInfo.tituloDetectado,
+    titulo: elements.titulo.value.trim(),
     anoEscolar: elements.anoEscolar.value,
     disciplina: elements.disciplina.value,
     textoOriginal: elements.textoBruto.value,
@@ -79,15 +67,33 @@ function getImportContext() {
   };
 }
 
+function isQuestionReady(question) {
+  if (!question.confirmadoParaSalvar || !question.enunciado.trim() || !question.disciplina || !question.anoEscolar) {
+    return false;
+  }
+
+  if (disciplinaPrecisaDescritor(question.disciplina) && (!question.descritor || !question.descritorConfirmadoPeloProfessor)) {
+    return false;
+  }
+
+  if (question.tipo === "resposta_escrita") {
+    return Boolean((question.respostaEsperada || "").trim());
+  }
+
+  return (question.alternativas || []).length >= 2 && question.respostaCorreta !== "";
+}
+
 function updateMetrics() {
   const detectadas = state.importedQuestions.length;
-  const prontas = state.importedQuestions.filter(question => question.confirmadoParaSalvar && question.enunciado.trim()).length;
-  const comDescritor = state.importedQuestions.filter(question => !disciplinaPrecisaDescritor(question.disciplina) || question.descritorConfirmadoPeloProfessor).length;
+  const prontas = state.importedQuestions.filter(isQuestionReady).length;
+  const comDescritor = state.importedQuestions.filter(question => (
+    !disciplinaPrecisaDescritor(question.disciplina) || question.descritorConfirmadoPeloProfessor
+  )).length;
 
   elements.metricDetectadas.textContent = String(detectadas);
   elements.metricProntas.textContent = String(prontas);
   elements.metricDescritor.textContent = String(comDescritor);
-  elements.btnSalvar.disabled = !prontas;
+  elements.btnSalvar.disabled = prontas === 0;
 }
 
 function updateParseInfo() {
@@ -102,15 +108,14 @@ function updateDetectionStatus(message, type = "neutral") {
   elements.statusDeteccao.dataset.status = type;
 }
 
-function updatePromptPanel() {
-  const shouldShow = state.detectedInputKind === "texto_bruto" && elements.textoBruto.value.trim();
-  elements.ajudaPrompt.hidden = !shouldShow;
-}
-
 function buildDescritorOptions(question) {
   return "<option value=\"\">Selecione</option>" + getDescritores(question.disciplina, question.anoEscolar)
     .map(item => `<option value="${item.codigo}" ${item.codigo === question.descritor ? "selected" : ""}>${item.codigo} - ${escapeHtml(item.nome)}</option>`)
     .join("");
+}
+
+function getSuggestionData(question) {
+  return question.classificacaoSugestao || question.descritorSugestaoIA || {};
 }
 
 function getAlternativeRows(question) {
@@ -230,10 +235,6 @@ function renderSupportImageField(question, index) {
   `;
 }
 
-function getSuggestionData(question) {
-  return question.descritorSugestaoIA || {};
-}
-
 function getGabaritoLabel(question) {
   if (question.gabaritoOriginal) {
     return question.gabaritoOriginal;
@@ -249,27 +250,25 @@ function getGabaritoLabel(question) {
 
 function renderClassificationSummary(question) {
   const suggestion = getSuggestionData(question);
-  const bncc = suggestion.codigo_bncc || question.bncc_sugerido || "Nao informado";
-  const habilidade = suggestion.habilidade || question.habilidade_bncc || "Nao informada";
-  const saeb = suggestion.saeb || question.saeb_equivalente || "Nao informado";
-  const parana = suggestion.parana || question.parana_equivalente || "Nao informado";
-  const conteudo = suggestion.conteudo || question.conteudo || "Nao informado";
-  const categoria = suggestion.categoria || question.categoria_bncc || "Nao informada";
+  const bncc = suggestion.bnccSugerida || suggestion.codigo_bncc || question.bncc_sugerido || "Nao informado";
+  const habilidade = suggestion.habilidadeBncc || suggestion.habilidade_bncc || suggestion.habilidade || question.habilidade_bncc || "Nao informada";
+  const descritor = suggestion.descritorSugerido || suggestion.descritor || question.descritor || "Nao informado";
+  const conteudo = suggestion.conteudoSugerido || suggestion.conteudo || question.conteudo || "Nao informado";
+  const categoria = suggestion.categoriaSugerida || suggestion.categoria || question.categoria_bncc || "Nao informada";
   const confianca = suggestion.confianca || question.confianca_classificacao || "baixa";
   const justificativa = suggestion.justificativa || question.justificativa_classificacao || "Sem justificativa.";
 
   return `
     <div class="review-summary-box">
-      <strong>Preview da classificacao sugerida</strong>
+      <strong>Preview da classificacao sugerida por regras locais</strong>
       <div class="review-summary-grid">
-        <div class="review-summary-item"><strong>Disciplina</strong><span>${escapeHtml(question.disciplinaOriginal || getDisciplineLabel(question.disciplina, ""))}</span></div>
-        <div class="review-summary-item"><strong>Ano sugerido</strong><span>${escapeHtml(question.anoOriginal || getYearLabel(question.anoEscolar, ""))}</span></div>
-        <div class="review-summary-item"><strong>Tipo importado</strong><span>${escapeHtml(question.tipoQuestaoImportado || question.tipo)}</span></div>
+        <div class="review-summary-item"><strong>Disciplina</strong><span>${escapeHtml(getDisciplineLabel(question.disciplina, question.disciplinaOriginal || ""))}</span></div>
+        <div class="review-summary-item"><strong>Ano sugerido</strong><span>${escapeHtml(getYearLabel(question.anoEscolar, question.anoOriginal || ""))}</span></div>
+        <div class="review-summary-item"><strong>Tipo</strong><span>${escapeHtml(question.tipo)}</span></div>
         <div class="review-summary-item"><strong>Gabarito</strong><span>${escapeHtml(getGabaritoLabel(question))}</span></div>
+        <div class="review-summary-item"><strong>Descritor</strong><span>${escapeHtml(descritor)}</span></div>
         <div class="review-summary-item"><strong>Codigo BNCC</strong><span>${escapeHtml(bncc)}</span></div>
         <div class="review-summary-item"><strong>Habilidade</strong><span>${escapeHtml(habilidade)}</span></div>
-        <div class="review-summary-item"><strong>Descritor SAEB</strong><span>${escapeHtml(saeb)}</span></div>
-        <div class="review-summary-item"><strong>Descritor Parana</strong><span>${escapeHtml(parana)}</span></div>
         <div class="review-summary-item"><strong>Conteudo</strong><span>${escapeHtml(conteudo)}</span></div>
         <div class="review-summary-item"><strong>Categoria</strong><span>${escapeHtml(categoria)}</span></div>
         <div class="review-summary-item"><strong>Confianca</strong><span>${escapeHtml(confianca)}</span></div>
@@ -315,10 +314,9 @@ function renderQuestionAlerts(question) {
 
 function renderImportPreview() {
   if (!state.importedQuestions.length) {
-    elements.listaImportada.innerHTML = renderEmptyState("Cole um JSON, solte um arquivo .json ou cole o texto bruto para preparar o prompt da IA externa.");
+    elements.listaImportada.innerHTML = renderEmptyState("Cole o texto bruto da prova e clique em \"Organizar questoes\" para montar a previa.");
     updateMetrics();
     updateParseInfo();
-    updatePromptPanel();
     return;
   }
 
@@ -331,7 +329,7 @@ function renderImportPreview() {
             <span class="tag tag-primary">${escapeHtml(getDisciplineLabel(question.disciplina, question.disciplinaOriginal || ""))}</span>
             <span class="tag tag-neutral">${escapeHtml(getYearLabel(question.anoEscolar, question.anoOriginal || ""))}</span>
             <span class="tag ${question.tipo === "resposta_escrita" ? "tag-warning" : "tag-success"}">${escapeHtml(question.tipo)}</span>
-            <span class="tag tag-neutral">${escapeHtml(state.sourceLabel || "IA externa")}</span>
+            <span class="tag tag-neutral">${escapeHtml(state.sourceLabel || "texto bruto")}</span>
           </div>
         </div>
         <div class="review-card-actions">
@@ -414,8 +412,8 @@ function renderImportPreview() {
           <input type="text" data-field="conteudo" value="${escapeHtml(question.conteudo || "")}" placeholder="Conteudo">
         </div>
         <div class="review-control-field">
-          <label>Tipo importado</label>
-          <input type="text" value="${escapeHtml(question.tipoQuestaoImportado || "")}" disabled>
+          <label>Categoria</label>
+          <input type="text" data-field="categoria_bncc" value="${escapeHtml(question.categoria_bncc || "")}" placeholder="Categoria">
         </div>
       </div>
     </article>
@@ -424,7 +422,6 @@ function renderImportPreview() {
   bindQuestionReviewEvents();
   updateMetrics();
   updateParseInfo();
-  updatePromptPanel();
 }
 
 function syncQuestionFromCard(index) {
@@ -440,6 +437,7 @@ function syncQuestionFromCard(index) {
   question.bncc_sugerido = card.querySelector("[data-field=\"bncc_sugerido\"]").value.trim();
   question.habilidade_bncc = card.querySelector("[data-field=\"habilidade_bncc\"]").value.trim();
   question.conteudo = card.querySelector("[data-field=\"conteudo\"]").value.trim();
+  question.categoria_bncc = card.querySelector("[data-field=\"categoria_bncc\"]").value.trim();
   question.descritorDescricao = getDescritores(question.disciplina, question.anoEscolar)
     .find(item => item.codigo === question.descritor)?.nome || "";
   question.textoApoio = card.querySelector("[data-field=\"textoApoio\"]")?.value.trim() || "";
@@ -450,10 +448,20 @@ function syncQuestionFromCard(index) {
   question.professor_id = question.confirmadoParaSalvar ? usuario.uid : question.professor_id;
 
   if (question.descritorSugestaoIA && typeof question.descritorSugestaoIA === "object") {
+    question.descritorSugestaoIA.descritor = question.descritor;
     question.descritorSugestaoIA.codigo_bncc = question.bncc_sugerido;
     question.descritorSugestaoIA.habilidade = question.habilidade_bncc;
     question.descritorSugestaoIA.habilidade_bncc = question.habilidade_bncc;
     question.descritorSugestaoIA.conteudo = question.conteudo;
+    question.descritorSugestaoIA.categoria = question.categoria_bncc;
+  }
+
+  if (question.classificacaoSugestao && typeof question.classificacaoSugestao === "object") {
+    question.classificacaoSugestao.descritorSugerido = question.descritor;
+    question.classificacaoSugestao.bnccSugerida = question.bncc_sugerido;
+    question.classificacaoSugestao.habilidadeBncc = question.habilidade_bncc;
+    question.classificacaoSugestao.conteudoSugerido = question.conteudo;
+    question.classificacaoSugestao.categoriaSugerida = question.categoria_bncc;
   }
 
   if (question.tipo === "resposta_escrita") {
@@ -533,8 +541,7 @@ function bindQuestionReviewEvents() {
   elements.listaImportada.querySelectorAll("[data-toggle-support-images]").forEach(button => {
     button.addEventListener("click", () => {
       const index = Number(button.dataset.toggleSupportImages);
-      const question = state.importedQuestions[index];
-      question.usarImagensApoio = !question.usarImagensApoio;
+      state.importedQuestions[index].usarImagensApoio = !state.importedQuestions[index].usarImagensApoio;
       renderImportPreview();
     });
   });
@@ -542,8 +549,7 @@ function bindQuestionReviewEvents() {
   elements.listaImportada.querySelectorAll("[data-toggle-support-text]").forEach(button => {
     button.addEventListener("click", () => {
       const index = Number(button.dataset.toggleSupportText);
-      const question = state.importedQuestions[index];
-      question.usarTextoApoio = !question.usarTextoApoio;
+      state.importedQuestions[index].usarTextoApoio = !state.importedQuestions[index].usarTextoApoio;
       renderImportPreview();
     });
   });
@@ -648,39 +654,8 @@ function applySuggestedContext(questoes, meta = {}) {
   }
 
   if (!elements.titulo.value.trim()) {
-    elements.titulo.value = meta.tituloBloco || state.lastLoadedFileName.replace(/\.json$/i, "") || "Importacao com IA externa";
+    elements.titulo.value = meta.tituloDetectado || "Importacao de questoes";
   }
-}
-
-function escapeRawLineBreaksInsideJsonStrings(text) {
-  let inString = false;
-  let escaped = false;
-  let output = "";
-
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-
-    if (char === "\"" && !escaped) {
-      inString = !inString;
-      output += char;
-      escaped = false;
-      continue;
-    }
-
-    if (inString && (char === "\n" || char === "\r")) {
-      output += "\\n";
-      escaped = false;
-      continue;
-    }
-
-    output += char;
-    escaped = char === "\\" && !escaped;
-    if (char !== "\\") {
-      escaped = false;
-    }
-  }
-
-  return output;
 }
 
 function resetImportedQuestions() {
@@ -688,91 +663,41 @@ function resetImportedQuestions() {
   state.parseInfo = { tituloDetectado: "", textoBaseDetectado: "" };
 }
 
-function aplicarResultadoJson(resultado, sourceLabel) {
-  const questoes = renderizarPreviewQuestoes(resultado);
-  state.importedQuestions = questoes;
-  state.detectedInputKind = "json";
-  state.sourceLabel = sourceLabel;
-  state.parseInfo = {
-    tituloDetectado: resultado.meta?.tituloBloco || (sourceLabel === "arquivo .json" ? state.lastLoadedFileName : "IA externa"),
-    textoBaseDetectado: resultado.meta?.textoBase || "JSON validado e pronto para revisao"
-  };
-
-  applySuggestedContext(questoes, resultado.meta || {});
-  updateDetectionStatus(`${questoes.length} questao(oes) detectada(s) automaticamente via ${sourceLabel}.`, "success");
-    showFeedback(elements.feedback, "success", `${questoes.length} questao(oes) pronta(s) para revisao. Edite o que quiser e clique apenas em "Salvar questões" no final.`);
-  renderImportPreview();
-}
-
-function handleRawTextDetected() {
-  resetImportedQuestions();
-  state.detectedInputKind = "texto_bruto";
-  state.sourceLabel = "";
-  state.parseInfo = {
-    tituloDetectado: elements.titulo.value.trim(),
-    textoBaseDetectado: ""
-  };
-  clearFeedback(elements.feedback);
-  updateDetectionStatus("Texto bruto detectado. Clique em \"Copiar prompt para IA\" e depois cole a resposta da IA aqui no mesmo campo.", "warning");
-  renderImportPreview();
-}
-
-function processarEntradaImportacao(sourceLabel = "colagem") {
+function processarTextoBrutoImportado() {
   const valor = elements.textoBruto.value.trim();
 
   if (!valor) {
     resetImportedQuestions();
-    state.detectedInputKind = "";
     state.sourceLabel = "";
     clearFeedback(elements.feedback);
-    updateDetectionStatus("Cole qualquer conteudo ou solte um arquivo .json para iniciar.", "neutral");
+    updateDetectionStatus("Cole o texto bruto e clique em \"Organizar questoes\".", "neutral");
     renderImportPreview();
     return;
   }
 
-  const comecaComoJson = comecaComoJsonImportado(valor);
-  if (comecaComoJson) {
-    try {
-      const resultado = validarJSONImportado(escapeRawLineBreaksInsideJsonStrings(valor));
-      aplicarResultadoJson(resultado, sourceLabel);
-      return;
-    } catch (error) {
-      resetImportedQuestions();
-      state.detectedInputKind = "json_invalido";
-      state.sourceLabel = sourceLabel;
-      showFeedback(elements.feedback, "error", error.message || "Nao foi possivel interpretar o JSON.");
-      updateDetectionStatus("O conteudo parece JSON, mas ainda ha um problema na estrutura. Veja o erro abaixo.", "error");
-      renderImportPreview();
-      return;
-    }
+  const resultado = organizarQuestoesParaRevisao(valor, getImportContext());
+  const questoes = resultado.questions || [];
+
+  if (!questoes.length) {
+    resetImportedQuestions();
+    state.sourceLabel = "";
+    updateDetectionStatus("Nenhuma questao foi identificada. Revise o texto bruto e tente novamente.", "warning");
+    showFeedback(elements.feedback, "error", "Nao foi possivel separar questoes automaticamente com esse texto.");
+    renderImportPreview();
+    return;
   }
 
-  handleRawTextDetected();
-}
+  state.importedQuestions = questoes;
+  state.sourceLabel = "texto bruto";
+  state.parseInfo = {
+    tituloDetectado: resultado.tituloDetectado || elements.titulo.value.trim(),
+    textoBaseDetectado: resultado.textoBaseDetectado || ""
+  };
 
-function agendarDeteccaoAutomatica(sourceLabel = "colagem") {
-  if (state.autoDetectTimer) {
-    clearTimeout(state.autoDetectTimer);
-  }
-
-  state.autoDetectTimer = setTimeout(() => {
-    processarEntradaImportacao(sourceLabel);
-  }, 500);
-}
-
-async function handleCopiarPrompt() {
-  clearFeedback(elements.feedback);
-
-  try {
-    const message = await copiarPromptIA(elements.textoBruto.value);
-    const iaWindow = window.open("https://chat.openai.com", "_blank", "noopener");
-    const avisoJanela = iaWindow
-      ? ""
-      : ' Se a aba da IA nao abriu automaticamente, use este link: <a href="https://chat.openai.com" target="_blank" rel="noopener">abrir IA</a>.';
-    showFeedback(elements.feedback, "success", `${message}${avisoJanela}`);
-  } catch (error) {
-    showFeedback(elements.feedback, "error", error.message || "Nao foi possivel copiar o prompt.");
-  }
+  applySuggestedContext(questoes, resultado);
+  updateDetectionStatus(`${questoes.length} questao(oes) organizada(s) automaticamente a partir do texto bruto.`, "success");
+  showFeedback(elements.feedback, "success", `${questoes.length} questao(oes) pronta(s) para revisao. Ajuste o que precisar e salve no final.`);
+  renderImportPreview();
 }
 
 function validateImportedQuestions() {
@@ -799,123 +724,71 @@ function validateImportedQuestions() {
       throw new Error(`Confirme o descritor da questao ${index + 1} antes de salvar.`);
     }
 
-    if (question.tipo === "resposta_escrita" && !question.respostaEsperada.trim()) {
-      throw new Error(`Informe a resposta correta da questao ${index + 1}.`);
+    if (question.tipo === "resposta_escrita") {
+      if (!question.respostaEsperada.trim()) {
+        throw new Error(`Informe a resposta correta da questao ${index + 1}.`);
+      }
+      return;
     }
 
-    if (question.tipo !== "resposta_escrita") {
-      if ((question.alternativas || []).length < 2) {
-        throw new Error(`A questao ${index + 1} precisa de pelo menos 2 alternativas.`);
-      }
+    if ((question.alternativas || []).length < 2) {
+      throw new Error(`A questao ${index + 1} precisa de pelo menos 2 alternativas.`);
+    }
 
-      if (question.respostaCorreta === "") {
-        throw new Error(`Defina a alternativa correta da questao ${index + 1}.`);
-      }
+    if (question.respostaCorreta === "") {
+      throw new Error(`Defina a alternativa correta da questao ${index + 1}.`);
     }
   });
 }
 
 async function handleSalvarImportacao() {
   clearFeedback(elements.feedback);
-  setLoading(elements.btnSalvar, true, "Salvar questões", "Salvando...");
+  setLoading(elements.btnSalvar, true, "Salvar questoes", "Salvando...");
 
   try {
     validateImportedQuestions();
     const context = getImportContext();
-    const result = await salvarQuestoesConfirmadas(context, state.importedQuestions, usuario);
+    const result = await salvarImportacaoRevisada(context, state.importedQuestions, usuario);
     showFeedback(elements.feedback, "success", `${result.totalSalvas} questao(oes) salva(s) no banco do professor.`);
     state.importedQuestions = [];
-    state.detectedInputKind = "";
     state.sourceLabel = "";
     renderImportPreview();
   } catch (error) {
     showFeedback(elements.feedback, "error", error.message || "Erro ao salvar a importacao.");
   } finally {
-    setLoading(elements.btnSalvar, false, "Salvar questões", "Salvando...");
+    setLoading(elements.btnSalvar, false, "Salvar questoes", "Salvando...");
   }
 }
 
 function handleLimparImportacao() {
   elements.formImportacao.reset();
   resetImportedQuestions();
-  state.detectedInputKind = "";
   state.sourceLabel = "";
-  state.lastLoadedFileName = "";
   clearFeedback(elements.feedback);
-  updateDetectionStatus("Cole qualquer conteudo ou solte um arquivo .json para iniciar.", "neutral");
+  updateDetectionStatus("Cole o texto bruto e clique em \"Organizar questoes\".", "neutral");
   renderImportPreview();
-}
-
-function readFileAsText(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("Nao foi possivel ler o arquivo enviado."));
-    reader.readAsText(file, "utf-8");
-  });
-}
-
-async function handleJsonFile(file) {
-  if (!file) return;
-
-  if (!/\.json$/i.test(file.name)) {
-    showFeedback(elements.feedback, "error", "Envie apenas arquivos com extensao .json.");
-    return;
-  }
-
-  try {
-    const content = await readFileAsText(file);
-    state.lastLoadedFileName = file.name;
-    elements.textoBruto.value = content;
-    if (!elements.titulo.value.trim()) {
-      elements.titulo.value = file.name.replace(/\.json$/i, "");
-    }
-    processarEntradaImportacao("arquivo .json");
-  } catch (error) {
-    showFeedback(elements.feedback, "error", error.message || "Erro ao ler arquivo .json.");
-  } finally {
-    elements.arquivoInput.value = "";
-  }
-}
-
-function bindDropzoneEvents() {
-  if (!elements.areaArquivo) return;
-
-  ["dragenter", "dragover"].forEach(eventName => {
-    elements.areaArquivo.addEventListener(eventName, event => {
-      event.preventDefault();
-      elements.areaArquivo.classList.add("is-dragover");
-    });
-  });
-
-  ["dragleave", "drop"].forEach(eventName => {
-    elements.areaArquivo.addEventListener(eventName, event => {
-      event.preventDefault();
-      if (eventName === "drop") {
-        const file = event.dataTransfer?.files?.[0];
-        handleJsonFile(file);
-      }
-      elements.areaArquivo.classList.remove("is-dragover");
-    });
-  });
 }
 
 function bindEvents() {
   populateSelect(elements.anoEscolar, ANOS_ESCOLARES, "Selecione");
   populateSelect(elements.disciplina, DISCIPLINAS, "Selecione");
 
-  elements.textoBruto.addEventListener("input", () => agendarDeteccaoAutomatica("colagem"));
-  elements.textoBruto.addEventListener("paste", () => setTimeout(() => agendarDeteccaoAutomatica("colagem"), 50));
-  elements.btnCopiarPromptIA.addEventListener("click", handleCopiarPrompt);
+  elements.textoBruto.addEventListener("input", () => {
+    if (!elements.textoBruto.value.trim()) {
+      updateDetectionStatus("Cole o texto bruto e clique em \"Organizar questoes\".", "neutral");
+      return;
+    }
+    updateDetectionStatus("Texto atualizado. Clique em \"Organizar questoes\" para processar novamente.", "warning");
+  });
+
+  elements.btnOrganizar.addEventListener("click", processarTextoBrutoImportado);
   elements.btnSalvar.addEventListener("click", handleSalvarImportacao);
   elements.btnLimpar.addEventListener("click", handleLimparImportacao);
-  elements.arquivoInput.addEventListener("change", event => handleJsonFile(event.target.files?.[0]));
-  bindDropzoneEvents();
 }
 
 function init() {
   bindEvents();
-  updateDetectionStatus("Cole qualquer conteudo ou solte um arquivo .json para iniciar.", "neutral");
+  updateDetectionStatus("Cole o texto bruto e clique em \"Organizar questoes\".", "neutral");
   renderImportPreview();
 }
 

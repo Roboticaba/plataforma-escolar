@@ -164,6 +164,7 @@ function createQuestionController(host, submitLabel, title) {
     btnConfirmarBncc: host.querySelector("[data-action='confirmar-bncc']"),
     descritorFeedback: host.querySelector("[data-field='descritorFeedback']"),
     bnccConfirmado: host.querySelector("[data-field='bnccConfirmado']"),
+    conteudo: host.querySelector("[data-field='conteudo']"),
     bnccResumo: host.querySelector("[data-field='bnccResumo']"),
     descritorConfirmado: host.querySelector("[data-field='descritorConfirmado']"),
     alternativasTextoPanel: host.querySelector("[data-panel='texto']"),
@@ -270,6 +271,10 @@ function updateBnccSummary(controller, context, fallback = null) {
     confianca_classificacao: controller.descritorSugestao?.confianca_classificacao || (controller.classificacaoConfirmada ? "alta" : "baixa"),
     justificativa: controller.descritorSugestao?.justificativa || "Classificacao selecionada manualmente."
   } : (fallback || controller.descritorSugestao);
+
+  if (selected && controller.conteudo && !controller.conteudo.value.trim()) {
+    controller.conteudo.value = selected.categoria || controller.descritorSugestao?.conteudo || "";
+  }
 
   if (!source?.codigo_bncc) {
     controller.bnccResumo.innerHTML = "Nenhuma classificacao sugerida ainda.";
@@ -421,6 +426,7 @@ function resetQuestionController(controller) {
   controller.descritorSugestao = null;
   controller.classificacaoConfirmada = false;
   if (controller.bnccConfirmado) controller.bnccConfirmado.value = "";
+  if (controller.conteudo) controller.conteudo.value = "";
   controller.editingId = "";
   controller.btnExcluir.hidden = true;
   clearFeedback(controller.feedback);
@@ -489,6 +495,9 @@ async function suggestDescritor(controller, context) {
   if (controller.bnccConfirmado) {
     controller.bnccConfirmado.value = result.codigo_bncc;
   }
+  if (controller.conteudo && !controller.conteudo.value.trim()) {
+    controller.conteudo.value = result.conteudo || result.categoria_bncc || "";
+  }
   controller.descritorConfirmado.checked = false;
   updateBnccSummary(controller, context, result);
   showFeedback(
@@ -547,6 +556,7 @@ function buildQuestionDraft(controller, context) {
     bncc_sugerido: controller.descritorSugestao?.codigo_bncc || "",
     bncc_confirmado: controller.bnccConfirmado?.value || "",
     habilidade_bncc: selectedBncc?.habilidade || controller.descritorSugestao?.habilidade_bncc || "",
+    conteudo: controller.conteudo?.value.trim() || controller.descritorSugestao?.conteudo || "",
     categoria_bncc: selectedBncc?.categoria || controller.descritorSugestao?.categoria_bncc || "",
     saeb_equivalente: selectedBncc?.saeb || controller.descritorSugestao?.saeb_equivalente || controller.descritor.value || "",
     parana_equivalente: selectedBncc?.parana || controller.descritorSugestao?.parana_equivalente || selectedBncc?.saeb || controller.descritor.value || "",
@@ -633,6 +643,7 @@ function fillQuestionController(controller, question) {
   controller.nivelDificuldade.value = question.nivelDificuldade || "";
   controller.descritor.value = question.descritor || "";
   if (controller.bnccConfirmado) controller.bnccConfirmado.value = question.bncc_confirmado || question.bncc_sugerido || question.codigoHabilidadeBncc || "";
+  if (controller.conteudo) controller.conteudo.value = question.conteudo || "";
   controller.classificacaoConfirmada = Boolean(question.classificacao_confirmada);
   controller.descritorSugestao = question.descritorSugestaoIA || (question.bncc_sugerido ? {
     codigo_bncc: question.bncc_sugerido,

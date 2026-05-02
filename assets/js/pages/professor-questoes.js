@@ -15,6 +15,7 @@ const state = {
     disciplina: "",
     descritor: "",
     tipo: "",
+    conteudo: "",
     apoio: "",
     search: ""
   }
@@ -30,6 +31,7 @@ const elements = {
   filtroDisciplina: document.getElementById("filtroDisciplina"),
   filtroDescritor: document.getElementById("filtroDescritor"),
   filtroTipoQuestao: document.getElementById("filtroTipoQuestao"),
+  filtroConteudo: document.getElementById("filtroConteudo"),
   filtroApoio: document.getElementById("filtroApoio"),
   filtroBusca: document.getElementById("filtroBusca"),
   btnNovaQuestao: document.getElementById("btnNovaQuestao"),
@@ -97,6 +99,7 @@ function groupMatchesFilters(group) {
     if (state.filters.disciplina && item.disciplina !== state.filters.disciplina) return false;
     if (state.filters.descritor && item.descritor !== state.filters.descritor) return false;
     if (state.filters.tipo && item.tipo !== state.filters.tipo) return false;
+    if (state.filters.conteudo && (item.conteudo || "") !== state.filters.conteudo) return false;
     if (state.filters.apoio) {
       const hasText = Boolean((item.textoApoio || "").trim());
       const hasImage = Boolean((item.imagensApoio || []).length);
@@ -171,6 +174,7 @@ function renderQuestionDetails(question, heading = "", options = {}) {
         ${question.descritor ? `<span class="tag tag-neutral">${escapeHtml(question.descritor)}</span>` : ""}
         ${question.conteudo ? `<span class="tag tag-neutral">${escapeHtml(question.conteudo)}</span>` : ""}
       </div>
+      ${question.conteudo ? `<p class="panel-subtitle"><strong>Conteudo:</strong> ${escapeHtml(question.conteudo)}</p>` : ""}
       ${includeContext && question.textoApoio ? `<p class="panel-subtitle" style="white-space:pre-wrap;"><strong>Texto de apoio:</strong><br>${escapeHtml(question.textoApoio)}</p>` : ""}
       ${includeContext ? renderImageList(question.imagensApoio || []) : ""}
       <div style="margin-top:14px;">
@@ -241,6 +245,7 @@ function renderQuestions() {
           <span class="tag ${isMine(question) ? "tag-success" : "tag-neutral"}">${isMine(question) ? "Sua questao" : "Compartilhada"}</span>
         </div>
         ${question.textoApoio ? `<p class="panel-subtitle"><strong>Texto de apoio:</strong> ${escapeHtml(question.textoApoio.slice(0, 160))}${question.textoApoio.length > 160 ? "..." : ""}</p>` : ""}
+        ${question.conteudo ? `<p class="panel-subtitle"><strong>Conteudo:</strong> ${escapeHtml(question.conteudo)}</p>` : ""}
         <p class="panel-subtitle">${alternativas ? `${alternativas} alternativa(s)` : "Questao escrita"} ${imagens ? `- ${imagens} imagem(ns) de apoio` : ""}</p>
         <div class="toolbar" style="margin-top:14px;">
           <button class="button-inline button-outline" type="button" data-view-question="${question.id}">Ver / Inspecionar</button>
@@ -330,6 +335,7 @@ async function loadQuestions() {
   state.questoes = await listQuestions();
   state.groups = buildGroups(state.questoes);
   updateMetrics();
+  updateFilterConteudos();
   renderQuestions();
 }
 
@@ -340,6 +346,24 @@ function updateFilterDescritores() {
     .join("");
 }
 
+function updateFilterConteudos() {
+  const conteudos = [...new Set(
+    state.questoes
+      .filter(item => (!elements.filtroDisciplina.value || item.disciplina === elements.filtroDisciplina.value))
+      .filter(item => (!elements.filtroAno.value || item.anoEscolar === elements.filtroAno.value || item.ano_escolar === elements.filtroAno.value))
+      .map(item => (item.conteudo || "").trim())
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+
+  const current = elements.filtroConteudo.value;
+  elements.filtroConteudo.innerHTML = '<option value="">Todos os conteudos</option>' + conteudos
+    .map(item => `<option value="${item}">${escapeHtml(item)}</option>`)
+    .join("");
+  if (conteudos.includes(current)) {
+    elements.filtroConteudo.value = current;
+  }
+}
+
 function handleFilters() {
   state.filters = {
     estrutura: elements.filtroEstrutura.value,
@@ -347,6 +371,7 @@ function handleFilters() {
     disciplina: elements.filtroDisciplina.value,
     descritor: elements.filtroDescritor.value,
     tipo: elements.filtroTipoQuestao.value,
+    conteudo: elements.filtroConteudo.value,
     apoio: elements.filtroApoio.value,
     search: elements.filtroBusca.value.trim()
   };
@@ -379,15 +404,18 @@ function bindEvents() {
 
   elements.filtroAno.addEventListener("change", () => {
     updateFilterDescritores();
+    updateFilterConteudos();
     handleFilters();
   });
   elements.filtroDisciplina.addEventListener("change", () => {
     updateFilterDescritores();
+    updateFilterConteudos();
     handleFilters();
   });
   elements.filtroDescritor.addEventListener("change", handleFilters);
   elements.filtroEstrutura.addEventListener("change", handleFilters);
   elements.filtroTipoQuestao.addEventListener("change", handleFilters);
+  elements.filtroConteudo.addEventListener("change", handleFilters);
   elements.filtroApoio.addEventListener("change", handleFilters);
   elements.filtroBusca.addEventListener("input", handleFilters);
 }
