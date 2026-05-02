@@ -1,15 +1,15 @@
-import { ANOS_ESCOLARES, DISCIPLINAS, disciplinaPrecisaDescritor, getDescritores } from "../core/constants.js";
-import { requireProfessor } from "../core/session.js";
-import { clearFeedback, escapeHtml, renderEmptyState, setLoading, showFeedback } from "../utils/ui.js";
-import { getAlternativeLabel } from "../services/questions-service.js";
-import { uploadImagemCloudinary, uploadMultiplasImagensCloudinary } from "../services/cloudinary-service.js";
+import { ANOS_ESCOLARES, DISCIPLINAS, disciplinaPrecisaDescritor, getDescritores } from "../core/constants.js?v=20260501fix4";
+import { requireProfessor } from "../core/session.js?v=20260501fix4";
+import { clearFeedback, escapeHtml, renderEmptyState, setLoading, showFeedback } from "../utils/ui.js?v=20260501fix4";
+import { getAlternativeLabel } from "../services/questions-service.js?v=20260501fix4";
+import { uploadImagemCloudinary, uploadMultiplasImagensCloudinary } from "../services/cloudinary-service.js?v=20260501fix4";
 import {
   comecaComoJsonImportado,
   copiarPromptIA,
   renderizarPreviewQuestoes,
   salvarQuestoesConfirmadas,
   validarJSONImportado
-} from "../services/importador-ia-externa-service.js";
+} from "../services/importador-ia-externa-service.js?v=20260501fix4";
 
 const usuario = requireProfessor();
 
@@ -652,6 +652,37 @@ function applySuggestedContext(questoes, meta = {}) {
   }
 }
 
+function escapeRawLineBreaksInsideJsonStrings(text) {
+  let inString = false;
+  let escaped = false;
+  let output = "";
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (char === "\"" && !escaped) {
+      inString = !inString;
+      output += char;
+      escaped = false;
+      continue;
+    }
+
+    if (inString && (char === "\n" || char === "\r")) {
+      output += "\\n";
+      escaped = false;
+      continue;
+    }
+
+    output += char;
+    escaped = char === "\\" && !escaped;
+    if (char !== "\\") {
+      escaped = false;
+    }
+  }
+
+  return output;
+}
+
 function resetImportedQuestions() {
   state.importedQuestions = [];
   state.parseInfo = { tituloDetectado: "", textoBaseDetectado: "" };
@@ -702,7 +733,7 @@ function processarEntradaImportacao(sourceLabel = "colagem") {
   const comecaComoJson = comecaComoJsonImportado(valor);
   if (comecaComoJson) {
     try {
-      const resultado = validarJSONImportado(valor);
+      const resultado = validarJSONImportado(escapeRawLineBreaksInsideJsonStrings(valor));
       aplicarResultadoJson(resultado, sourceLabel);
       return;
     } catch (error) {

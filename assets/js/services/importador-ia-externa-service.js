@@ -230,13 +230,15 @@ function normalizarTextoJsonImportado(texto) {
 }
 
 function normalizarJsonFlexivel(bruto) {
-  const semComentarios = bruto
+  const comQuebrasEscapadas = escapeInvalidLineBreaksInsideStrings(bruto);
+
+  const semComentarios = comQuebrasEscapadas
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .split("\n")
     .map(linha => linha.replace(/(^|[^:])\/\/.*$/g, "$1"))
     .join("\n");
 
-  return escapeInvalidLineBreaksInsideStrings(semComentarios)
+  return semComentarios
     .replace(/\bNone\b/g, "null")
     .replace(/\bTrue\b/g, "true")
     .replace(/\bFalse\b/g, "false")
@@ -722,7 +724,11 @@ export function validarJSONImportado(texto) {
     throw new Error("Cole o JSON organizado pela IA externa antes de continuar.");
   }
 
-  const tentativas = [bruto, normalizarJsonFlexivel(bruto)];
+  const tentativas = [
+    bruto,
+    escapeInvalidLineBreaksInsideStrings(bruto),
+    normalizarJsonFlexivel(bruto)
+  ];
   let dados = null;
   let ultimoErro = null;
 
