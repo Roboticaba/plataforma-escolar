@@ -4,7 +4,9 @@ import { createQuestion, limparAlternativas, listQuestions, getQuestionTypeLabel
 import { createProva, normalizeTemporaryQuestion } from "../services/provas-service.js";
 import { listTurmasByProfessor } from "../services/turmas-service.js";
 import { uploadImagemCloudinary, uploadMultiplasImagensCloudinary } from "../services/cloudinary-service.js";
-import { sugerirDescritorComIA } from "../services/descritor-ai-service.js";
+import { buildSuggestionPayload, montarProvaAutomaticamente } from "../services/montagem-prova-service.js";
+import { preClassificarQuestao } from "../services/importacao-questoes-service.js";
+import { scoreSearchMatch } from "../services/search-utils.js";
 import { clearFeedback, escapeHtml, renderEmptyState, setLoading, showFeedback } from "../utils/ui.js";
 
 const usuario = requireProfessor();
@@ -42,6 +44,17 @@ const elements = {
   resumoTotal: document.getElementById("resumoTotal"),
   btnSalvarProva: document.getElementById("btnSalvarProva"),
   feedbackProva: document.getElementById("feedbackProva"),
+  modoMontagem: document.getElementById("modoMontagem"),
+  painelMontagemAutomatica: document.getElementById("painelMontagemAutomatica"),
+  autoNumeroQuestoes: document.getElementById("autoNumeroQuestoes"),
+  autoDescritores: document.getElementById("autoDescritores"),
+  autoBncc: document.getElementById("autoBncc"),
+  autoConteudos: document.getElementById("autoConteudos"),
+  autoGenero: document.getElementById("autoGenero"),
+  autoDificuldade: document.getElementById("autoDificuldade"),
+  btnMontagemAutomatica: document.getElementById("btnMontagemAutomatica"),
+  feedbackMontagemAutomatica: document.getElementById("feedbackMontagemAutomatica"),
+  modeloProvaNome: document.getElementById("modeloProvaNome"),
   btnAbrirBanco: document.getElementById("btnAbrirBanco"),
   btnAbrirNovaQuestao: document.getElementById("btnAbrirNovaQuestao"),
   modalBanco: document.getElementById("modalBanco"),
@@ -97,6 +110,17 @@ function updateQuestionType() {
   const escrita = elements.tipoQuestao.value === "resposta_escrita";
   elements.alternativasWrapper.hidden = escrita;
   elements.respostaEsperadaWrapper.hidden = !escrita;
+}
+
+function splitCriteriaInput(value) {
+  return String(value || "")
+    .split(/[,\n;|]/)
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function updateMontagemMode() {
+  elements.painelMontagemAutomatica.hidden = elements.modoMontagem.value !== "automatico";
 }
 
 function updateQuestionDescritores() {
@@ -182,6 +206,13 @@ async function getQuestionFormPayload() {
     descritorDescricao: selectedDescritorData?.nome || "",
     descritorConfirmadoPeloProfessor: elements.questaoDescritorConfirmadoPeloProfessor.checked,
     descritorSugestaoIA: state.descritorSugestao,
+    descritorSugerido: state.descritorSugestao?.descritorSugerido || "",
+    bncc_sugerido: state.descritorSugestao?.bnccSugerida || "",
+    habilidade_bncc: state.descritorSugestao?.habilidadeBncc || "",
+    conteudo: state.descritorSugestao?.conteudoSugerido || "",
+    categoria_bncc: state.descritorSugestao?.categoriaSugerida || "",
+    justificativa_classificacao: state.descritorSugestao?.justificativa || "",
+    confianca_classificacao: state.descritorSugestao?.confianca || "baixa",
     textoApoio: form.get("textoApoio"),
     imagensApoio,
     respostaEsperada: form.get("respostaEsperada"),
@@ -382,8 +413,18 @@ function matchesBancoFilters(item) {
     if (state.filters.disciplina && item.disciplina !== state.filters.disciplina) return false;
     if (state.filters.descritor && item.descritor !== state.filters.descritor) return false;
     if (state.filters.search) {
-      const searchBase = [item.enunciado, item.textoApoio, item.titulo, item.blocoTitulo, item.descritor, item.descritorDescricao].join(" ").toLowerCase();
-      if (!searchBase.includes(state.filters.search.toLowerCase())) return false;
+      if (!scoreSearchMatch(state.filters.search, [
+        item.enunciado,
+        item.textoApoio,
+        item.titulo,
+        item.blocoTitulo,
+        item.descritor,
+        item.descritorDescricao,
+        item.conteudo,
+        item.disciplina,
+        item.anoEscolar || item.ano_escolar,
+        ...(item.tagsNormalizadas || [])
+      ]).matched) return false;
     }
     return true;
 }
@@ -409,7 +450,16 @@ function renderBancoModal() {
   elements.contadorBancoSelecionado.textContent = `${state.selectedQuestionIds.length} questao(oes) e ${state.selectedBlockIds.length} bloco(s) selecionado(s)`;
 
   if (!individuais.length && !blocos.length) {
-    elements.listaBancoQuestoes.innerHTML = renderEmptyState("Nenhuma questao ou bloco encontrado no Banco de Questoes.");
+    const suggestions = buildSuggestionPayload(state.bancoQuestoes, state.filters.search);
+    elements.listaBancoQuestoes.innerHTML = `
+      ${renderEmptyState("Nenhuma questao ou bloco encontrado no Banco de Questoes.")}
+      ${state.filters.search && suggestions.terms.length ? `
+        <div class="question-card">
+          <strong>${escapeHtml(suggestions.message)}</strong>
+          <p class="panel-subtitle">${escapeHtml(suggestions.terms.join(" | "))}</p>
+        </div>
+      ` : ""}
+    `;
     return;
   }
 
@@ -487,25 +537,92 @@ async function handleSuggestDescritor() {
     anoEscolar: elements.questaoAnoEscolar.value,
     textoApoio: elements.questaoTextoApoio.value,
     enunciado: elements.questaoEnunciado.value,
-    alternativas: limparAlternativas(elements.alternativasTexto.value),
+    alternativas: limparAlternativas(elements.alternativasTexto.value).map(texto => ({ texto })),
     respostaEsperada: elements.questaoRespostaEsperada.value
   };
 
-  const result = await sugerirDescritorComIA(payload);
+  const result = preClassificarQuestao(payload);
   state.descritorSugestao = result;
 
-  if (!result || !result.descritor) {
+  if (!result || !result.descritorSugerido) {
     showFeedback(elements.questaoDescritorSuggestionFeedback, "error", "Nao foi possivel sugerir um descritor. Escolha manualmente.");
     return;
   }
 
-  elements.questaoDescritor.value = result.descritor;
+  elements.questaoDescritor.value = result.descritorSugerido;
   elements.questaoDescritorConfirmadoPeloProfessor.checked = false;
   showFeedback(
     elements.questaoDescritorSuggestionFeedback,
     "success",
-    `Descritor sugerido: ${result.descritor} - ${result.descricao} (confianca ${Math.round((result.confianca || 0) * 100)}%). ${result.justificativa || ""}`
+    `Descritor sugerido: ${result.descritorSugerido} - ${result.descritorDescricao || ""} (${result.confianca || "baixa"}). ${result.justificativa || ""}`
   );
+}
+
+function applyAutomaticSelection(result) {
+  const selectedIds = result.selected
+    .filter(question => question.id && !question.blocoId)
+    .map(question => question.id);
+  const selectedBlocks = result.selected
+    .filter(question => question.blocoId)
+    .map(question => question.blocoId);
+
+  state.selectedQuestionIds = [...new Set([...state.selectedQuestionIds, ...selectedIds])];
+  state.selectedBlockIds = [...new Set([...state.selectedBlockIds, ...selectedBlocks])];
+
+  result.selected.forEach(question => {
+    if (question.id && !question.blocoId) {
+      appendSelectedItem("questao", question.id);
+    }
+    if (question.blocoId) {
+      appendSelectedItem("bloco", question.blocoId);
+    }
+  });
+}
+
+async function handleMontagemAutomatica() {
+  clearFeedback(elements.feedbackMontagemAutomatica);
+  const criteria = {
+    disciplina: elements.disciplina.value,
+    anoEscolar: elements.anoEscolar.value,
+    numeroQuestoes: Number(elements.autoNumeroQuestoes.value || 0),
+    descritores: splitCriteriaInput(elements.autoDescritores.value),
+    habilidadesBncc: splitCriteriaInput(elements.autoBncc.value),
+    conteudos: splitCriteriaInput(elements.autoConteudos.value),
+    generoTextual: elements.autoGenero.value.trim(),
+    dificuldade: elements.autoDificuldade.value
+  };
+
+  if (!criteria.disciplina || !criteria.anoEscolar || !criteria.numeroQuestoes) {
+    showFeedback(elements.feedbackMontagemAutomatica, "error", "Informe disciplina, ano e numero de questoes antes de gerar automaticamente.");
+    return;
+  }
+
+  const result = montarProvaAutomaticamente(state.bancoQuestoes, criteria);
+  if (!result.selected.length) {
+    const suggestions = buildSuggestionPayload(state.bancoQuestoes, [
+      ...criteria.descritores,
+      ...criteria.conteudos,
+      criteria.generoTextual
+    ].filter(Boolean).join(" "));
+    showFeedback(
+      elements.feedbackMontagemAutomatica,
+      "error",
+      suggestions.terms.length
+        ? `Nao encontramos questoes suficientes. ${suggestions.message} ${suggestions.terms.join(", ")}`
+        : "Nao encontramos questoes com esses criterios."
+    );
+    return;
+  }
+
+  applyAutomaticSelection(result);
+  await refreshSelectedQuestionDetails();
+
+  if (result.faltantes > 0) {
+    showFeedback(elements.feedbackMontagemAutomatica, "success", `${result.aviso} Ja deixamos ${result.encontrados} questoes selecionadas.`);
+    return;
+  }
+
+  showFeedback(elements.feedbackMontagemAutomatica, "success", `${result.encontrados} questoes selecionadas automaticamente para a prova.`);
 }
 
 async function handleCreateQuestion(event) {
@@ -568,6 +685,20 @@ async function handleSaveProva(event) {
       disciplina: form.get("disciplina"),
       tempoMinutos: form.get("tempoMinutos"),
       valorTotal: form.get("valorTotal"),
+      modoMontagem: form.get("modoMontagem"),
+      modeloProvaNome: elements.modeloProvaNome.value.trim(),
+      criteriosMontagem: form.get("modoMontagem") === "automatico" ? {
+        numeroQuestoes: Number(elements.autoNumeroQuestoes.value || 0),
+        descritores: splitCriteriaInput(elements.autoDescritores.value),
+        habilidadesBncc: splitCriteriaInput(elements.autoBncc.value),
+        conteudos: splitCriteriaInput(elements.autoConteudos.value),
+        generoTextual: elements.autoGenero.value.trim(),
+        dificuldade: elements.autoDificuldade.value
+      } : null,
+      descritores: splitCriteriaInput(elements.autoDescritores.value),
+      habilidadesBncc: splitCriteriaInput(elements.autoBncc.value),
+      conteudos: splitCriteriaInput(elements.autoConteudos.value),
+      palavrasChave: splitCriteriaInput(elements.autoConteudos.value).concat(splitCriteriaInput(elements.autoGenero.value)),
       questoesBancoIds: state.selectedQuestionIds,
       blocosIds: state.selectedBlockIds,
       blocosResumo: state.selectedBlockDetails.map(block => ({
@@ -609,6 +740,8 @@ function bindEvents() {
 
   elements.btnAbrirBanco.addEventListener("click", () => openModal(elements.modalBanco));
   elements.btnAbrirNovaQuestao.addEventListener("click", () => openModal(elements.modalQuestao));
+  elements.modoMontagem.addEventListener("change", updateMontagemMode);
+  elements.btnMontagemAutomatica.addEventListener("click", handleMontagemAutomatica);
 
   document.querySelectorAll("[data-close-modal='banco']").forEach(button => {
     button.addEventListener("click", () => closeModal(elements.modalBanco));
@@ -712,6 +845,7 @@ async function init() {
   buildAlternativasFromForm();
   updateQuestionType();
   updateQuestionDescritores();
+  updateMontagemMode();
   renderSelectionSummary();
   await Promise.all([loadBancoQuestoes(), loadTurmas()]);
 }

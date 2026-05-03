@@ -1,6 +1,7 @@
 import { getAnoLabel, getDisciplinaLabel } from "../core/constants.js";
 import { requireProfessor } from "../core/session.js";
 import { getAlternativeLabel, getQuestionTypeLabel, listQuestions } from "../services/questions-service.js";
+import { buildSuggestionPayload } from "../services/montagem-prova-service.js";
 import { escapeHtml, renderEmptyState } from "../utils/ui.js";
 
 const usuario = requireProfessor();
@@ -168,7 +169,16 @@ function renderQuestions() {
   const filtered = state.groups.filter(groupMatchesFilters);
 
   if (!filtered.length) {
-    elements.listaQuestoes.innerHTML = renderEmptyState("Nenhuma questao ou bloco encontrado com os filtros atuais.");
+    const suggestions = buildSuggestionPayload(state.questoes, state.filters.search);
+    elements.listaQuestoes.innerHTML = `
+      ${renderEmptyState("Nenhuma questao ou bloco encontrado com os filtros atuais.")}
+      ${state.filters.search && suggestions.terms.length ? `
+        <div class="question-card">
+          <strong>${escapeHtml(suggestions.message)}</strong>
+          <p class="panel-subtitle">${escapeHtml(suggestions.terms.join(" | "))}</p>
+        </div>
+      ` : ""}
+    `;
     return;
   }
 
@@ -322,10 +332,10 @@ function handleFilters() {
 
 function bindEvents() {
   elements.btnNovaQuestao.addEventListener("click", () => {
-    window.location.href = "criar-questao.html?mode=individual";
+    window.location.href = "professor-importar-questoes.html?modo=individual";
   });
   elements.btnNovoBloco.addEventListener("click", () => {
-    window.location.href = "criar-questao.html?mode=bloco";
+    window.location.href = "professor-importar-questoes.html?modo=bloco";
   });
 
   document.querySelectorAll("[data-close-inspecao]").forEach(button => {

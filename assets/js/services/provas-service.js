@@ -6,6 +6,7 @@ import {
   getQuestionsByIds,
   normalizeLegacyQuestion
 } from "./questions-service.js";
+import { buildNormalizedTags, scoreSearchMatch } from "./search-utils.js";
 
 function getCurrentUid(usuario) {
   return auth.currentUser?.uid || usuario?.uid || "";
@@ -112,6 +113,18 @@ export function buildProvaRecord(payload, usuario) {
     questoesTemporarias,
     itensProva: itensProva.length ? itensProva : fallbackItensProva,
     totalQuestoes,
+    modoMontagem: payload.modoMontagem || "manual",
+    criteriosMontagem: payload.criteriosMontagem || null,
+    modeloProvaNome: payload.modeloProvaNome || "",
+    tagsNormalizadas: buildNormalizedTags([
+      payload.titulo,
+      payload.disciplina,
+      payload.anoEscolar,
+      ...(payload.descritores || []),
+      ...(payload.habilidadesBncc || []),
+      ...(payload.conteudos || []),
+      ...(payload.palavrasChave || [])
+    ]),
     criadoPor: uid,
     autorId: uid,
     criadoEm: new Date(),
@@ -122,6 +135,21 @@ export function buildProvaRecord(payload, usuario) {
 export async function createProva(payload, usuario) {
   const record = buildProvaRecord(payload, usuario);
   const docRef = await db.collection("provas").add(record);
+  const usedAt = new Date();
+
+  const questionIds = [...new Set(record.questoesBancoIds || [])];
+  for (const questionId of questionIds) {
+    const ref = db.collection("questoes").doc(questionId);
+    await db.runTransaction(async transaction => {
+      const snapshot = await transaction.get(ref);
+      if (!snapshot.exists) return;
+      const data = snapshot.data() || {};
+      transaction.update(ref, {
+        vezesUsada: Number(data.vezesUsada || 0) + 1,
+        ultimaUtilizacao: usedAt
+      });
+    });
+  }
   return {
     id: docRef.id,
     ...record
@@ -135,7 +163,41 @@ export async function listProvasByProfessor(uid) {
     .orderBy("criadoEm", "desc")
     .get();
 
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  return snapshot.docs.map(doc => {
+    const data = doc.data() || {};
+    return {
+      id: doc.id,
+      ...data,
+      tagsNormalizadas: Array.isArray(data.tagsNormalizadas)
+        ? data.tagsNormalizadas
+        : buildNormalizedTags([
+            data.titulo,
+            data.nome,
+            data.disciplina,
+            data.anoEscolar || data.ano,
+            ...(data.blocosResumo || []).map(item => item.titulo),
+            ...(data.descritores || []),
+            ...(data.habilidadesBncc || []),
+            ...(data.conteudos || [])
+          ])
+    };
+  });
+}
+
+export function filterProvasBySearch(provas = [], search = "") {
+  if (!search) return provas;
+
+  return provas.filter(prova => scoreSearchMatch(search, [
+    prova.titulo,
+    prova.nome,
+    prova.disciplina,
+    prova.anoEscolar || prova.ano,
+    ...(prova.tagsNormalizadas || []),
+    ...(prova.blocosResumo || []).map(item => item.titulo),
+    ...(prova.descritores || []),
+    ...(prova.habilidadesBncc || []),
+    ...(prova.conteudos || [])
+  ]).matched);
 }
 
 export async function deleteProva(id) {

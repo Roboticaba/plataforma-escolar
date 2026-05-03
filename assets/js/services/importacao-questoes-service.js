@@ -7,9 +7,11 @@ const QUESTION_ONLY_LABEL_REGEX = /^\s*questao\s*(\d{1,3})\s*$/i;
 const NUMBER_ONLY_QUESTION_REGEX = /^\s*(\d{1,3})\s*$/;
 const NUMBER_MARKER_ONLY_REGEX = /^\s*(\d{1,3})\s*[)\.:\-]+\s*$/;
 const PAGE_NUMBER_ONLY_REGEX = /^\s*\d{1,2}\s*$/;
-const ALT_LINE_REGEX = /^\s*(?:\(?\s*([A-Ea-e])\s*\)?|(\d{1,2}))\s*[)\.:\-]\s*(.+)?$/;
-const ALT_ONLY_LABEL_REGEX = /^\s*\(?\s*([A-Ea-e])\s*\)?\s*$/;
+const ALT_LINE_REGEX = /^\s*(?:\(?\s*([A-Ea-e])\s*\)?|(\d{1,2})|([*-]))\s*[)\.:\-]?\s*(.+)?$/;
+const ALT_ONLY_LABEL_REGEX = /^\s*(?:\(?\s*([A-Ea-e])\s*\)?|[*-])\s*$/;
 const GABARITO_HEADER_REGEX = /^\s*gabarito\b/i;
+const GABARITO_SECTION_HEADER_REGEX = /^\s*gabarito\s*(?:[:\-])?\s*$/i;
+const INLINE_GABARITO_REGEX = /^\s*gabarito\s*[:\-]\s*([A-Ea-e]|\d{1,2})\s*$/i;
 const RESPOSTA_HEADER_REGEX = /^\s*respostas?\s*(?:[:\-])?\s*$/i;
 const PAGE_NOISE_REGEX = /^\s*(saeb|prova brasil|pagina\s+\d+|p[aÃ¡]gina\s+\d+|inep|ministerio da educacao|mec)\b/i;
 const REFERENCE_NOISE_REGEX = /(disponivel em:|https?:\/\/|www\.|\.com\b|\.htm\b|fromview=|uuid=|query=|position=)/i;
@@ -193,7 +195,7 @@ function splitSections(rawText) {
   let inAnswers = false;
 
   lines.forEach(line => {
-    if (GABARITO_HEADER_REGEX.test(line) || RESPOSTA_HEADER_REGEX.test(line)) {
+    if (GABARITO_SECTION_HEADER_REGEX.test(line) || RESPOSTA_HEADER_REGEX.test(line)) {
       inAnswers = true;
       answerLines.push(line);
       return;
@@ -234,6 +236,7 @@ function createQuestionDraft(order, context, data = {}) {
     classificacaoSugestao: null,
     formatoAlternativas: "(A)",
     nivelDificuldade: "",
+    generoTextual: "",
     blocoTitulo: context.titulo || "",
     blocoId: "",
     ordemBloco: order - 1,
@@ -340,7 +343,7 @@ function finalizeDraft(current, answerMap) {
   let tipo = "resposta_escrita";
   let alternativas = [];
   let respostaCorreta = "";
-  const answerToken = answerMap.get(current.numeroOriginal) || "";
+  const answerToken = current.gabaritoOriginal || answerMap.get(current.numeroOriginal) || "";
 
   if (alternativasTexto.length >= 2) {
     tipo = "multipla_texto";
@@ -424,6 +427,69 @@ function buildSupportText(lines = []) {
     .map(line => normalizeLooseText(line))
     .filter(Boolean)
     .join("\n");
+}
+
+function buildSingleQuestionFallback(lines, baseContext, answerMap) {
+  const filteredLines = (lines || [])
+    .map(line => normalizeLooseText(line))
+    .filter(line => line && !isIgnorableLine(line) && !PAGE_NUMBER_ONLY_REGEX.test(line));
+
+  if (!filteredLines.length) return null;
+
+  const firstAlternativeIndex = filteredLines.findIndex(line => ALT_LINE_REGEX.test(line) || ALT_ONLY_LABEL_REGEX.test(line));
+  const stemLines = firstAlternativeIndex === -1 ? filteredLines : filteredLines.slice(0, firstAlternativeIndex);
+  const alternativeLines = firstAlternativeIndex === -1 ? [] : filteredLines.slice(firstAlternativeIndex);
+
+  const supportLines = isSupportBlockStart(stemLines[0]) && stemLines.length > 1
+    ? stemLines.slice(0, -1)
+    : [];
+  const enunciadoLines = supportLines.length
+    ? stemLines.slice(-1)
+    : stemLines;
+
+  const effectiveContext = resolveQuestionContext(baseContext, supportLines.length ? buildSupportText(supportLines) : baseContext.textoBase || "");
+  const draft = startQuestionDraft(effectiveContext, 1, buildSupportText(enunciadoLines).replace(/\n+/g, " ").trim());
+  draft.textoApoio = supportLines.length ? buildSupportText(supportLines) : draft.textoApoio;
+
+  let pendingAlternativeLabel = "";
+  for (const line of alternativeLines) {
+    const inlineGabaritoMatch = line.match(INLINE_GABARITO_REGEX);
+    if (inlineGabaritoMatch) {
+      draft.gabaritoOriginal = normalizeAnswerToken(inlineGabaritoMatch[1]);
+      continue;
+    }
+
+    if (pendingAlternativeLabel) {
+      draft.alternativasRaw.push(line);
+      pendingAlternativeLabel = "";
+      continue;
+    }
+
+    const altMatch = line.match(ALT_LINE_REGEX);
+    if (altMatch) {
+      const alternativaTexto = normalizeLooseText(altMatch[4] || "");
+      if (alternativaTexto) {
+        draft.alternativasRaw.push(alternativaTexto);
+      } else {
+        pendingAlternativeLabel = altMatch[1] || altMatch[2] || altMatch[3] || "";
+      }
+      continue;
+    }
+
+    const altOnlyMatch = line.match(ALT_ONLY_LABEL_REGEX);
+    if (altOnlyMatch) {
+      pendingAlternativeLabel = altOnlyMatch[1] || "";
+      continue;
+    }
+
+    if (draft.alternativasRaw.length > 0) {
+      appendToAlternative(draft, line);
+    } else {
+      appendToQuestionStatement(draft, line);
+    }
+  }
+
+  return finalizeDraft(draft, answerMap);
 }
 
 function normalizeConfidenceLabel(score) {
@@ -633,11 +699,11 @@ export function parseQuestoesImportadas(rawText, context) {
 
     const altMatch = normalizedLine.match(ALT_LINE_REGEX);
     if (altMatch) {
-      const alternativaTexto = normalizeLooseText(altMatch[3] || "");
+      const alternativaTexto = normalizeLooseText(altMatch[4] || "");
       if (alternativaTexto) {
         current.alternativasRaw.push(alternativaTexto);
       } else {
-        pendingAlternativeLabel = altMatch[1] || altMatch[2] || "";
+        pendingAlternativeLabel = altMatch[1] || altMatch[2] || altMatch[3] || "";
       }
       continue;
     }
@@ -645,6 +711,12 @@ export function parseQuestoesImportadas(rawText, context) {
     const altOnlyMatch = normalizedLine.match(ALT_ONLY_LABEL_REGEX);
     if (altOnlyMatch) {
       pendingAlternativeLabel = altOnlyMatch[1] || "";
+      continue;
+    }
+
+    const inlineGabaritoMatch = normalizedLine.match(INLINE_GABARITO_REGEX);
+    if (inlineGabaritoMatch) {
+      current.gabaritoOriginal = normalizeAnswerToken(inlineGabaritoMatch[1]);
       continue;
     }
 
@@ -657,6 +729,13 @@ export function parseQuestoesImportadas(rawText, context) {
 
   const finalized = finalizeDraft(current, answerMap);
   if (finalized) results.push(finalized);
+
+  if (!results.length) {
+    const fallbackQuestion = buildSingleQuestionFallback(workingLines, baseContext, answerMap);
+    if (fallbackQuestion) {
+      results.push(fallbackQuestion);
+    }
+  }
 
   const normalizedQuestions = applySharedBlockMetadata(results, baseContext)
     .map(question => applyPreClassification(question));

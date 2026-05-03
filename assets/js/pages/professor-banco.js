@@ -1,6 +1,7 @@
 import { ANOS_ESCOLARES, DISCIPLINAS, getAnoLabel, getDisciplinaLabel } from "../core/constants.js";
 import { requireProfessor } from "../core/session.js";
-import { deleteProva, listProvasByProfessor } from "../services/provas-service.js";
+import { buildSuggestionPayload } from "../services/montagem-prova-service.js";
+import { deleteProva, filterProvasBySearch, listProvasByProfessor } from "../services/provas-service.js";
 import { escapeHtml, renderEmptyState } from "../utils/ui.js";
 
 const usuario = requireProfessor();
@@ -51,26 +52,36 @@ function updateMetrics() {
 function renderProvas() {
   const ano = elements.filtroAno.value;
   const disciplina = elements.filtroDisciplina.value;
-  const busca = elements.filtroBusca.value.trim().toLowerCase();
-  const filtered = state.provas.filter(prova => {
+  const busca = elements.filtroBusca.value.trim();
+  let filtered = state.provas.filter(prova => {
     if (ano && (prova.anoEscolar || prova.ano) !== ano) return false;
     if (disciplina && prova.disciplina !== disciplina) return false;
-    if (busca) {
-      const base = [
-        prova.titulo,
-        prova.nome,
-        prova.disciplina,
-        getDisciplinaLabel(prova.disciplina),
-        getAnoLabel(prova.anoEscolar || prova.ano || ""),
-        ...(prova.blocosResumo || []).map(bloco => bloco.titulo)
-      ].join(" ").toLowerCase();
-      if (!base.includes(busca)) return false;
-    }
     return true;
   });
 
+  if (busca) {
+    filtered = filterProvasBySearch(filtered, busca);
+  }
+
   if (!filtered.length) {
-    elements.listaProvas.innerHTML = renderEmptyState("Nenhuma prova encontrada com os filtros atuais.");
+    const suggestions = buildSuggestionPayload(state.provas.map(prova => ({
+      descritor: "",
+      descritorDescricao: "",
+      conteudo: (prova.conteudos || []).join(" "),
+      disciplina: prova.disciplina,
+      enunciado: prova.titulo || prova.nome || "",
+      textoApoio: (prova.blocosResumo || []).map(item => item.titulo).join(" "),
+      tipo: prova.modoMontagem || "manual"
+    })), busca);
+    elements.listaProvas.innerHTML = `
+      ${renderEmptyState("Nenhuma prova encontrada com os filtros atuais.")}
+      ${busca && suggestions.terms.length ? `
+        <div class="question-card">
+          <strong>${escapeHtml(suggestions.message)}</strong>
+          <p class="panel-subtitle">${escapeHtml(suggestions.terms.join(" | "))}</p>
+        </div>
+      ` : ""}
+    `;
     return;
   }
 

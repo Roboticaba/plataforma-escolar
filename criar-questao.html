@@ -6,6 +6,16 @@
 <title>Criar Questao - Roboticaba Professor</title>
 <link rel="stylesheet" href="professor-styles.css">
 <link rel="stylesheet" href="assets/css/professor-app.css">
+<script>
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  const hasEdit = params.has("edit") || params.has("block");
+  if (hasEdit) return;
+  const modo = params.get("modo") || params.get("mode") || "individual";
+  const destino = modo === "bloco" ? "bloco" : "individual";
+  window.location.replace(`professor-importar-questoes.html?modo=${destino}`);
+}());
+</script>
 <style>
 :root {
   --robot-purple: #241044;
@@ -162,8 +172,8 @@
       <div class="panel-header">
         <div>
           <span class="hero-badge">Criacao de Questoes</span>
-          <h1 class="hero-title">O que voce deseja criar?</h1>
-          <p class="hero-text">Escolha um modo e cole o texto da questao ou do bloco. O sistema organiza automaticamente texto de apoio, enunciado e alternativas para voce revisar antes de salvar.</p>
+          <h1 class="hero-title">Digite ou cole sua questao</h1>
+          <p class="hero-text">Escolha se voce quer organizar uma questao individual ou um bloco com texto base. O sistema interpreta automaticamente apoio, enunciado, alternativas e classificacao inicial.</p>
         </div>
         <span class="tag mode-badge" id="modoAtualBadge">Modo atual: escolha uma opcao</span>
       </div>

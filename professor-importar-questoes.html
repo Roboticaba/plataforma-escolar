@@ -55,6 +55,25 @@
   gap: 10px;
   margin-top: 12px;
 }
+.mode-switch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.mode-chip-button {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mode-chip-button.is-active {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: rgba(37, 99, 235, 0.08);
+}
 .review-content-stack {
   display: grid;
   gap: 14px;
@@ -127,8 +146,30 @@
 }
 .review-toggle-row {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-top: -2px;
+}
+.review-toggle-button {
+  min-height: 42px;
+  border-radius: 12px;
+}
+.review-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+.review-shared-block {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+.review-shared-block h3 {
+  margin: 0;
 }
 .review-controls-row {
   display: grid;
@@ -194,6 +235,10 @@
 }
 .review-summary-item strong {
   font-size: 12px;
+}
+.context-note {
+  font-size: 13px;
+  color: var(--muted);
 }
 .small-textarea { min-height: 96px; }
 .import-full-width {
@@ -268,12 +313,17 @@
 <div class="page-shell import-shell">
   <section class="hero-panel">
     <article class="hero-card">
-      <span class="hero-badge">Importar questoes</span>
-      <h1 class="hero-title">Cole o texto bruto da prova e organize as questoes em minutos.</h1>
-      <p class="hero-text">O sistema separa as questoes por regras locais, identifica texto de apoio, alternativas e gabarito, sugere a classificacao e deixa tudo editavel antes de salvar.</p>
+      <span class="hero-badge">Criar / importar questoes</span>
+      <h1 class="hero-title" id="pageMainTitle">Digite ou cole sua questao e organize tudo em minutos.</h1>
+      <p class="hero-text" id="pageMainSubtitle">O sistema interpreta texto de apoio, enunciado, alternativas e gabarito por regras locais, monta cards editaveis e permite salvar so no final.</p>
       <div class="toolbar" style="margin-top:18px;">
         <a class="button button-outline" href="professor-questoes.html">Banco de questoes</a>
         <a class="button button-outline" href="professor.html">Voltar ao painel</a>
+      </div>
+      <div class="mode-switch-row" id="modeSwitchRow">
+        <button type="button" class="mode-chip-button" data-mode="lote">Criar / importar em lote</button>
+        <button type="button" class="mode-chip-button" data-mode="individual">Questao individual</button>
+        <button type="button" class="mode-chip-button" data-mode="bloco">Bloco com texto base</button>
       </div>
     </article>
     <aside class="hero-side-card">
@@ -296,7 +346,7 @@
           <span class="tag tag-warning">Fluxo local</span>
           <span class="tag tag-neutral">Classificacao local</span>
         </div>
-        <p class="panel-subtitle">Fluxo atual: colar texto bruto, organizar questoes, revisar a classificacao e salvar no banco.</p>
+        <p class="panel-subtitle">Fluxo unico: colar o texto, organizar automaticamente, revisar em cards e salvar por questao ou em lote.</p>
       </div>
     </aside>
   </section>
@@ -305,13 +355,13 @@
     <aside class="panel sticky-panel">
       <div class="panel-header">
         <div>
-          <h2 class="panel-title">Dados da importacao</h2>
-          <p class="panel-subtitle">Preencha o contexto da prova, cole o texto bruto e clique em organizar.</p>
+          <h2 class="panel-title" id="contextPanelTitle">Dados da importacao</h2>
+          <p class="panel-subtitle" id="contextPanelSubtitle">Preencha o contexto, cole o texto e clique em organizar.</p>
         </div>
       </div>
       <form id="formImportacao" class="import-form-grid">
         <div class="form-field wide-field">
-          <label>Titulo da importacao</label>
+          <label id="labelTituloImportacao">Titulo da importacao</label>
           <input id="importTitulo" placeholder="Ex.: Prova diagnostica - 4o ano">
         </div>
         <div class="form-field">
@@ -327,11 +377,12 @@
           <input id="importFonteNome" placeholder="Ex.: Caderno da escola / material autoral">
         </div>
         <div class="form-field import-full-width">
-          <label>Texto bruto da prova</label>
-          <textarea id="importTextoBruto" placeholder="Cole aqui o texto bruto da prova, com questoes, alternativas e gabarito se houver." style="min-height:320px;"></textarea>
+          <label id="mainInputLabel">Digite ou cole sua questao</label>
+          <textarea id="importTextoBruto" placeholder="Cole aqui a questao ou o bloco completo, com texto de apoio, alternativas e gabarito se houver." style="min-height:320px;"></textarea>
+          <div class="context-note" id="mainInputHint">O sistema identifica automaticamente se o texto representa uma questao individual, varias questoes ou um bloco com texto base.</div>
         </div>
         <div class="form-field import-full-width">
-          <div id="importStatusDeteccao" class="import-status-box" data-status="neutral">Cole o texto bruto e clique em &quot;Organizar questoes&quot;.</div>
+          <div id="importStatusDeteccao" class="import-status-box" data-status="neutral">Cole o texto e clique em &quot;Organizar&quot;.</div>
         </div>
         <div class="form-field import-full-width">
           <label>URL da fonte (opcional)</label>
@@ -342,10 +393,11 @@
           <textarea id="importFonteObservacao" class="small-textarea" placeholder="Ex.: prova digitada manualmente a partir de material impresso."></textarea>
         </div>
       </form>
-      <div class="review-toolbar">
-        <button class="button" type="button" id="btnOrganizarImportacao">Organizar questoes</button>
+            <div class="review-toolbar">
+        <button class="button" type="button" id="btnOrganizarImportacao">Organizar</button>
         <button class="button button-outline" type="button" id="btnLimparImportacao">Limpar</button>
-        <button class="button button-success" type="button" id="btnSalvarImportacao" disabled>Salvar questões</button>
+        <button class="button button-success" type="button" id="btnSalvarImportacao" disabled>Salvar questoes</button>
+        <button class="button button-outline" type="button" id="btnSalvarBlocoCompletoImportacao" hidden>Salvar bloco completo</button>
       </div>
       <div id="feedbackImportacao" class="feedback" hidden></div>
       <div class="stat-row">
@@ -358,8 +410,12 @@
       <div class="panel-header">
         <div>
           <h2 class="panel-title">Previa editavel</h2>
-          <p class="panel-subtitle">Revise a separacao das questoes, ajuste a classificacao sugerida e salve apenas no final.</p>
+          <p class="panel-subtitle">Revise os cards, ajuste o que precisar e escolha entre salvar por card, salvar o bloco completo ou salvar em lote.</p>
         </div>
+      </div>
+      <div id="sharedBlockPanel" class="review-shared-block" hidden>
+        <h3>Texto de apoio do bloco</h3>
+        <textarea id="sharedBlockText" placeholder="Texto de apoio compartilhado do bloco" style="min-height:140px;"></textarea>
       </div>
       <div id="listaImportada" class="review-list"></div>
     </section>
@@ -369,6 +425,6 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script type="module" src="assets/js/pages/professor-importar-questoes.js?v=20260502ux1"></script>
+<script type="module" src="assets/js/pages/professor-importar-questoes.js?v=20260503unified2"></script>
 </body>
 </html>

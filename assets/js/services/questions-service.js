@@ -4,6 +4,7 @@ import {
   disciplinaPrecisaDescritor,
   getDescritores
 } from "../core/constants.js";
+import { buildNormalizedTags, buildSearchIndex, scoreSearchMatch } from "./search-utils.js";
 
 export const QUESTION_TYPES = {
   multipla_texto: "multipla_texto",
@@ -286,6 +287,7 @@ export function buildQuestionSearchText(payload) {
     payload.tituloTextoApoio,
     payload.blocoTitulo,
     payload.textoApoio,
+    payload.generoTextual,
     payload.conteudo,
     payload.enunciado,
     alternativasTexto,
@@ -314,6 +316,20 @@ export function buildQuestionSearchText(payload) {
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
+}
+
+export function getQuestionQuality(payload = {}) {
+  if (!sanitizeText(payload.enunciado)) return "incompleto";
+  if (normalizeQuestionType(payload.tipo, payload.alternativas) !== QUESTION_TYPES.resposta_escrita) {
+    const alternatives = normalizeAlternatives(payload.alternativas, payload.respostaCorreta ?? payload.resposta_correta);
+    if (!alternatives.length) return "incompleto";
+    const hasCorrect = alternatives.some(item => item.correta);
+    if (!hasCorrect) return "sem_gabarito";
+  }
+  if (disciplinaPrecisaDescritor(payload.disciplina) && !sanitizeText(payload.descritor)) {
+    return "sem_descritor";
+  }
+  return "completo";
 }
 
 export function getDescritorInfo(disciplina, anoEscolar, descritor) {
@@ -409,6 +425,7 @@ export function buildQuestionRecord(payload, usuario) {
       : "",
     nivelDificuldade: sanitizeText(payload.nivelDificuldade),
     conteudo: sanitizeText(payload.conteudo),
+    generoTextual: sanitizeText(payload.generoTextual),
     autor: usuario.uid,
     autorId: usuario.uid,
     autorNome: usuario.nome || "",
@@ -444,7 +461,25 @@ export function buildQuestionRecord(payload, usuario) {
       ...payload,
       descritorDescricao: payload.descritorDescricao || descritorInfo?.nome || "",
       ...bnccFields
-    })
+    }),
+    tagsNormalizadas: buildNormalizedTags([
+      payload.disciplina,
+      payload.anoEscolar,
+      payload.descritor,
+      payload.descritorDescricao || descritorInfo?.nome || "",
+      payload.conteudo,
+      payload.generoTextual,
+      payload.tipo,
+      getQuestionTypeLabel(tipoNormalizado),
+      payload.categoria_bncc,
+      payload.bncc_sugerido,
+      payload.habilidade_bncc,
+      payload.enunciado,
+      payload.textoApoio
+    ]),
+    qualidadeCadastro: getQuestionQuality(payload),
+    vezesUsada: Number(payload.vezesUsada || 0),
+    ultimaUtilizacao: payload.ultimaUtilizacao || null
   };
 }
 
@@ -483,6 +518,7 @@ export function normalizeLegacyQuestion(question = {}) {
     respostaEsperada: question.respostaEsperada || "",
     nivelDificuldade: question.nivelDificuldade || "",
     conteudo: question.conteudo || "",
+    generoTextual: question.generoTextual || "",
     autor: question.autor || question.autorId || "",
     autorId: question.autorId || question.autor || "",
     autorNome: question.autorNome || "",
@@ -498,7 +534,23 @@ export function normalizeLegacyQuestion(question = {}) {
     blocoId: question.blocoId || "",
     blocoTitulo: question.blocoTitulo || question.tituloTextoApoio || "",
     ordemBloco: Number(question.ordemBloco || 0),
-    origem: question.origem || "banco"
+    origem: question.origem || "banco",
+    tagsNormalizadas: Array.isArray(question.tagsNormalizadas)
+      ? question.tagsNormalizadas
+      : buildNormalizedTags([
+          question.disciplina,
+          question.anoEscolar || question.ano_escolar,
+          question.descritor,
+          question.descritorDescricao,
+          question.conteudo,
+          question.generoTextual,
+          question.tipo,
+          question.enunciado,
+          question.textoApoio
+        ]),
+    qualidadeCadastro: question.qualidadeCadastro || getQuestionQuality(question),
+    vezesUsada: Number(question.vezesUsada || 0),
+    ultimaUtilizacao: question.ultimaUtilizacao || null
   };
 }
 
@@ -699,13 +751,18 @@ export async function listQuestions(filters = {}) {
   }
 
   if (filters.search) {
-    const search = filters.search.toLowerCase();
-    questions = questions.filter(item => [
+    questions = questions.filter(item => scoreSearchMatch(filters.search, [
+      item.searchText,
+      ...(item.tagsNormalizadas || []),
       item.enunciado,
       item.textoApoio,
       item.descritor,
-      item.descritorDescricao
-    ].join(" ").toLowerCase().includes(search));
+      item.descritorDescricao,
+      item.conteudo,
+      item.disciplina,
+      item.anoEscolar,
+      item.tipo
+    ]).matched);
   }
 
   return questions;
