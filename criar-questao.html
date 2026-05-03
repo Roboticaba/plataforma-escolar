@@ -163,18 +163,18 @@
         <div>
           <span class="hero-badge">Criacao de Questoes</span>
           <h1 class="hero-title">O que voce deseja criar?</h1>
-          <p class="hero-text">Escolha um modo para mostrar apenas os campos necessarios. Os modos ficam separados para evitar mistura entre questao individual e bloco com texto base.</p>
+          <p class="hero-text">Escolha um modo e cole o texto da questao ou do bloco. O sistema organiza automaticamente texto de apoio, enunciado e alternativas para voce revisar antes de salvar.</p>
         </div>
         <span class="tag mode-badge" id="modoAtualBadge">Modo atual: escolha uma opcao</span>
       </div>
       <div class="choice-grid" aria-label="Escolha obrigatoria do tipo de criacao">
         <button class="choice-card" type="button" data-mode="individual">
           <strong>Nova questao individual</strong>
-          <span>Crie uma questao independente com texto/imagem de apoio opcional, descritor e alternativas.</span>
+          <span>Cole uma questao completa e deixe o sistema separar apoio, enunciado, alternativas e tipo automaticamente.</span>
         </button>
         <button class="choice-card" type="button" data-mode="bloco">
           <strong>Novo bloco com texto base</strong>
-          <span>Cadastre um texto base e adicione varias questoes relacionadas antes de salvar o bloco completo.</span>
+          <span>Cole um bloco inteiro com texto base e varias questoes para organizar tudo de uma vez antes de salvar.</span>
         </button>
       </div>
       <div class="toolbar" style="margin-top:18px;">
@@ -256,6 +256,14 @@
       <label>Texto de apoio</label>
       <textarea data-field="textoApoio" placeholder="Opcional na questao individual. Obrigatorio no bloco."></textarea>
     </div>
+    <div class="form-field wide-field" data-block-smart-field hidden>
+      <label>Bloco bruto</label>
+      <textarea data-field="entradaBloco" placeholder="Cole aqui o texto base e as questoes do bloco. O sistema vai separar automaticamente para revisao."></textarea>
+      <div class="toolbar" style="margin-top:12px;">
+        <button class="button button-primary" type="button" data-action="organizar-bloco">Organizar bloco automaticamente</button>
+      </div>
+      <div class="muted-small">Dica: cole o texto completo com marcadores como 1), 1., Questao 1, alternativas A), B), C), D) e gabarito, se houver.</div>
+    </div>
     <div class="form-field wide-field">
       <label>Imagens de apoio</label>
       <input data-field="imagensApoio" type="file" accept="image/*" multiple>
@@ -270,11 +278,20 @@
     <div class="panel-header">
       <div>
         <h2 class="panel-title" data-title>Nova questao</h2>
-        <p class="panel-subtitle">A questao tem descritor, formato de alternativas e um tipo por vez.</p>
+        <p class="panel-subtitle">Cole a questao completa no campo inteligente e ajuste apenas o necessario.</p>
       </div>
     </div>
     <form data-question-form>
-      <div class="form-field">
+      <div class="form-field wide-field">
+        <label>Entrada inteligente da questao</label>
+        <textarea data-field="entradaInteligente" placeholder="Cole aqui a questao completa, com texto de apoio e alternativas, se houver."></textarea>
+        <div class="toolbar" style="margin-top:12px;">
+          <button class="button button-primary" type="button" data-action="organizar-entrada">Organizar questao automaticamente</button>
+        </div>
+        <div class="helper-box" data-field="resumoDeteccao">O sistema detecta texto de apoio, enunciado, alternativas e define o tipo automaticamente.</div>
+      </div>
+
+      <div class="form-field" hidden>
         <label>Tipo de questao</label>
         <div class="compact-type-grid">
           <label class="type-pill"><input type="radio" name="tipo" value="multipla_texto" checked> Multipla escolha com texto</label>
@@ -311,9 +328,9 @@
         <div class="panel-header">
           <div>
             <h3 class="panel-title" style="font-size:1rem;">Classificacao BNCC</h3>
-            <p class="panel-subtitle">A BNCC e a classificacao principal; SAEB e Parana aparecem como equivalencia.</p>
+            <p class="panel-subtitle">A classificacao sugerida usa regras locais com base no texto da questao.</p>
           </div>
-          <button class="button-inline button-outline" type="button" data-action="sugerir">Sugerir BNCC</button>
+          <button class="button-inline button-outline" type="button" data-action="sugerir">Atualizar classificacao</button>
         </div>
         <div data-field="descritorFeedback" class="feedback" hidden></div>
         <div class="form-field" style="margin-top:12px;">
@@ -382,6 +399,6 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script type="module" src="assets/js/pages/criar-questao.js"></script>
+<script type="module" src="assets/js/pages/criar-questao.js?v=20260502ux1"></script>
 </body>
 </html>

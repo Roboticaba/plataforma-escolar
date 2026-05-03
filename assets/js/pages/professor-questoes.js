@@ -1,4 +1,4 @@
-import { ANOS_ESCOLARES, DISCIPLINAS, getAnoLabel, getDescritores, getDisciplinaLabel } from "../core/constants.js";
+import { getAnoLabel, getDisciplinaLabel } from "../core/constants.js";
 import { requireProfessor } from "../core/session.js";
 import { getAlternativeLabel, getQuestionTypeLabel, listQuestions } from "../services/questions-service.js";
 import { escapeHtml, renderEmptyState } from "../utils/ui.js";
@@ -10,13 +10,6 @@ const state = {
   groups: [],
   selectedInspection: null,
   filters: {
-    estrutura: "",
-    anoEscolar: "",
-    disciplina: "",
-    descritor: "",
-    tipo: "",
-    conteudo: "",
-    apoio: "",
     search: ""
   }
 };
@@ -26,13 +19,6 @@ const elements = {
   totalMinhasQuestoes: document.getElementById("totalMinhasQuestoes"),
   totalCompartilhadas: document.getElementById("totalCompartilhadas"),
   listaQuestoes: document.getElementById("listaQuestoes"),
-  filtroEstrutura: document.getElementById("filtroEstrutura"),
-  filtroAno: document.getElementById("filtroAno"),
-  filtroDisciplina: document.getElementById("filtroDisciplina"),
-  filtroDescritor: document.getElementById("filtroDescritor"),
-  filtroTipoQuestao: document.getElementById("filtroTipoQuestao"),
-  filtroConteudo: document.getElementById("filtroConteudo"),
-  filtroApoio: document.getElementById("filtroApoio"),
   filtroBusca: document.getElementById("filtroBusca"),
   btnNovaQuestao: document.getElementById("btnNovaQuestao"),
   btnNovoBloco: document.getElementById("btnNovoBloco"),
@@ -42,12 +28,6 @@ const elements = {
   inspecaoConteudo: document.getElementById("inspecaoConteudo"),
   btnEditarInspecao: document.getElementById("btnEditarInspecao")
 };
-
-function populateSelect(select, options, placeholder) {
-  select.innerHTML = `<option value="">${placeholder}</option>` + options
-    .map(option => `<option value="${option.value}">${option.label}</option>`)
-    .join("");
-}
 
 function isMine(question) {
   return question.autorId === usuario.uid || question.autor === usuario.uid;
@@ -90,34 +70,26 @@ function buildGroups(questions) {
 }
 
 function groupMatchesFilters(group) {
-  if (state.filters.estrutura === "individual" && group.kind !== "question") return false;
-  if (state.filters.estrutura === "bloco" && group.kind !== "block") return false;
-
   const questions = group.kind === "block" ? group.questions : [group.question];
   return questions.some(item => {
-    if (state.filters.anoEscolar && item.anoEscolar !== state.filters.anoEscolar && item.ano_escolar !== state.filters.anoEscolar) return false;
-    if (state.filters.disciplina && item.disciplina !== state.filters.disciplina) return false;
-    if (state.filters.descritor && item.descritor !== state.filters.descritor) return false;
-    if (state.filters.tipo && item.tipo !== state.filters.tipo) return false;
-    if (state.filters.conteudo && (item.conteudo || "") !== state.filters.conteudo) return false;
-    if (state.filters.apoio) {
-      const hasText = Boolean((item.textoApoio || "").trim());
-      const hasImage = Boolean((item.imagensApoio || []).length);
-      if (state.filters.apoio === "texto" && !hasText) return false;
-      if (state.filters.apoio === "imagem" && !hasImage) return false;
-      if (state.filters.apoio === "texto_imagem" && (!hasText || !hasImage)) return false;
-      if (state.filters.apoio === "sem_apoio" && (hasText || hasImage)) return false;
-    }
     if (state.filters.search) {
       const search = state.filters.search.toLowerCase();
       const base = [
+        item.disciplina,
+        getDisciplinaLabel(item.disciplina),
+        item.anoEscolar,
+        item.ano_escolar,
+        getAnoLabel(item.anoEscolar || item.ano_escolar),
+        item.tipo,
+        getQuestionTypeLabel(item.tipo),
         item.enunciado,
         item.textoApoio,
         item.tituloTextoApoio,
         item.blocoTitulo,
         item.conteudo,
         item.descritor,
-        item.descritorDescricao
+        item.descritorDescricao,
+        group.kind === "block" ? "bloco" : "questao individual"
       ].join(" ").toLowerCase();
       if (!base.includes(search)) return false;
     }
@@ -164,17 +136,20 @@ function renderAlternatives(question) {
 
 function renderQuestionDetails(question, heading = "", options = {}) {
   const includeContext = options.includeContext !== false;
+  const studentView = Boolean(options.studentView);
   return `
     <article class="question-card">
       ${heading ? `<h3 class="question-card-title">${escapeHtml(heading)}</h3>` : ""}
-      <div class="meta-row">
-        <span class="tag tag-primary">${escapeHtml(getAnoLabel(question.anoEscolar || question.ano_escolar))}</span>
-        <span class="tag tag-primary">${escapeHtml(getDisciplinaLabel(question.disciplina))}</span>
-        <span class="tag tag-neutral">${escapeHtml(getQuestionTypeLabel(question.tipo))}</span>
-        ${question.descritor ? `<span class="tag tag-neutral">${escapeHtml(question.descritor)}</span>` : ""}
-        ${question.conteudo ? `<span class="tag tag-neutral">${escapeHtml(question.conteudo)}</span>` : ""}
-      </div>
-      ${question.conteudo ? `<p class="panel-subtitle"><strong>Conteudo:</strong> ${escapeHtml(question.conteudo)}</p>` : ""}
+      ${studentView ? "" : `
+        <div class="meta-row">
+          <span class="tag tag-primary">${escapeHtml(getAnoLabel(question.anoEscolar || question.ano_escolar))}</span>
+          <span class="tag tag-primary">${escapeHtml(getDisciplinaLabel(question.disciplina))}</span>
+          <span class="tag tag-neutral">${escapeHtml(getQuestionTypeLabel(question.tipo))}</span>
+          ${question.descritor ? `<span class="tag tag-neutral">${escapeHtml(question.descritor)}</span>` : ""}
+          ${question.conteudo ? `<span class="tag tag-neutral">${escapeHtml(question.conteudo)}</span>` : ""}
+        </div>
+        ${question.conteudo ? `<p class="panel-subtitle"><strong>Conteudo:</strong> ${escapeHtml(question.conteudo)}</p>` : ""}
+      `}
       ${includeContext && question.textoApoio ? `<p class="panel-subtitle" style="white-space:pre-wrap;"><strong>Texto de apoio:</strong><br>${escapeHtml(question.textoApoio)}</p>` : ""}
       ${includeContext ? renderImageList(question.imagensApoio || []) : ""}
       <div style="margin-top:14px;">
@@ -218,7 +193,7 @@ function renderQuestions() {
           </div>
           <p class="panel-subtitle">${escapeHtml((first.textoApoio || "").slice(0, 180))}${(first.textoApoio || "").length > 180 ? "..." : ""}</p>
           <div class="toolbar" style="margin-top:14px;">
-            <button class="button-inline button-outline" type="button" data-view-block="${group.blocoId}">Ver / Inspecionar</button>
+            <button class="button-inline button-outline" type="button" data-view-block="${group.blocoId}">Ver questao</button>
             <button class="button-inline button-primary" type="button" data-edit-block="${group.blocoId}">Editar</button>
           </div>
         </article>
@@ -248,7 +223,7 @@ function renderQuestions() {
         ${question.conteudo ? `<p class="panel-subtitle"><strong>Conteudo:</strong> ${escapeHtml(question.conteudo)}</p>` : ""}
         <p class="panel-subtitle">${alternativas ? `${alternativas} alternativa(s)` : "Questao escrita"} ${imagens ? `- ${imagens} imagem(ns) de apoio` : ""}</p>
         <div class="toolbar" style="margin-top:14px;">
-          <button class="button-inline button-outline" type="button" data-view-question="${question.id}">Ver / Inspecionar</button>
+          <button class="button-inline button-outline" type="button" data-view-question="${question.id}">Ver questao</button>
           <button class="button-inline button-primary" type="button" data-edit-question="${question.id}">Editar</button>
         </div>
       </article>
@@ -279,7 +254,7 @@ function openInspection(selection) {
         ${renderImageList(first.imagensApoio || [])}
       </section>
       <div class="selection-list" style="margin-top:14px;">
-        ${selection.questions.map((question, index) => renderQuestionDetails(question, `Questao ${index + 1}`, { includeContext: false })).join("")}
+        ${selection.questions.map((question, index) => renderQuestionDetails(question, `Questao ${index + 1}`, { includeContext: false, studentView: true })).join("")}
       </div>
     `;
     return;
@@ -287,7 +262,7 @@ function openInspection(selection) {
 
   elements.inspecaoTitulo.textContent = "Questao individual";
   elements.inspecaoSubtitulo.textContent = selection.question.enunciado || "Visualizacao completa";
-  elements.inspecaoConteudo.innerHTML = renderQuestionDetails(selection.question);
+  elements.inspecaoConteudo.innerHTML = renderQuestionDetails(selection.question, "", { studentView: true });
 }
 
 function closeInspection() {
@@ -335,53 +310,17 @@ async function loadQuestions() {
   state.questoes = await listQuestions();
   state.groups = buildGroups(state.questoes);
   updateMetrics();
-  updateFilterConteudos();
   renderQuestions();
-}
-
-function updateFilterDescritores() {
-  const descritores = getDescritores(elements.filtroDisciplina.value, elements.filtroAno.value);
-  elements.filtroDescritor.innerHTML = '<option value="">Todos os descritores</option>' + descritores
-    .map(item => `<option value="${item.codigo}">${item.codigo} - ${item.nome}</option>`)
-    .join("");
-}
-
-function updateFilterConteudos() {
-  const conteudos = [...new Set(
-    state.questoes
-      .filter(item => (!elements.filtroDisciplina.value || item.disciplina === elements.filtroDisciplina.value))
-      .filter(item => (!elements.filtroAno.value || item.anoEscolar === elements.filtroAno.value || item.ano_escolar === elements.filtroAno.value))
-      .map(item => (item.conteudo || "").trim())
-      .filter(Boolean)
-  )].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
-
-  const current = elements.filtroConteudo.value;
-  elements.filtroConteudo.innerHTML = '<option value="">Todos os conteudos</option>' + conteudos
-    .map(item => `<option value="${item}">${escapeHtml(item)}</option>`)
-    .join("");
-  if (conteudos.includes(current)) {
-    elements.filtroConteudo.value = current;
-  }
 }
 
 function handleFilters() {
   state.filters = {
-    estrutura: elements.filtroEstrutura.value,
-    anoEscolar: elements.filtroAno.value,
-    disciplina: elements.filtroDisciplina.value,
-    descritor: elements.filtroDescritor.value,
-    tipo: elements.filtroTipoQuestao.value,
-    conteudo: elements.filtroConteudo.value,
-    apoio: elements.filtroApoio.value,
     search: elements.filtroBusca.value.trim()
   };
   renderQuestions();
 }
 
 function bindEvents() {
-  populateSelect(elements.filtroAno, ANOS_ESCOLARES, "Todos os anos");
-  populateSelect(elements.filtroDisciplina, DISCIPLINAS, "Todas as disciplinas");
-
   elements.btnNovaQuestao.addEventListener("click", () => {
     window.location.href = "criar-questao.html?mode=individual";
   });
@@ -402,21 +341,6 @@ function bindEvents() {
     }
   });
 
-  elements.filtroAno.addEventListener("change", () => {
-    updateFilterDescritores();
-    updateFilterConteudos();
-    handleFilters();
-  });
-  elements.filtroDisciplina.addEventListener("change", () => {
-    updateFilterDescritores();
-    updateFilterConteudos();
-    handleFilters();
-  });
-  elements.filtroDescritor.addEventListener("change", handleFilters);
-  elements.filtroEstrutura.addEventListener("change", handleFilters);
-  elements.filtroTipoQuestao.addEventListener("change", handleFilters);
-  elements.filtroConteudo.addEventListener("change", handleFilters);
-  elements.filtroApoio.addEventListener("change", handleFilters);
   elements.filtroBusca.addEventListener("input", handleFilters);
 }
 

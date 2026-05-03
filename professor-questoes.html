@@ -43,38 +43,12 @@
     <section class="panel">
       <div class="panel-header">
         <div>
-          <h2 class="panel-title">Filtros do Banco</h2>
-          <p class="panel-subtitle">Busque por ano, disciplina, descritor ou palavras do enunciado e do texto de apoio.</p>
+          <h2 class="panel-title">Busca do Banco</h2>
+          <p class="panel-subtitle">Use uma busca unica para encontrar rapidamente por disciplina, ano, descritor, conteudo, tipo ou trechos da questao.</p>
         </div>
       </div>
       <div class="filters-row">
-        <select id="filtroEstrutura">
-          <option value="">Todas</option>
-          <option value="individual">Questao individual</option>
-          <option value="bloco">Bloco de questoes baseadas em texto</option>
-        </select>
-        <select id="filtroAno"></select>
-        <select id="filtroDisciplina"></select>
-        <select id="filtroDescritor">
-          <option value="">Todos os descritores</option>
-        </select>
-        <select id="filtroTipoQuestao">
-          <option value="">Todos os tipos</option>
-          <option value="multipla_texto">Multipla escolha com texto</option>
-          <option value="multipla_imagem">Multipla escolha com imagem</option>
-          <option value="resposta_escrita">Resposta escrita</option>
-        </select>
-        <select id="filtroConteudo">
-          <option value="">Todos os conteudos</option>
-        </select>
-        <select id="filtroApoio">
-          <option value="">Com ou sem apoio</option>
-          <option value="texto">Com texto de apoio</option>
-          <option value="imagem">Com imagem de apoio</option>
-          <option value="texto_imagem">Com texto e imagem de apoio</option>
-          <option value="sem_apoio">Sem apoio</option>
-        </select>
-        <input id="filtroBusca" placeholder="Buscar por enunciado ou texto de apoio">
+        <input id="filtroBusca" placeholder="Ex: 5o ano Portugues D1 inferencia">
       </div>
       <div id="listaQuestoes" class="question-list" style="margin-top:18px;"></div>
     </section>
@@ -87,8 +61,8 @@
         </div>
       </div>
       <div class="question-card">
-        <div class="tag-row"><span class="tag tag-primary">Descritor confirmado</span></div>
-        <p class="panel-subtitle">Portugues e Matematica exigem confirmacao do descritor antes de salvar.</p>
+        <div class="tag-row"><span class="tag tag-primary">Busca unica</span></div>
+        <p class="panel-subtitle">Digite combinacoes como ano, disciplina, descritor, conteudo ou tipo para filtrar sem trocar varios campos.</p>
       </div>
       <div class="question-card">
         <div class="tag-row"><span class="tag tag-success">Cloudinary</span></div>
@@ -122,6 +96,6 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script type="module" src="assets/js/pages/professor-questoes.js"></script>
+<script type="module" src="assets/js/pages/professor-questoes.js?v=20260502ux1"></script>
 </body>
 </html>

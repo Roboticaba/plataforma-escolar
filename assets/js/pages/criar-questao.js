@@ -15,8 +15,8 @@ import {
   updateQuestion
 } from "../services/questions-service.js";
 import { uploadImagemCloudinary, uploadMultiplasImagensCloudinary } from "../services/cloudinary-service.js";
-import { analisarDescritorQuestao } from "../services/descritor-ai-service.js";
 import { listarHabilidades } from "../services/classificador-bncc-service.js";
+import { organizarQuestoesParaRevisao, preClassificarQuestao } from "../services/importacao-questoes-service.js";
 import { db } from "../core/firebase-app.js";
 import { clearFeedback, escapeHtml, renderEmptyState, setLoading, showFeedback } from "../utils/ui.js";
 
@@ -88,6 +88,9 @@ function createContextController(host, isBlock) {
     anoEscolar: host.querySelector("[data-field='anoEscolar']"),
     disciplina: host.querySelector("[data-field='disciplina']"),
     textoApoio: host.querySelector("[data-field='textoApoio']"),
+    entradaBloco: host.querySelector("[data-field='entradaBloco']"),
+    btnOrganizarBloco: host.querySelector("[data-action='organizar-bloco']"),
+    blocoSmartField: host.querySelector("[data-block-smart-field]"),
     imagensApoio: host.querySelector("[data-field='imagensApoio']"),
     previewImagensApoio: host.querySelector("[data-field='previewImagensApoio']"),
     imagensApoioExistentes: host.querySelector("[data-field='imagensApoioExistentes']"),
@@ -95,6 +98,7 @@ function createContextController(host, isBlock) {
   };
 
   controller.tituloTextoField.hidden = !isBlock;
+  if (controller.blocoSmartField) controller.blocoSmartField.hidden = !isBlock;
   populateSelect(controller.anoEscolar, ANOS_ESCOLARES, "Selecione");
   populateSelect(controller.disciplina, DISCIPLINAS, "Selecione");
   controller.imagensApoio.addEventListener("change", () => renderSupportImagePreview(controller));
@@ -130,14 +134,15 @@ async function uploadContextImages(controller) {
   return [...context.existingImages, ...uploaded];
 }
 
-function validateContext(controller) {
+function validateContext(controller, options = {}) {
+  const requireBlockText = options.requireBlockText !== false;
   const context = getContextPayload(controller);
   if (!context.anoEscolar) throw new Error("Selecione o ano escolar.");
   if (!context.disciplina) throw new Error("Selecione a disciplina.");
 
   if (controller.isBlock) {
     if (!context.tituloTexto) throw new Error("Informe o titulo do texto.");
-    if (!context.textoApoio.trim()) throw new Error("Informe o texto base do bloco.");
+    if (requireBlockText && !context.textoApoio.trim()) throw new Error("Informe o texto base do bloco.");
   }
 
   return context;
@@ -154,6 +159,9 @@ function createQuestionController(host, submitLabel, title) {
     root,
     form: host.querySelector("[data-question-form]"),
     title: host.querySelector("[data-title]"),
+    entradaInteligente: host.querySelector("[data-field='entradaInteligente']"),
+    btnOrganizarEntrada: host.querySelector("[data-action='organizar-entrada']"),
+    resumoDeteccao: host.querySelector("[data-field='resumoDeteccao']"),
     enunciado: host.querySelector("[data-field='enunciado']"),
     descritorWrapper: host.querySelector("[data-descritor-wrapper]"),
     descritor: host.querySelector("[data-field='descritor']"),
@@ -199,6 +207,7 @@ function createQuestionController(host, submitLabel, title) {
   });
   controller.alternativasTexto.addEventListener("input", () => renderTextAlternatives(controller));
   controller.alternativasImagem.addEventListener("change", () => appendImageAlternatives(controller));
+  controller.btnOrganizarEntrada?.addEventListener("click", () => organizeSingleQuestionInput(controller, getActiveContext()));
   controller.btnSugerir.addEventListener("click", () => suggestDescritor(controller, getActiveContext()));
   controller.btnConfirmarBncc?.addEventListener("click", () => confirmBnccClassification(controller, getActiveContext()));
   controller.bnccConfirmado?.addEventListener("change", () => syncBnccSelection(controller, getActiveContext()));
@@ -230,6 +239,9 @@ function updateQuestionType(controller) {
   controller.alternativasTextoPanel.hidden = tipo !== "multipla_texto";
   controller.alternativasImagemPanel.hidden = tipo !== "multipla_imagem";
   controller.respostaEscritaPanel.hidden = tipo !== "resposta_escrita";
+  if (controller.resumoDeteccao) {
+    controller.resumoDeteccao.dataset.tipoDetectado = tipo;
+  }
 }
 
 function updateQuestionDescritores(controller, context) {
@@ -429,6 +441,10 @@ function resetQuestionController(controller) {
   if (controller.conteudo) controller.conteudo.value = "";
   controller.editingId = "";
   controller.btnExcluir.hidden = true;
+  if (controller.entradaInteligente) controller.entradaInteligente.value = "";
+  if (controller.resumoDeteccao) {
+    controller.resumoDeteccao.innerHTML = "O sistema detecta texto de apoio, enunciado, alternativas e define o tipo automaticamente.";
+  }
   clearFeedback(controller.feedback);
   clearFeedback(controller.descritorFeedback);
   populateAlternativeFormats(controller.formatoAlternativas);
@@ -465,27 +481,206 @@ function getActiveContext() {
   return state.mode === "bloco" ? getContextPayload(blockContext) : getContextPayload(individualContext);
 }
 
+function buildLocalClassificationResult(question, context) {
+  const suggestion = preClassificarQuestao({
+    ...question,
+    disciplina: context.disciplina,
+    anoEscolar: context.anoEscolar,
+    textoApoio: question.textoApoio || context.textoApoio || ""
+  });
+
+  return {
+    descritor: suggestion.descritorSugerido || "",
+    descricao: suggestion.descritorDescricao || "",
+    codigo_bncc: suggestion.bnccSugerida || "",
+    habilidade_bncc: suggestion.habilidadeBncc || "",
+    categoria_bncc: suggestion.categoriaSugerida || "",
+    conteudo: suggestion.conteudoSugerido || "",
+    saeb_equivalente: suggestion.saebEquivalente || suggestion.descritorSugerido || "",
+    parana_equivalente: suggestion.paranaEquivalente || suggestion.descritorSugerido || "",
+    confianca: suggestion.confianca || "baixa",
+    confianca_classificacao: suggestion.confianca || "baixa",
+    pontuacao_classificacao: 0,
+    justificativa: suggestion.justificativa || "Classificacao local por regras."
+  };
+}
+
+function applyQuestionDetectionSummary(controller, parsedQuestion) {
+  if (!controller.resumoDeteccao) return;
+
+  const tipo = parsedQuestion.tipo === "resposta_escrita"
+    ? "Questao dissertativa"
+    : parsedQuestion.tipo === "multipla_imagem"
+      ? "Multipla escolha com imagem"
+      : "Multipla escolha com texto";
+  const apoio = parsedQuestion.textoApoio ? "com texto de apoio" : "sem texto de apoio";
+  const alternativas = parsedQuestion.tipo === "resposta_escrita"
+    ? "sem alternativas"
+    : `${(parsedQuestion.alternativas || []).length} alternativa(s)`;
+
+  controller.resumoDeteccao.innerHTML = `${tipo}, ${apoio}, ${alternativas}. Voce pode revisar e ajustar abaixo antes de salvar.`;
+}
+
+function fillControllerFromParsedQuestion(controller, contextController, parsedQuestion) {
+  if (contextController && parsedQuestion.textoApoio && !contextController.textoApoio.value.trim()) {
+    contextController.textoApoio.value = parsedQuestion.textoApoio;
+  }
+
+  setSelectedTipo(controller, parsedQuestion.tipo || "multipla_texto");
+  controller.enunciado.value = parsedQuestion.enunciado || "";
+  controller.respostaEsperada.value = parsedQuestion.respostaEsperada || "";
+  controller.formatoAlternativas.value = parsedQuestion.formatoAlternativas || DEFAULT_ALTERNATIVE_FORMAT;
+  controller.imageAlternatives = [];
+  controller.correctIndex = parsedQuestion.respostaCorreta === "" || parsedQuestion.respostaCorreta === null || parsedQuestion.respostaCorreta === undefined
+    ? ""
+    : String(parsedQuestion.respostaCorreta);
+
+  if (parsedQuestion.tipo === "multipla_texto") {
+    controller.alternativasTexto.value = (parsedQuestion.alternativas || [])
+      .map(item => item.texto || "")
+      .filter(Boolean)
+      .join("\n");
+  } else {
+    controller.alternativasTexto.value = "";
+  }
+
+  if (parsedQuestion.tipo === "multipla_imagem") {
+    controller.imageAlternatives = (parsedQuestion.alternativas || [])
+      .filter(item => item.imagemUrl)
+      .map(item => ({
+        existingUrl: item.imagemUrl,
+        url: item.imagemUrl,
+        name: "Imagem salva"
+      }));
+  }
+
+  const classificacaoLocal = buildLocalClassificationResult(parsedQuestion, getActiveContext());
+  controller.descritorSugestao = classificacaoLocal;
+  controller.classificacaoConfirmada = false;
+  if (classificacaoLocal.descritor) {
+    controller.descritor.value = classificacaoLocal.descritor;
+  }
+  if (controller.bnccConfirmado) {
+    controller.bnccConfirmado.value = classificacaoLocal.codigo_bncc || "";
+  }
+  if (controller.conteudo && !controller.conteudo.value.trim()) {
+    controller.conteudo.value = classificacaoLocal.conteudo || classificacaoLocal.categoria_bncc || "";
+  }
+  controller.descritorConfirmado.checked = Boolean(controller.descritor.value) || !disciplinaPrecisaDescritor(getActiveContext().disciplina);
+
+  updateQuestionType(controller);
+  renderTextAlternatives(controller);
+  renderImageAlternatives(controller);
+  updateBnccSummary(controller, getActiveContext(), classificacaoLocal);
+  applyQuestionDetectionSummary(controller, parsedQuestion);
+}
+
+function parseSingleQuestionFromInput(rawText, context) {
+  const resultado = organizarQuestoesParaRevisao(rawText, {
+    titulo: context.tituloTexto || "",
+    anoEscolar: context.anoEscolar,
+    disciplina: context.disciplina,
+    textoOriginal: rawText,
+    fonte: { nome: "", url: "", observacao: "", licenca: "" }
+  });
+
+  return {
+    resultado,
+    questao: (resultado.questions || [])[0] || null
+  };
+}
+
+function organizeSingleQuestionInput(controller, context) {
+  clearFeedback(controller.feedback);
+  const rawText = controller.entradaInteligente?.value.trim() || "";
+
+  if (!rawText) {
+    showFeedback(controller.feedback, "error", "Cole ou digite a questao no campo inteligente.");
+    return;
+  }
+
+  const { resultado, questao } = parseSingleQuestionFromInput(rawText, context);
+  if (!questao) {
+    showFeedback(controller.feedback, "error", "Nao foi possivel separar a questao automaticamente. Ajuste o texto e tente novamente.");
+    return;
+  }
+
+  fillControllerFromParsedQuestion(
+    controller,
+    state.mode === "bloco" ? blockContext : individualContext,
+    questao
+  );
+
+  if ((resultado.questions || []).length > 1) {
+    showFeedback(controller.feedback, "success", `Foram detectadas ${resultado.questions.length} questoes. A primeira foi organizada aqui; para varias questoes juntas, use o modo bloco.`);
+    return;
+  }
+
+  showFeedback(controller.feedback, "success", "Questao organizada automaticamente. Revise e salve quando estiver pronta.");
+}
+
+function organizeBlockInput() {
+  clearFeedback(elements.feedbackBloco);
+  const context = validateContext(blockContext, { requireBlockText: false });
+  const rawText = blockContext.entradaBloco?.value.trim() || "";
+
+  if (!rawText) {
+    showFeedback(elements.feedbackBloco, "error", "Cole o bloco bruto antes de organizar.");
+    return;
+  }
+
+  const resultado = organizarQuestoesParaRevisao(rawText, {
+    titulo: context.tituloTexto,
+    anoEscolar: context.anoEscolar,
+    disciplina: context.disciplina,
+    textoOriginal: rawText,
+    fonte: { nome: "", url: "", observacao: "", licenca: "" }
+  });
+  const questoes = resultado.questions || [];
+
+  if (!questoes.length) {
+    showFeedback(elements.feedbackBloco, "error", "Nao foi possivel separar as questoes automaticamente nesse bloco.");
+    return;
+  }
+
+  if (resultado.tituloDetectado && !blockContext.tituloTexto.value.trim()) {
+    blockContext.tituloTexto.value = resultado.tituloDetectado;
+  }
+  if (resultado.textoBaseDetectado) {
+    blockContext.textoApoio.value = resultado.textoBaseDetectado;
+  }
+
+  state.blockQuestions = questoes.map(question => ({
+    ...question,
+    disciplina: context.disciplina,
+    anoEscolar: context.anoEscolar,
+    textoApoio: "",
+    imagensApoio: [],
+    descritorConfirmadoPeloProfessor: !disciplinaPrecisaDescritor(context.disciplina) || Boolean(question.descritor)
+  }));
+  renderBlockQuestions();
+  elements.blockQuestionPanel.hidden = true;
+  showFeedback(elements.feedbackBloco, "success", `${questoes.length} questao(oes) organizada(s) automaticamente. Agora revise a lista e salve o bloco completo.`);
+}
+
 async function suggestDescritor(controller, context) {
   clearFeedback(controller.descritorFeedback);
   const tipo = getSelectedTipo(controller);
-  const result = await analisarDescritorQuestao({
-    tituloTextoApoio: context.tituloTexto,
-    disciplina: context.disciplina,
-    anoEscolar: context.anoEscolar,
-    textoApoio: context.textoApoio,
+  const result = buildLocalClassificationResult({
     enunciado: controller.enunciado.value,
-    alternativas: tipo === "multipla_texto" ? limparAlternativas(controller.alternativasTexto.value) : [],
-    respostaCorreta: controller.correctIndex,
-    tipo,
-    respostaEsperada: tipo === "resposta_escrita" ? controller.respostaEsperada.value : ""
-  });
+    alternativas: tipo === "multipla_texto"
+      ? limparAlternativas(controller.alternativasTexto.value).map(texto => ({ texto }))
+      : [],
+    respostaEsperada: tipo === "resposta_escrita" ? controller.respostaEsperada.value : "",
+    tipo
+  }, context);
 
   controller.descritorSugestao = result;
   controller.classificacaoConfirmada = false;
 
   if (!result || !result.codigo_bncc) {
     updateBnccSummary(controller, context, result);
-    showFeedback(controller.descritorFeedback, "error", "Nao foi possivel sugerir uma habilidade BNCC. Ajuste manualmente.");
+    showFeedback(controller.descritorFeedback, "error", "Nao foi possivel sugerir uma habilidade BNCC pelas regras locais. Ajuste manualmente.");
     return;
   }
 
@@ -503,7 +698,7 @@ async function suggestDescritor(controller, context) {
   showFeedback(
     controller.descritorFeedback,
     "success",
-    `BNCC sugerida: ${result.codigo_bncc} - ${result.habilidade_bncc || result.descricao}. SAEB: ${result.saeb_equivalente || "-"}. Parana: ${result.parana_equivalente || "-"}. ${result.justificativa || ""}`
+    `Classificacao local sugerida: ${result.codigo_bncc} - ${result.habilidade_bncc || result.descricao}. SAEB: ${result.saeb_equivalente || "-"}. Parana: ${result.parana_equivalente || "-"}. ${result.justificativa || ""}`
   );
 }
 
@@ -637,6 +832,7 @@ async function materializeQuestionDraft(draft) {
 function fillQuestionController(controller, question) {
   controller.editingId = question.id || "";
   controller.btnExcluir.hidden = !controller.editingId;
+  if (controller.entradaInteligente) controller.entradaInteligente.value = "";
   setSelectedTipo(controller, question.tipo);
   controller.enunciado.value = question.enunciado || "";
   controller.formatoAlternativas.value = question.formatoAlternativas || DEFAULT_ALTERNATIVE_FORMAT;
@@ -681,6 +877,10 @@ function fillQuestionController(controller, question) {
   renderTextAlternatives(controller);
   renderImageAlternatives(controller);
   updateBnccSummary(controller, getActiveContext(), controller.descritorSugestao);
+  applyQuestionDetectionSummary(controller, {
+    ...question,
+    respostaCorreta: question.resposta_correta
+  });
 }
 
 function fillContext(controller, questionOrBlock) {
@@ -905,6 +1105,7 @@ function bindEvents() {
   blockForm.form.addEventListener("submit", handleBlockQuestionSubmit);
   elements.btnAdicionarQuestaoBloco.addEventListener("click", () => startBlockQuestion(null));
   elements.btnSalvarBlocoCompleto.addEventListener("click", saveCompleteBlock);
+  blockContext.btnOrganizarBloco?.addEventListener("click", organizeBlockInput);
   elements.btnExcluirBloco.addEventListener("click", async () => {
     if (!state.editingBlockId) return;
     const ok = confirm("Tem certeza que deseja excluir este bloco? Todas as questoes vinculadas tambem serao apagadas do Firestore.");
@@ -929,6 +1130,7 @@ function bindEvents() {
     blockContext.anoEscolar.value = "";
     blockContext.disciplina.value = "";
     blockContext.textoApoio.value = "";
+    if (blockContext.entradaBloco) blockContext.entradaBloco.value = "";
     blockContext.existingImages = [];
     blockContext.imagensApoio.value = "";
     renderSupportImagePreview(blockContext);

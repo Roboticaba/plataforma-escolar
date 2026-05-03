@@ -6,6 +6,87 @@
 <link rel="stylesheet" href="professor-styles.css">
 <link rel="stylesheet" href="assets/css/professor-app.css">
 <script src="html2pdf.bundle.min.js"></script>
+<style>
+.print-preview-sheet {
+  background: #fff;
+  border: 1px solid #dbe3ef;
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+}
+.print-preview-header {
+  border-bottom: 2px solid #dbe3ef;
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+}
+.print-preview-fields {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr;
+  gap: 12px 18px;
+  margin-top: 16px;
+}
+.print-line {
+  border-bottom: 1px solid #94a3b8;
+  min-height: 28px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+.print-question,
+.print-block {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.print-question {
+  padding: 16px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+.print-block {
+  padding: 18px;
+  margin-bottom: 18px;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #dbe3ef;
+}
+.print-question-number {
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.print-support {
+  white-space: pre-wrap;
+  line-height: 1.65;
+  margin-bottom: 10px;
+  color: #334155;
+}
+.print-alternative {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 8px 0;
+  line-height: 1.55;
+}
+.print-alternative strong {
+  min-width: 30px;
+}
+@media print {
+  body.dashboard-page {
+    background: #fff;
+  }
+  .toolbar,
+  .hero-side-card,
+  #btnPdf,
+  #btnWord,
+  #btnExcluirProva {
+    display: none !important;
+  }
+  .print-preview-sheet {
+    box-shadow: none;
+    border: none;
+    padding: 0;
+  }
+}
+</style>
 </head>
 <body class="dashboard-page">
 <div class="page-shell">
@@ -60,6 +141,6 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script type="module" src="assets/js/pages/professor-ver.js"></script>
+<script type="module" src="assets/js/pages/professor-ver.js?v=20260502ux1"></script>
 </body>
 </html>

@@ -72,7 +72,7 @@ function isQuestionReady(question) {
     return false;
   }
 
-  if (disciplinaPrecisaDescritor(question.disciplina) && (!question.descritor || !question.descritorConfirmadoPeloProfessor)) {
+  if (disciplinaPrecisaDescritor(question.disciplina) && !question.descritor) {
     return false;
   }
 
@@ -87,7 +87,7 @@ function updateMetrics() {
   const detectadas = state.importedQuestions.length;
   const prontas = state.importedQuestions.filter(isQuestionReady).length;
   const comDescritor = state.importedQuestions.filter(question => (
-    !disciplinaPrecisaDescritor(question.disciplina) || question.descritorConfirmadoPeloProfessor
+    !disciplinaPrecisaDescritor(question.disciplina) || Boolean(question.descritor)
   )).length;
 
   elements.metricDetectadas.textContent = String(detectadas);
@@ -112,6 +112,43 @@ function buildDescritorOptions(question) {
   return "<option value=\"\">Selecione</option>" + getDescritores(question.disciplina, question.anoEscolar)
     .map(item => `<option value="${item.codigo}" ${item.codigo === question.descritor ? "selected" : ""}>${item.codigo} - ${escapeHtml(item.nome)}</option>`)
     .join("");
+}
+
+function normalizeQuestionClassification(question) {
+  const descritorValido = getDescritores(question.disciplina, question.anoEscolar)
+    .some(item => item.codigo === question.descritor);
+
+  if (!descritorValido) {
+    question.descritor = "";
+    question.descritorDescricao = "";
+  } else {
+    question.descritorDescricao = getDescritores(question.disciplina, question.anoEscolar)
+      .find(item => item.codigo === question.descritor)?.nome || "";
+  }
+
+  question.descritorConfirmadoPeloProfessor = !disciplinaPrecisaDescritor(question.disciplina) || Boolean(question.descritor);
+}
+
+function syncAllQuestionsFromCards() {
+  elements.listaImportada.querySelectorAll("[data-question-index]").forEach(card => {
+    syncQuestionFromCard(Number(card.dataset.questionIndex));
+  });
+}
+
+function applyGlobalFieldToQuestions(field, value) {
+  if (!state.importedQuestions.length) return;
+  syncAllQuestionsFromCards();
+
+  state.importedQuestions = state.importedQuestions.map(question => {
+    const next = {
+      ...question,
+      [field]: value
+    };
+    normalizeQuestionClassification(next);
+    return next;
+  });
+
+  renderImportPreview();
 }
 
 function getSuggestionData(question) {
@@ -337,10 +374,6 @@ function renderImportPreview() {
             <input type="checkbox" data-field="confirmadoParaSalvar" ${question.confirmadoParaSalvar ? "checked" : ""}>
             Incluir no salvamento
           </label>
-          <label class="checkbox-row review-checkbox">
-            <input type="checkbox" data-field="confirmadoDescritor" ${question.descritorConfirmadoPeloProfessor ? "checked" : ""}>
-            Descritor confirmado
-          </label>
         </div>
       </header>
 
@@ -442,7 +475,7 @@ function syncQuestionFromCard(index) {
     .find(item => item.codigo === question.descritor)?.nome || "";
   question.textoApoio = card.querySelector("[data-field=\"textoApoio\"]")?.value.trim() || "";
   question.confirmadoParaSalvar = card.querySelector("[data-field=\"confirmadoParaSalvar\"]").checked;
-  question.descritorConfirmadoPeloProfessor = card.querySelector("[data-field=\"confirmadoDescritor\"]").checked;
+  normalizeQuestionClassification(question);
   question.classificacao_confirmada = question.confirmadoParaSalvar;
   question.data_confirmacao = question.confirmadoParaSalvar ? (question.data_confirmacao || new Date()) : null;
   question.professor_id = question.confirmadoParaSalvar ? usuario.uid : question.professor_id;
@@ -498,6 +531,10 @@ function syncQuestionFromCard(index) {
 
   const checkedAlternative = card.querySelector(`input[name="correctAlternative-${index}"]:checked`);
   question.respostaCorreta = checkedAlternative ? checkedAlternative.value : "";
+  question.alternativas = (question.alternativas || []).map((item, altIndex) => ({
+    ...item,
+    correta: String(question.respostaCorreta) === String(altIndex)
+  }));
   question.respostaEsperada = "";
 
   const alertsContainer = card.querySelector("[data-question-alerts]");
@@ -720,8 +757,8 @@ function validateImportedQuestions() {
       throw new Error(`Informe a disciplina da questao ${index + 1}.`);
     }
 
-    if (disciplinaPrecisaDescritor(question.disciplina) && (!question.descritor || !question.descritorConfirmadoPeloProfessor)) {
-      throw new Error(`Confirme o descritor da questao ${index + 1} antes de salvar.`);
+    if (disciplinaPrecisaDescritor(question.disciplina) && !question.descritor) {
+      throw new Error(`Defina o descritor da questao ${index + 1} antes de salvar.`);
     }
 
     if (question.tipo === "resposta_escrita") {
@@ -746,6 +783,14 @@ async function handleSalvarImportacao() {
   setLoading(elements.btnSalvar, true, "Salvar questoes", "Salvando...");
 
   try {
+    syncAllQuestionsFromCards();
+    state.importedQuestions.forEach(question => {
+      question.descritorConfirmadoPeloProfessor = !disciplinaPrecisaDescritor(question.disciplina) || Boolean(question.descritor);
+      if (question.confirmadoParaSalvar) {
+        question.classificacao_confirmada = true;
+        question.data_confirmacao = question.data_confirmacao || new Date();
+      }
+    });
     validateImportedQuestions();
     const context = getImportContext();
     const result = await salvarImportacaoRevisada(context, state.importedQuestions, usuario);
@@ -784,6 +829,8 @@ function bindEvents() {
   elements.btnOrganizar.addEventListener("click", processarTextoBrutoImportado);
   elements.btnSalvar.addEventListener("click", handleSalvarImportacao);
   elements.btnLimpar.addEventListener("click", handleLimparImportacao);
+  elements.anoEscolar.addEventListener("change", () => applyGlobalFieldToQuestions("anoEscolar", elements.anoEscolar.value));
+  elements.disciplina.addEventListener("change", () => applyGlobalFieldToQuestions("disciplina", elements.disciplina.value));
 }
 
 function init() {
