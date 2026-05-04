@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Importar Questoes - Roboticaba Professor</title>
+<link rel="stylesheet" href="professor-styles.css">
+<link rel="stylesheet" href="assets/css/professor-app.css">
+<style>
+.import-shell { max-width: 1440px; }
+[hidden] { display: none !important; }
+.import-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.import-stack {
+  display: grid;
+  gap: 16px;
+}
+.import-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.95fr) minmax(0, 1.25fr);
+  gap: 20px;
+}
+.sticky-panel { position: sticky; top: 18px; }
+.review-list { display: grid; gap: 16px; }
+.review-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface-soft);
+  padding: 18px;
+}
+.review-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.review-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.review-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.review-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+.mode-switch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.mode-chip-button {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mode-chip-button.is-active {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: rgba(37, 99, 235, 0.08);
+}
+.review-content-stack {
+  display: grid;
+  gap: 14px;
+}
+.review-large-field textarea,
+.review-large-field input {
+  width: 100%;
+}
+.review-large-field textarea {
+  min-height: 108px;
+}
+.review-large-field textarea[data-field="textoApoio"],
+.review-large-field textarea[data-field="imagensApoio"] {
+  min-height: 88px;
+}
+.review-alternatives {
+  display: grid;
+  gap: 10px;
+}
+.review-alt-row {
+  display: grid;
+  grid-template-columns: auto 90px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+.review-alt-row input[type="text"] {
+  width: 100%;
+}
+.review-alt-label {
+  font-weight: 700;
+  color: var(--ink);
+}
+.review-upload-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+.review-upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.review-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+.review-preview-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+.review-preview-card img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+.review-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: -2px;
+}
+.review-toggle-button {
+  min-height: 42px;
+  border-radius: 12px;
+}
+.review-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+.review-shared-block {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+.review-shared-block h3 {
+  margin: 0;
+}
+.review-controls-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-items: stretch;
+  margin-top: 14px;
+}
+.review-control-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  justify-items: stretch;
+}
+.review-control-field label {
+  font-size: 12px;
+  font-weight: 700;
+}
+.review-control-field select,
+.review-control-field .review-checkbox,
+.review-control-field .button-inline {
+  min-height: 44px;
+}
+.review-control-field select {
+  width: 100%;
+  max-width: 100%;
+}
+.review-control-field-descritor select {
+  max-width: 250px;
+  justify-self: center;
+}
+.review-control-field .button-inline {
+  width: 100%;
+  justify-content: center;
+}
+.review-checkbox {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 0 12px;
+}
+.review-summary-box {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+.review-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.review-summary-item {
+  display: grid;
+  gap: 4px;
+}
+.review-summary-item strong {
+  font-size: 12px;
+}
+.context-note {
+  font-size: 13px;
+  color: var(--muted);
+}
+.small-textarea { min-height: 96px; }
+.import-full-width {
+  grid-column: 1 / -1 !important;
+}
+.stat-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.stat-chip {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 700;
+}
+.import-dropzone {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: 18px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+.import-dropzone.is-dragover {
+  border-color: var(--brand);
+  background: rgba(37, 99, 235, 0.06);
+  transform: translateY(-1px);
+}
+.import-status-box {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 14px;
+  font-size: 14px;
+}
+.import-status-box[data-status="success"] {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+.import-status-box[data-status="warning"] {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+.import-status-box[data-status="error"] {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+.prompt-help-card {
+  display: grid;
+  gap: 10px;
+}
+@media (max-width: 1120px) {
+  .import-layout { grid-template-columns: 1fr; }
+  .sticky-panel { position: static; }
+  .import-form-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .review-controls-row { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 720px) {
+  .import-form-grid { grid-template-columns: 1fr; }
+  .review-alt-row { grid-template-columns: 1fr; }
+  .review-controls-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body class="dashboard-page">
+<div class="page-shell import-shell">
+  <section class="hero-panel">
+    <article class="hero-card">
+      <span class="hero-badge">Criar / importar questoes</span>
+      <h1 class="hero-title" id="pageMainTitle">Digite ou cole sua questao e organize tudo em minutos.</h1>
+      <p class="hero-text" id="pageMainSubtitle">O sistema interpreta texto de apoio, enunciado, alternativas e gabarito por regras locais, monta cards editaveis e permite salvar so no final.</p>
+      <div class="toolbar" style="margin-top:18px;">
+        <a class="button button-outline" href="professor-questoes.html">Banco de questoes</a>
+        <a class="button button-outline" href="professor.html">Voltar ao painel</a>
+      </div>
+      <div class="mode-switch-row" id="modeSwitchRow">
+        <button type="button" class="mode-chip-button" data-mode="lote">Criar / importar em lote</button>
+        <button type="button" class="mode-chip-button" data-mode="individual">Questao individual</button>
+        <button type="button" class="mode-chip-button" data-mode="bloco">Bloco com texto base</button>
+      </div>
+    </article>
+    <aside class="hero-side-card">
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-label">Detectadas</div>
+          <div class="metric-value" id="metricDetectadas">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Prontas para salvar</div>
+          <div class="metric-value" id="metricProntas">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Com descritor definido</div>
+          <div class="metric-value" id="metricDescritor">0</div>
+        </div>
+      </div>
+      <div class="question-card">
+        <div class="tag-row">
+          <span class="tag tag-warning">Fluxo local</span>
+          <span class="tag tag-neutral">Classificacao local</span>
+        </div>
+        <p class="panel-subtitle">Fluxo unico: colar o texto, organizar automaticamente, revisar em cards e salvar por questao ou em lote.</p>
+      </div>
+    </aside>
+  </section>
+
+  <div class="import-layout">
+    <aside class="panel sticky-panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title" id="contextPanelTitle">Dados da importacao</h2>
+          <p class="panel-subtitle" id="contextPanelSubtitle">Preencha o contexto, cole o texto e clique em organizar.</p>
+        </div>
+      </div>
+      <form id="formImportacao" class="import-form-grid">
+        <div class="form-field wide-field">
+          <label id="labelTituloImportacao">Titulo da importacao</label>
+          <input id="importTitulo" placeholder="Ex.: Prova diagnostica - 4o ano">
+        </div>
+        <div class="form-field">
+          <label>Ano escolar</label>
+          <select id="importAnoEscolar"></select>
+        </div>
+        <div class="form-field">
+          <label>Disciplina</label>
+          <select id="importDisciplina"></select>
+        </div>
+        <div class="form-field wide-field">
+          <label>Nome da fonte</label>
+          <input id="importFonteNome" placeholder="Ex.: Caderno da escola / material autoral">
+        </div>
+        <div class="form-field import-full-width">
+          <label id="mainInputLabel">Digite ou cole sua questao</label>
+          <textarea id="importTextoBruto" placeholder="Cole aqui a questao ou o bloco completo, com texto de apoio, alternativas e gabarito se houver." style="min-height:320px;"></textarea>
+          <div class="context-note" id="mainInputHint">O sistema identifica automaticamente se o texto representa uma questao individual, varias questoes ou um bloco com texto base.</div>
+        </div>
+        <div class="form-field import-full-width">
+          <div id="importStatusDeteccao" class="import-status-box" data-status="neutral">Cole o texto e clique em &quot;Organizar&quot;.</div>
+        </div>
+        <div class="form-field import-full-width">
+          <label>URL da fonte (opcional)</label>
+          <input id="importFonteUrl" placeholder="https://">
+        </div>
+        <div class="form-field import-full-width">
+          <label>Observacoes da fonte</label>
+          <textarea id="importFonteObservacao" class="small-textarea" placeholder="Ex.: prova digitada manualmente a partir de material impresso."></textarea>
+        </div>
+      </form>
+            <div class="review-toolbar">
+        <button class="button" type="button" id="btnOrganizarImportacao">Organizar</button>
+        <button class="button button-outline" type="button" id="btnLimparImportacao">Limpar</button>
+        <button class="button button-success" type="button" id="btnSalvarImportacao" disabled>Salvar questoes</button>
+        <button class="button button-outline" type="button" id="btnSalvarBlocoCompletoImportacao" hidden>Salvar bloco completo</button>
+      </div>
+      <div id="feedbackImportacao" class="feedback" hidden></div>
+      <div class="stat-row">
+        <span class="stat-chip" id="chipTituloDetectado">Titulo detectado: -</span>
+        <span class="stat-chip" id="chipTextoBase">Texto base: nao detectado</span>
+      </div>
+    </aside>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Previa editavel</h2>
+          <p class="panel-subtitle">Revise os cards, ajuste o que precisar e escolha entre salvar por card, salvar o bloco completo ou salvar em lote.</p>
+        </div>
+      </div>
+      <div id="sharedBlockPanel" class="review-shared-block" hidden>
+        <h3>Texto de apoio do bloco</h3>
+        <textarea id="sharedBlockText" placeholder="Texto de apoio compartilhado do bloco" style="min-height:140px;"></textarea>
+      </div>
+      <div id="listaImportada" class="review-list"></div>
+    </section>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script type="module" src="assets/js/pages/professor-importar-questoes.js?v=20260503unified2"></script>
+</body>
+</html>
