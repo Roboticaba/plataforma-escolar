@@ -15,7 +15,8 @@ import {
   updateQuestion
 } from "../services/questions-service.js";
 import { uploadImagemCloudinary, uploadMultiplasImagensCloudinary } from "../services/cloudinary-service.js";
-import { analisarDescritorQuestao } from "../services/descritor-ai-service.js";
+import { listarHabilidades } from "../services/classificador-bncc-service.js";
+import { organizarQuestoesParaRevisao, preClassificarQuestao } from "../services/importacao-questoes-service.js";
 import { db } from "../core/firebase-app.js";
 import { clearFeedback, escapeHtml, renderEmptyState, setLoading, showFeedback } from "../utils/ui.js";
 
@@ -29,6 +30,8 @@ const state = {
   deletedBlockQuestionIds: [],
   editingBlockQuestionIndex: null
 };
+
+const ACCEPTED_CLIPBOARD_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
 const elements = {
   modeCards: document.querySelectorAll("[data-mode]"),
@@ -75,6 +78,22 @@ function populateAlternativeFormats(select) {
   select.value = DEFAULT_ALTERNATIVE_FORMAT;
 }
 
+function getClipboardImageFile(event) {
+  const items = Array.from(event?.clipboardData?.items || []);
+  const imageItem = items.find(item => ACCEPTED_CLIPBOARD_IMAGE_TYPES.has(item.type));
+  return imageItem?.getAsFile() || null;
+}
+
+function makePasteTarget(element, onPaste) {
+  if (!element) return;
+  element.tabIndex = element.tabIndex >= 0 ? element.tabIndex : 0;
+  element.addEventListener("click", event => {
+    if (event.target?.matches?.("input, button, textarea, select, a")) return;
+    element.focus();
+  });
+  element.addEventListener("paste", onPaste);
+}
+
 function createContextController(host, isBlock) {
   const node = elements.contextTemplate.content.cloneNode(true);
   host.innerHTML = "";
@@ -87,6 +106,9 @@ function createContextController(host, isBlock) {
     anoEscolar: host.querySelector("[data-field='anoEscolar']"),
     disciplina: host.querySelector("[data-field='disciplina']"),
     textoApoio: host.querySelector("[data-field='textoApoio']"),
+    entradaBloco: host.querySelector("[data-field='entradaBloco']"),
+    btnOrganizarBloco: host.querySelector("[data-action='organizar-bloco']"),
+    blocoSmartField: host.querySelector("[data-block-smart-field]"),
     imagensApoio: host.querySelector("[data-field='imagensApoio']"),
     previewImagensApoio: host.querySelector("[data-field='previewImagensApoio']"),
     imagensApoioExistentes: host.querySelector("[data-field='imagensApoioExistentes']"),
@@ -94,9 +116,11 @@ function createContextController(host, isBlock) {
   };
 
   controller.tituloTextoField.hidden = !isBlock;
+  if (controller.blocoSmartField) controller.blocoSmartField.hidden = !isBlock;
   populateSelect(controller.anoEscolar, ANOS_ESCOLARES, "Selecione");
   populateSelect(controller.disciplina, DISCIPLINAS, "Selecione");
   controller.imagensApoio.addEventListener("change", () => renderSupportImagePreview(controller));
+  makePasteTarget(controller.imagensApoio.closest(".form-field"), event => uploadSupportImageFromClipboard(event, controller));
 
   return controller;
 }
@@ -110,6 +134,23 @@ function renderSupportImagePreview(controller) {
   controller.imagensApoioExistentes.innerHTML = (controller.existingImages || [])
     .map(url => `<img src="${url}" alt="Imagem de apoio existente">`)
     .join("");
+}
+
+async function uploadSupportImageFromClipboard(event, controller) {
+  const file = getClipboardImageFile(event);
+  if (!file) return;
+
+  event.preventDefault();
+
+  try {
+    showFeedback(elements.feedbackBloco, "success", "Enviando imagem de apoio colada...");
+    const url = await uploadImagemCloudinary(file);
+    controller.existingImages = [...(controller.existingImages || []), url];
+    renderSupportImagePreview(controller);
+    showFeedback(elements.feedbackBloco, "success", "Imagem de apoio colada adicionada.");
+  } catch (error) {
+    showFeedback(elements.feedbackBloco, "error", error.message || "Erro ao enviar imagem colada.");
+  }
 }
 
 function getContextPayload(controller) {
@@ -129,14 +170,15 @@ async function uploadContextImages(controller) {
   return [...context.existingImages, ...uploaded];
 }
 
-function validateContext(controller) {
+function validateContext(controller, options = {}) {
+  const requireBlockText = options.requireBlockText !== false;
   const context = getContextPayload(controller);
   if (!context.anoEscolar) throw new Error("Selecione o ano escolar.");
   if (!context.disciplina) throw new Error("Selecione a disciplina.");
 
   if (controller.isBlock) {
     if (!context.tituloTexto) throw new Error("Informe o titulo do texto.");
-    if (!context.textoApoio.trim()) throw new Error("Informe o texto base do bloco.");
+    if (requireBlockText && !context.textoApoio.trim()) throw new Error("Informe o texto base do bloco.");
   }
 
   return context;
@@ -153,6 +195,9 @@ function createQuestionController(host, submitLabel, title) {
     root,
     form: host.querySelector("[data-question-form]"),
     title: host.querySelector("[data-title]"),
+    entradaInteligente: host.querySelector("[data-field='entradaInteligente']"),
+    btnOrganizarEntrada: host.querySelector("[data-action='organizar-entrada']"),
+    resumoDeteccao: host.querySelector("[data-field='resumoDeteccao']"),
     enunciado: host.querySelector("[data-field='enunciado']"),
     descritorWrapper: host.querySelector("[data-descritor-wrapper]"),
     descritor: host.querySelector("[data-field='descritor']"),
@@ -160,7 +205,11 @@ function createQuestionController(host, submitLabel, title) {
     nivelDificuldade: host.querySelector("[data-field='nivelDificuldade']"),
     descritorPanel: host.querySelector("[data-descritor-panel]"),
     btnSugerir: host.querySelector("[data-action='sugerir']"),
+    btnConfirmarBncc: host.querySelector("[data-action='confirmar-bncc']"),
     descritorFeedback: host.querySelector("[data-field='descritorFeedback']"),
+    bnccConfirmado: host.querySelector("[data-field='bnccConfirmado']"),
+    conteudo: host.querySelector("[data-field='conteudo']"),
+    bnccResumo: host.querySelector("[data-field='bnccResumo']"),
     descritorConfirmado: host.querySelector("[data-field='descritorConfirmado']"),
     alternativasTextoPanel: host.querySelector("[data-panel='texto']"),
     alternativasTexto: host.querySelector("[data-field='alternativasTexto']"),
@@ -177,7 +226,8 @@ function createQuestionController(host, submitLabel, title) {
     imageAlternatives: [],
     correctIndex: "",
     descritorSugestao: null,
-    editingId: ""
+    editingId: "",
+    classificacaoConfirmada: false
   };
 
   controller.title.textContent = title;
@@ -193,7 +243,11 @@ function createQuestionController(host, submitLabel, title) {
   });
   controller.alternativasTexto.addEventListener("input", () => renderTextAlternatives(controller));
   controller.alternativasImagem.addEventListener("change", () => appendImageAlternatives(controller));
+  makePasteTarget(controller.alternativasImagemPanel, event => appendImageAlternativeFromClipboard(event, controller));
+  controller.btnOrganizarEntrada?.addEventListener("click", () => organizeSingleQuestionInput(controller, getActiveContext()));
   controller.btnSugerir.addEventListener("click", () => suggestDescritor(controller, getActiveContext()));
+  controller.btnConfirmarBncc?.addEventListener("click", () => confirmBnccClassification(controller, getActiveContext()));
+  controller.bnccConfirmado?.addEventListener("change", () => syncBnccSelection(controller, getActiveContext()));
   controller.descritor.addEventListener("change", () => {
     if (controller.descritor.value) controller.descritorConfirmado.checked = true;
   });
@@ -222,6 +276,9 @@ function updateQuestionType(controller) {
   controller.alternativasTextoPanel.hidden = tipo !== "multipla_texto";
   controller.alternativasImagemPanel.hidden = tipo !== "multipla_imagem";
   controller.respostaEscritaPanel.hidden = tipo !== "resposta_escrita";
+  if (controller.resumoDeteccao) {
+    controller.resumoDeteccao.dataset.tipoDetectado = tipo;
+  }
 }
 
 function updateQuestionDescritores(controller, context) {
@@ -235,6 +292,86 @@ function updateQuestionDescritores(controller, context) {
     .map(item => `<option value="${item.codigo}">${item.codigo} - ${item.nome}</option>`)
     .join("");
   controller.descritor.value = current;
+  updateBnccOptions(controller, context);
+  updateBnccSummary(controller, context);
+}
+
+function updateBnccOptions(controller, context) {
+  const current = controller.bnccConfirmado?.value || "";
+  const habilidades = listarHabilidades({ disciplina: context.disciplina, ano: context.anoEscolar });
+  if (controller.bnccConfirmado) {
+    controller.bnccConfirmado.innerHTML = '<option value="">Selecione</option>' + habilidades
+      .map(item => `<option value="${item.codigo_bncc}">${item.codigo_bncc} - ${item.habilidade}</option>`)
+      .join("");
+    controller.bnccConfirmado.value = current;
+  }
+}
+
+function updateBnccSummary(controller, context, fallback = null) {
+  if (!controller.bnccResumo) return;
+  const habilidades = listarHabilidades({ disciplina: context.disciplina, ano: context.anoEscolar });
+  const selected = habilidades.find(item => item.codigo_bncc === controller.bnccConfirmado?.value);
+  const source = selected ? {
+    codigo_bncc: selected.codigo_bncc,
+    habilidade_bncc: selected.habilidade,
+    categoria_bncc: selected.categoria,
+    saeb_equivalente: selected.saeb,
+    parana_equivalente: selected.parana,
+    confianca_classificacao: controller.descritorSugestao?.confianca_classificacao || (controller.classificacaoConfirmada ? "alta" : "baixa"),
+    justificativa: controller.descritorSugestao?.justificativa || "Classificacao selecionada manualmente."
+  } : (fallback || controller.descritorSugestao);
+
+  if (selected && controller.conteudo && !controller.conteudo.value.trim()) {
+    controller.conteudo.value = selected.categoria || controller.descritorSugestao?.conteudo || "";
+  }
+
+  if (!source?.codigo_bncc) {
+    controller.bnccResumo.innerHTML = "Nenhuma classificacao sugerida ainda.";
+    return;
+  }
+
+  controller.bnccResumo.innerHTML = `
+    <strong>${escapeHtml(source.codigo_bncc)}</strong> - ${escapeHtml(source.habilidade_bncc || source.habilidade || "")}
+    <br>Categoria: ${escapeHtml(source.categoria_bncc || source.categoria || "")}
+    <br>SAEB: ${escapeHtml(source.saeb_equivalente || source.saeb || "-")} | Parana: ${escapeHtml(source.parana_equivalente || source.parana || "-")}
+    <br>Confianca: ${escapeHtml(source.confianca_classificacao || source.confianca || "baixa")}
+    <br>Justificativa: ${escapeHtml(source.justificativa || "")}
+  `;
+}
+
+function syncBnccSelection(controller, context) {
+  const habilidades = listarHabilidades({ disciplina: context.disciplina, ano: context.anoEscolar });
+  const selected = habilidades.find(item => item.codigo_bncc === controller.bnccConfirmado?.value);
+  if (!selected) {
+    updateBnccSummary(controller, context);
+    return;
+  }
+
+  if (!controller.descritor.value && (selected.saeb || selected.parana)) {
+    controller.descritor.value = selected.saeb || selected.parana;
+  }
+  controller.classificacaoConfirmada = false;
+  updateBnccSummary(controller, context, {
+    codigo_bncc: selected.codigo_bncc,
+    habilidade_bncc: selected.habilidade,
+    categoria_bncc: selected.categoria,
+    saeb_equivalente: selected.saeb,
+    parana_equivalente: selected.parana,
+    confianca_classificacao: controller.descritorSugestao?.confianca_classificacao || "media",
+    justificativa: controller.descritorSugestao?.justificativa || "Classificacao BNCC ajustada manualmente pelo professor."
+  });
+}
+
+function confirmBnccClassification(controller, context) {
+  if (!controller.bnccConfirmado?.value) {
+    showFeedback(controller.descritorFeedback, "error", "Selecione uma habilidade BNCC antes de confirmar.");
+    return;
+  }
+
+  controller.classificacaoConfirmada = true;
+  controller.descritorConfirmado.checked = true;
+  updateBnccSummary(controller, context);
+  showFeedback(controller.descritorFeedback, "success", "Classificacao BNCC confirmada para esta questao.");
 }
 
 function renderTextAlternatives(controller) {
@@ -295,6 +432,39 @@ async function appendImageAlternatives(controller) {
   }
 }
 
+async function appendImageAlternativeFromClipboard(event, controller) {
+  const file = getClipboardImageFile(event);
+  if (!file) return;
+
+  event.preventDefault();
+
+  const previewUrl = URL.createObjectURL(file);
+  controller.imageAlternatives.push({
+    uploading: true,
+    url: previewUrl,
+    name: file.name || "imagem-colada.png"
+  });
+  renderImageAlternatives(controller);
+
+  try {
+    showFeedback(controller.feedback, "success", "Enviando imagem colada...");
+    const secureUrl = await uploadImagemCloudinary(file);
+    const item = controller.imageAlternatives.find(alt => alt.url === previewUrl && alt.uploading);
+    if (item) {
+      item.uploading = false;
+      item.existingUrl = secureUrl;
+      item.url = secureUrl;
+      item.name = file.name || "imagem-colada.png";
+    }
+    showFeedback(controller.feedback, "success", "Imagem colada adicionada como alternativa.");
+    renderImageAlternatives(controller);
+  } catch (error) {
+    controller.imageAlternatives = controller.imageAlternatives.filter(alt => alt.url !== previewUrl);
+    showFeedback(controller.feedback, "error", error.message || "Erro ao enviar imagem colada.");
+    renderImageAlternatives(controller);
+  }
+}
+
 function renderImageAlternatives(controller) {
   const format = controller.formatoAlternativas.value;
   controller.alternativasImagemPreview.innerHTML = controller.imageAlternatives.length
@@ -336,8 +506,15 @@ function resetQuestionController(controller) {
   controller.imageAlternatives = [];
   controller.correctIndex = "";
   controller.descritorSugestao = null;
+  controller.classificacaoConfirmada = false;
+  if (controller.bnccConfirmado) controller.bnccConfirmado.value = "";
+  if (controller.conteudo) controller.conteudo.value = "";
   controller.editingId = "";
   controller.btnExcluir.hidden = true;
+  if (controller.entradaInteligente) controller.entradaInteligente.value = "";
+  if (controller.resumoDeteccao) {
+    controller.resumoDeteccao.innerHTML = "O sistema detecta texto de apoio, enunciado, alternativas e define o tipo automaticamente.";
+  }
   clearFeedback(controller.feedback);
   clearFeedback(controller.descritorFeedback);
   populateAlternativeFormats(controller.formatoAlternativas);
@@ -345,6 +522,7 @@ function resetQuestionController(controller) {
   updateQuestionDescritores(controller, getActiveContext());
   renderTextAlternatives(controller);
   renderImageAlternatives(controller);
+  updateBnccSummary(controller, getActiveContext(), controller.descritorSugestao);
 }
 
 async function handleDeleteQuestion(controller) {
@@ -373,34 +551,224 @@ function getActiveContext() {
   return state.mode === "bloco" ? getContextPayload(blockContext) : getContextPayload(individualContext);
 }
 
-async function suggestDescritor(controller, context) {
-  clearFeedback(controller.descritorFeedback);
-  const tipo = getSelectedTipo(controller);
-  const result = await analisarDescritorQuestao({
-    tituloTextoApoio: context.tituloTexto,
+function buildLocalClassificationResult(question, context) {
+  const suggestion = preClassificarQuestao({
+    ...question,
     disciplina: context.disciplina,
     anoEscolar: context.anoEscolar,
-    textoApoio: context.textoApoio,
-    enunciado: controller.enunciado.value,
-    alternativas: tipo === "multipla_texto" ? limparAlternativas(controller.alternativasTexto.value) : [],
-    respostaCorreta: controller.correctIndex,
-    tipo,
-    respostaEsperada: tipo === "resposta_escrita" ? controller.respostaEsperada.value : ""
+    textoApoio: question.textoApoio || context.textoApoio || ""
   });
 
-  controller.descritorSugestao = result;
+  return {
+    descritor: suggestion.descritorSugerido || "",
+    descricao: suggestion.descritorDescricao || "",
+    codigo_bncc: suggestion.bnccSugerida || "",
+    habilidade_bncc: suggestion.habilidadeBncc || "",
+    categoria_bncc: suggestion.categoriaSugerida || "",
+    conteudo: suggestion.conteudoSugerido || "",
+    saeb_equivalente: suggestion.saebEquivalente || suggestion.descritorSugerido || "",
+    parana_equivalente: suggestion.paranaEquivalente || suggestion.descritorSugerido || "",
+    confianca: suggestion.confianca || "baixa",
+    confianca_classificacao: suggestion.confianca || "baixa",
+    pontuacao_classificacao: 0,
+    justificativa: suggestion.justificativa || "Classificacao local por regras."
+  };
+}
 
-  if (!result || !result.descritor) {
-    showFeedback(controller.descritorFeedback, "error", "Nao foi possivel sugerir um descritor. Escolha manualmente.");
+function applyQuestionDetectionSummary(controller, parsedQuestion) {
+  if (!controller.resumoDeteccao) return;
+
+  const tipo = parsedQuestion.tipo === "resposta_escrita"
+    ? "Questao dissertativa"
+    : parsedQuestion.tipo === "multipla_imagem"
+      ? "Multipla escolha com imagem"
+      : "Multipla escolha com texto";
+  const apoio = parsedQuestion.textoApoio ? "com texto de apoio" : "sem texto de apoio";
+  const alternativas = parsedQuestion.tipo === "resposta_escrita"
+    ? "sem alternativas"
+    : `${(parsedQuestion.alternativas || []).length} alternativa(s)`;
+
+  controller.resumoDeteccao.innerHTML = `${tipo}, ${apoio}, ${alternativas}. Voce pode revisar e ajustar abaixo antes de salvar.`;
+}
+
+function fillControllerFromParsedQuestion(controller, contextController, parsedQuestion) {
+  if (contextController && parsedQuestion.textoApoio && !contextController.textoApoio.value.trim()) {
+    contextController.textoApoio.value = parsedQuestion.textoApoio;
+  }
+
+  setSelectedTipo(controller, parsedQuestion.tipo || "multipla_texto");
+  controller.enunciado.value = parsedQuestion.enunciado || "";
+  controller.respostaEsperada.value = parsedQuestion.respostaEsperada || "";
+  controller.formatoAlternativas.value = parsedQuestion.formatoAlternativas || DEFAULT_ALTERNATIVE_FORMAT;
+  controller.imageAlternatives = [];
+  controller.correctIndex = parsedQuestion.respostaCorreta === "" || parsedQuestion.respostaCorreta === null || parsedQuestion.respostaCorreta === undefined
+    ? ""
+    : String(parsedQuestion.respostaCorreta);
+
+  if (parsedQuestion.tipo === "multipla_texto") {
+    controller.alternativasTexto.value = (parsedQuestion.alternativas || [])
+      .map(item => item.texto || "")
+      .filter(Boolean)
+      .join("\n");
+  } else {
+    controller.alternativasTexto.value = "";
+  }
+
+  if (parsedQuestion.tipo === "multipla_imagem") {
+    controller.imageAlternatives = (parsedQuestion.alternativas || [])
+      .filter(item => item.imagemUrl)
+      .map(item => ({
+        existingUrl: item.imagemUrl,
+        url: item.imagemUrl,
+        name: "Imagem salva"
+      }));
+  }
+
+  const classificacaoLocal = buildLocalClassificationResult(parsedQuestion, getActiveContext());
+  controller.descritorSugestao = classificacaoLocal;
+  controller.classificacaoConfirmada = false;
+  if (classificacaoLocal.descritor) {
+    controller.descritor.value = classificacaoLocal.descritor;
+  }
+  if (controller.bnccConfirmado) {
+    controller.bnccConfirmado.value = classificacaoLocal.codigo_bncc || "";
+  }
+  if (controller.conteudo && !controller.conteudo.value.trim()) {
+    controller.conteudo.value = classificacaoLocal.conteudo || classificacaoLocal.categoria_bncc || "";
+  }
+  controller.descritorConfirmado.checked = Boolean(controller.descritor.value) || !disciplinaPrecisaDescritor(getActiveContext().disciplina);
+
+  updateQuestionType(controller);
+  renderTextAlternatives(controller);
+  renderImageAlternatives(controller);
+  updateBnccSummary(controller, getActiveContext(), classificacaoLocal);
+  applyQuestionDetectionSummary(controller, parsedQuestion);
+}
+
+function parseSingleQuestionFromInput(rawText, context) {
+  const resultado = organizarQuestoesParaRevisao(rawText, {
+    titulo: context.tituloTexto || "",
+    anoEscolar: context.anoEscolar,
+    disciplina: context.disciplina,
+    textoOriginal: rawText,
+    fonte: { nome: "", url: "", observacao: "", licenca: "" }
+  });
+
+  return {
+    resultado,
+    questao: (resultado.questions || [])[0] || null
+  };
+}
+
+function organizeSingleQuestionInput(controller, context) {
+  clearFeedback(controller.feedback);
+  const rawText = controller.entradaInteligente?.value.trim() || "";
+
+  if (!rawText) {
+    showFeedback(controller.feedback, "error", "Cole ou digite a questao no campo inteligente.");
     return;
   }
 
-  controller.descritor.value = result.descritor;
+  const { resultado, questao } = parseSingleQuestionFromInput(rawText, context);
+  if (!questao) {
+    showFeedback(controller.feedback, "error", "Nao foi possivel separar a questao automaticamente. Ajuste o texto e tente novamente.");
+    return;
+  }
+
+  fillControllerFromParsedQuestion(
+    controller,
+    state.mode === "bloco" ? blockContext : individualContext,
+    questao
+  );
+
+  if ((resultado.questions || []).length > 1) {
+    showFeedback(controller.feedback, "success", `Foram detectadas ${resultado.questions.length} questoes. A primeira foi organizada aqui; para varias questoes juntas, use o modo bloco.`);
+    return;
+  }
+
+  showFeedback(controller.feedback, "success", "Questao organizada automaticamente. Revise e salve quando estiver pronta.");
+}
+
+function organizeBlockInput() {
+  clearFeedback(elements.feedbackBloco);
+  const context = validateContext(blockContext, { requireBlockText: false });
+  const rawText = blockContext.entradaBloco?.value.trim() || "";
+
+  if (!rawText) {
+    showFeedback(elements.feedbackBloco, "error", "Cole o bloco bruto antes de organizar.");
+    return;
+  }
+
+  const resultado = organizarQuestoesParaRevisao(rawText, {
+    titulo: context.tituloTexto,
+    anoEscolar: context.anoEscolar,
+    disciplina: context.disciplina,
+    textoOriginal: rawText,
+    fonte: { nome: "", url: "", observacao: "", licenca: "" }
+  });
+  const questoes = resultado.questions || [];
+
+  if (!questoes.length) {
+    showFeedback(elements.feedbackBloco, "error", "Nao foi possivel separar as questoes automaticamente nesse bloco.");
+    return;
+  }
+
+  if (resultado.tituloDetectado && !blockContext.tituloTexto.value.trim()) {
+    blockContext.tituloTexto.value = resultado.tituloDetectado;
+  }
+  if (resultado.textoBaseDetectado) {
+    blockContext.textoApoio.value = resultado.textoBaseDetectado;
+  }
+
+  state.blockQuestions = questoes.map(question => ({
+    ...question,
+    disciplina: context.disciplina,
+    anoEscolar: context.anoEscolar,
+    textoApoio: "",
+    imagensApoio: [],
+    descritorConfirmadoPeloProfessor: !disciplinaPrecisaDescritor(context.disciplina) || Boolean(question.descritor)
+  }));
+  renderBlockQuestions();
+  elements.blockQuestionPanel.hidden = true;
+  showFeedback(elements.feedbackBloco, "success", `${questoes.length} questao(oes) organizada(s) automaticamente. Agora revise a lista e salve o bloco completo.`);
+}
+
+async function suggestDescritor(controller, context) {
+  clearFeedback(controller.descritorFeedback);
+  const tipo = getSelectedTipo(controller);
+  const result = buildLocalClassificationResult({
+    enunciado: controller.enunciado.value,
+    alternativas: tipo === "multipla_texto"
+      ? limparAlternativas(controller.alternativasTexto.value).map(texto => ({ texto }))
+      : [],
+    respostaEsperada: tipo === "resposta_escrita" ? controller.respostaEsperada.value : "",
+    tipo
+  }, context);
+
+  controller.descritorSugestao = result;
+  controller.classificacaoConfirmada = false;
+
+  if (!result || !result.codigo_bncc) {
+    updateBnccSummary(controller, context, result);
+    showFeedback(controller.descritorFeedback, "error", "Nao foi possivel sugerir uma habilidade BNCC pelas regras locais. Ajuste manualmente.");
+    return;
+  }
+
+  if (result.descritor) {
+    controller.descritor.value = result.descritor;
+  }
+  if (controller.bnccConfirmado) {
+    controller.bnccConfirmado.value = result.codigo_bncc;
+  }
+  if (controller.conteudo && !controller.conteudo.value.trim()) {
+    controller.conteudo.value = result.conteudo || result.categoria_bncc || "";
+  }
   controller.descritorConfirmado.checked = false;
+  updateBnccSummary(controller, context, result);
   showFeedback(
     controller.descritorFeedback,
     "success",
-    `Descritor sugerido: ${result.descritor} - ${result.descricao} (confianca ${Math.round((result.confianca || 0) * 100)}%). ${result.justificativa || ""}`
+    `Classificacao local sugerida: ${result.codigo_bncc} - ${result.habilidade_bncc || result.descricao}. SAEB: ${result.saeb_equivalente || "-"}. Parana: ${result.parana_equivalente || "-"}. ${result.justificativa || ""}`
   );
 }
 
@@ -408,6 +776,8 @@ function buildQuestionDraft(controller, context) {
   const tipo = getSelectedTipo(controller);
   const selectedDescritor = getDescritores(context.disciplina, context.anoEscolar)
     .find(item => item.codigo === controller.descritor.value);
+  const selectedBncc = listarHabilidades({ disciplina: context.disciplina, ano: context.anoEscolar })
+    .find(item => item.codigo_bncc === controller.bnccConfirmado?.value);
   let alternativas = [];
 
   if (tipo === "multipla_texto") {
@@ -448,6 +818,31 @@ function buildQuestionDraft(controller, context) {
     descritorConfirmado: controller.descritor.value,
     professorAlterou: Boolean(controller.descritorSugestao?.descritor && controller.descritor.value && controller.descritorSugestao.descritor !== controller.descritor.value),
     confiancaDescritor: Number(controller.descritorSugestao?.confianca || 0),
+    bncc_sugerido: controller.descritorSugestao?.codigo_bncc || "",
+    bncc_confirmado: controller.bnccConfirmado?.value || "",
+    habilidade_bncc: selectedBncc?.habilidade || controller.descritorSugestao?.habilidade_bncc || "",
+    conteudo: controller.conteudo?.value.trim() || controller.descritorSugestao?.conteudo || "",
+    categoria_bncc: selectedBncc?.categoria || controller.descritorSugestao?.categoria_bncc || "",
+    saeb_equivalente: selectedBncc?.saeb || controller.descritorSugestao?.saeb_equivalente || controller.descritor.value || "",
+    parana_equivalente: selectedBncc?.parana || controller.descritorSugestao?.parana_equivalente || selectedBncc?.saeb || controller.descritor.value || "",
+    confianca_classificacao: controller.descritorSugestao?.confianca_classificacao || (controller.bnccConfirmado?.value ? "media" : "baixa"),
+    pontuacao_classificacao: Number(controller.descritorSugestao?.pontuacao_classificacao || 0),
+    justificativa_classificacao: controller.descritorSugestao?.justificativa || "",
+    classificacao_confirmada: Boolean(controller.classificacaoConfirmada && controller.bnccConfirmado?.value),
+    data_confirmacao: controller.classificacaoConfirmada && controller.bnccConfirmado?.value ? new Date() : null,
+    professor_id: usuario.uid,
+    bncc: {
+      codigoHabilidade: controller.bnccConfirmado?.value || controller.descritorSugestao?.codigo_bncc || "",
+      habilidade: selectedBncc?.habilidade || controller.descritorSugestao?.habilidade_bncc || "",
+      componenteCurricular: getDisciplinaLabel(context.disciplina),
+      unidadeTematica: "",
+      objetoConhecimento: "",
+      praticaLinguagem: "",
+      campoAtuacao: "",
+      areaConhecimento: ""
+    },
+    codigoHabilidadeBncc: controller.bnccConfirmado?.value || controller.descritorSugestao?.codigo_bncc || "",
+    habilidadeBncc: selectedBncc?.habilidade || controller.descritorSugestao?.habilidade_bncc || "",
     nivelDificuldade: controller.nivelDificuldade.value,
     formatoAlternativas: controller.formatoAlternativas.value,
     autor: usuario.uid,
@@ -507,11 +902,24 @@ async function materializeQuestionDraft(draft) {
 function fillQuestionController(controller, question) {
   controller.editingId = question.id || "";
   controller.btnExcluir.hidden = !controller.editingId;
+  if (controller.entradaInteligente) controller.entradaInteligente.value = "";
   setSelectedTipo(controller, question.tipo);
   controller.enunciado.value = question.enunciado || "";
   controller.formatoAlternativas.value = question.formatoAlternativas || DEFAULT_ALTERNATIVE_FORMAT;
   controller.nivelDificuldade.value = question.nivelDificuldade || "";
   controller.descritor.value = question.descritor || "";
+  if (controller.bnccConfirmado) controller.bnccConfirmado.value = question.bncc_confirmado || question.bncc_sugerido || question.codigoHabilidadeBncc || "";
+  if (controller.conteudo) controller.conteudo.value = question.conteudo || "";
+  controller.classificacaoConfirmada = Boolean(question.classificacao_confirmada);
+  controller.descritorSugestao = question.descritorSugestaoIA || (question.bncc_sugerido ? {
+    codigo_bncc: question.bncc_sugerido,
+    habilidade_bncc: question.habilidade_bncc || question.habilidadeBncc || "",
+    categoria_bncc: question.categoria_bncc || "",
+    saeb_equivalente: question.saeb_equivalente || "",
+    parana_equivalente: question.parana_equivalente || "",
+    confianca_classificacao: question.confianca_classificacao || "baixa",
+    justificativa: question.justificativa_classificacao || ""
+  } : null);
   controller.descritorConfirmado.checked = question.descritorConfirmadoPeloProfessor !== false;
   controller.respostaEsperada.value = question.respostaEsperada || "";
   controller.correctIndex = typeof question.resposta_correta === "number"
@@ -538,6 +946,11 @@ function fillQuestionController(controller, question) {
   updateQuestionType(controller);
   renderTextAlternatives(controller);
   renderImageAlternatives(controller);
+  updateBnccSummary(controller, getActiveContext(), controller.descritorSugestao);
+  applyQuestionDetectionSummary(controller, {
+    ...question,
+    respostaCorreta: question.resposta_correta
+  });
 }
 
 function fillContext(controller, questionOrBlock) {
@@ -762,6 +1175,7 @@ function bindEvents() {
   blockForm.form.addEventListener("submit", handleBlockQuestionSubmit);
   elements.btnAdicionarQuestaoBloco.addEventListener("click", () => startBlockQuestion(null));
   elements.btnSalvarBlocoCompleto.addEventListener("click", saveCompleteBlock);
+  blockContext.btnOrganizarBloco?.addEventListener("click", organizeBlockInput);
   elements.btnExcluirBloco.addEventListener("click", async () => {
     if (!state.editingBlockId) return;
     const ok = confirm("Tem certeza que deseja excluir este bloco? Todas as questoes vinculadas tambem serao apagadas do Firestore.");
@@ -786,6 +1200,7 @@ function bindEvents() {
     blockContext.anoEscolar.value = "";
     blockContext.disciplina.value = "";
     blockContext.textoApoio.value = "";
+    if (blockContext.entradaBloco) blockContext.entradaBloco.value = "";
     blockContext.existingImages = [];
     blockContext.imagensApoio.value = "";
     renderSupportImagePreview(blockContext);

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Import Tests</title>
+</head>
+<body>
+  <pre id="out">running...</pre>
+  <script>
+    window.firebase = {
+      apps: [],
+      initializeApp() { return {}; },
+      app() { return {}; },
+      firestore() { return { collection() { return {}; } }; },
+      auth() { return {}; }
+    };
+  </script>
+  <script src="../assets/vendor/jszip.min.js"></script>
+  <script type="module">
+    import { organizarQuestoesParaRevisao } from "../assets/js/services/importacao-questoes-service.js?v=20260504-bugfix";
+    import { extractPdfAssessment } from "../assets/js/services/pdf-import-service.js?v=20260504-bugfix";
+    import { extractDocxAssessment } from "../assets/js/services/docx-import-service.js?v=20260504-bugfix";
+
+    const ctx = { titulo: "Teste", anoEscolar: "5ano", disciplina: "portugues", fonte: {} };
+
+    async function fetchAsFile(url, name, type) {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new File([blob], name, { type });
+    }
+
+    function summarize(result) {
+      return {
+        count: result.questions?.length || 0,
+        textoBase: result.textoBaseDetectado || "",
+        questoes: (result.questions || []).map(q => ({
+          numero: q.numeroOriginal,
+          textoApoio: q.textoApoio || "",
+          enunciado: q.enunciado || "",
+          tipo: q.tipo,
+          alternativas: (q.alternativas || []).map(a => a.texto || a.imagemUrl || ""),
+          gabarito: q.gabaritoOriginal || "",
+          respostaCorreta: q.respostaCorreta
+        }))
+      };
+    }
+
+    const cases = {};
+    cases.simple = summarize(organizarQuestoesParaRevisao(
+      "QUESTAO 1\nQual animal late?\nA) Gato\nB) Cachorro\nC) Peixe\nD) Cavalo\nGabarito: B",
+      ctx
+    ));
+    cases.supportEach = summarize(organizarQuestoesParaRevisao(
+      "Leia o texto abaixo.\nO gato dormiu no sofa.\n\nQUESTAO 1\nO que o gato fez?\nA) Correu\nB) Dormiu\nC) Pulou\nD) Nadou\n\nLeia o texto abaixo.\nA lua apareceu no ceu.\n\nQUESTAO 2\nO que apareceu no ceu?\nA) O sol\nB) A chuva\nC) A lua\nD) O vento\nGabarito: C",
+      ctx
+    ));
+    cases.block1620 = summarize(organizarQuestoesParaRevisao(
+      "LEIA O TEXTO E RESPONDA AS QUESTOES 16, 17, 18, 19 E 20\nO menino saiu cedo para a escola.\n\n16. O menino saiu cedo para onde?\nA) Escola\nB) Praca\nC) Praia\nD) Cinema\n\n17. Quando o menino saiu?\nA) Tarde\nB) Noite\nC) Cedo\nD) Nunca",
+      ctx
+    ));
+    cases.noAlternatives = summarize(organizarQuestoesParaRevisao(
+      "QUESTAO 1\nExplique com suas palavras o que aconteceu com o personagem.",
+      ctx
+    ));
+    cases.complete = summarize(organizarQuestoesParaRevisao(
+      "QUESTAO 1\nComplete a frase: O Brasil fica na ______.",
+      ctx
+    ));
+    cases.lowercase = summarize(organizarQuestoesParaRevisao(
+      "1) Qual numero vem depois do 2?\na) 1\nb) 2\nc) 3\nd) 4\nGabarito: c",
+      ctx
+    ));
+
+    const pdfFile = await fetchAsFile("./sample-saeb.pdf", "sample-saeb.pdf", "application/pdf");
+    const pdf = await extractPdfAssessment(pdfFile);
+    cases.pdf = {
+      textoLen: pdf.textoExtraido.length,
+      pages: pdf.pages?.length || 0,
+      images: pdf.imagensPendentes?.length || 0,
+      alertas: pdf.alertas || []
+    };
+
+    const docxFile = await fetchAsFile("./sample-text-images.docx", "sample-text-images.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    const docx = await extractDocxAssessment(docxFile);
+    cases.docx = {
+      textoLen: docx.textoExtraido.length,
+      images: docx.imagensPendentes?.length || 0,
+      alertas: docx.alertas || []
+    };
+
+    document.getElementById("out").textContent = JSON.stringify(cases, null, 2);
+  </script>
+</body>
+</html>

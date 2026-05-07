@@ -59,6 +59,114 @@ export function sanitizeText(value) {
   return String(value || "").trim();
 }
 
+function buildEmptyBnccFields() {
+  return {
+    codigoHabilidade: "",
+    habilidade: "",
+    componenteCurricular: "",
+    unidadeTematica: "",
+    objetoConhecimento: "",
+    praticaLinguagem: "",
+    campoAtuacao: "",
+    areaConhecimento: ""
+  };
+}
+
+function normalizeBnccPayload(payload = {}, descritorInfo = null) {
+  const payloadBncc = payload?.bncc && typeof payload.bncc === "object" ? payload.bncc : {};
+  const descritorBncc = descritorInfo?.bncc && typeof descritorInfo.bncc === "object" ? descritorInfo.bncc : {};
+
+  return {
+    codigoHabilidade: sanitizeText(
+      payload.codigoHabilidadeBncc ||
+      payload.habilidadeCodigoBncc ||
+      payload.codigoBncc ||
+      payloadBncc.codigoHabilidade ||
+      payloadBncc.codigoHabilidadeBncc ||
+      payloadBncc.habilidadeCodigoBncc ||
+      payloadBncc.codigoBncc ||
+      descritorBncc.codigoHabilidade ||
+      descritorInfo?.codigoHabilidadeBncc ||
+      ""
+    ),
+    habilidade: sanitizeText(payload.habilidadeBncc || payloadBncc.habilidade || payloadBncc.habilidadeBncc || descritorBncc.habilidade || descritorInfo?.habilidadeBncc || ""),
+    componenteCurricular: sanitizeText(payload.componenteCurricularBncc || payloadBncc.componenteCurricular || payloadBncc.componenteCurricularBncc || descritorBncc.componenteCurricular || descritorInfo?.componenteCurricularBncc || ""),
+    unidadeTematica: sanitizeText(payload.unidadeTematicaBncc || payloadBncc.unidadeTematica || payloadBncc.unidadeTematicaBncc || descritorBncc.unidadeTematica || descritorInfo?.unidadeTematicaBncc || ""),
+    objetoConhecimento: sanitizeText(payload.objetoConhecimentoBncc || payloadBncc.objetoConhecimento || payloadBncc.objetoConhecimentoBncc || descritorBncc.objetoConhecimento || descritorInfo?.objetoConhecimentoBncc || ""),
+    praticaLinguagem: sanitizeText(payload.praticaLinguagemBncc || payloadBncc.praticaLinguagem || payloadBncc.praticaLinguagemBncc || descritorBncc.praticaLinguagem || descritorInfo?.praticaLinguagemBncc || ""),
+    campoAtuacao: sanitizeText(payload.campoAtuacaoBncc || payloadBncc.campoAtuacao || payloadBncc.campoAtuacaoBncc || descritorBncc.campoAtuacao || descritorInfo?.campoAtuacaoBncc || ""),
+    areaConhecimento: sanitizeText(payload.areaConhecimentoBncc || payloadBncc.areaConhecimento || payloadBncc.areaConhecimentoBncc || descritorBncc.areaConhecimento || descritorInfo?.areaConhecimentoBncc || "")
+  };
+}
+
+function buildBnccRecordFields(payload = {}, descritorInfo = null) {
+  const bncc = {
+    ...buildEmptyBnccFields(),
+    ...normalizeBnccPayload(payload, descritorInfo)
+  };
+
+  return {
+    bncc,
+    codigoHabilidadeBncc: bncc.codigoHabilidade,
+    habilidadeBncc: bncc.habilidade,
+    componenteCurricularBncc: bncc.componenteCurricular,
+    unidadeTematicaBncc: bncc.unidadeTematica,
+    objetoConhecimentoBncc: bncc.objetoConhecimento,
+    praticaLinguagemBncc: bncc.praticaLinguagem,
+    campoAtuacaoBncc: bncc.campoAtuacao,
+    areaConhecimentoBncc: bncc.areaConhecimento
+  };
+}
+
+function buildClassificationRecordFields(payload = {}, bnccFields = {}, usuario = null) {
+  const suggestion = payload?.descritorSugestaoIA && typeof payload.descritorSugestaoIA === "object"
+    ? payload.descritorSugestaoIA
+    : {};
+  const confirmed = Boolean(payload.classificacao_confirmada ?? payload.classificacaoConfirmada ?? payload.descritorConfirmadoPeloProfessor ?? false);
+  const codigoSugerido = sanitizeText(payload.bncc_sugerido || payload.bnccSugerido || suggestion.codigo_bncc || bnccFields.codigoHabilidadeBncc || "");
+  const codigoConfirmado = sanitizeText(payload.bncc_confirmado || payload.bnccConfirmado || (confirmed ? (codigoSugerido || bnccFields.codigoHabilidadeBncc) : ""));
+  const habilidade = sanitizeText(payload.habilidade_bncc || payload.habilidadeBncc || suggestion.habilidade_bncc || suggestion.habilidade || bnccFields.habilidadeBncc || "");
+  const categoria = sanitizeText(payload.categoria_bncc || payload.categoriaBncc || suggestion.categoria_bncc || suggestion.categoria || "");
+  const saeb = sanitizeText(payload.saeb_equivalente || payload.saebEquivalente || suggestion.saeb_equivalente || suggestion.saeb || payload.descritor || "");
+  const parana = sanitizeText(payload.parana_equivalente || payload.paranaEquivalente || suggestion.parana_equivalente || suggestion.parana || saeb);
+  const confianca = sanitizeText(payload.confianca_classificacao || payload.confiancaClassificacao || suggestion.confianca_classificacao || suggestion.confianca || "baixa");
+  const pontuacao = Number(payload.pontuacao_classificacao ?? payload.pontuacaoClassificacao ?? suggestion.pontuacao_classificacao ?? suggestion.pontuacao ?? 0);
+  const justificativa = sanitizeText(payload.justificativa_classificacao || payload.justificativaClassificacao || suggestion.justificativa || "");
+  const dataConfirmacao = payload.data_confirmacao || payload.dataConfirmacao || (confirmed ? new Date() : null);
+
+  return {
+    bncc_sugerido: codigoSugerido,
+    bncc_confirmado: codigoConfirmado,
+    habilidade_bncc: habilidade,
+    categoria_bncc: categoria,
+    saeb_equivalente: saeb,
+    parana_equivalente: parana,
+    confianca_classificacao: confianca,
+    pontuacao_classificacao: pontuacao,
+    justificativa_classificacao: justificativa,
+    classificacao_confirmada: confirmed,
+    data_confirmacao: dataConfirmacao,
+    professor_id: sanitizeText(payload.professor_id || payload.professorId || usuario?.uid || payload.autorId || payload.autor || "")
+  };
+}
+
+function normalizeClassificationRecordFields(question = {}) {
+  return {
+    bncc_sugerido: sanitizeText(question.bncc_sugerido || question.bnccSugerido || question.codigoHabilidadeBncc || ""),
+    bncc_confirmado: sanitizeText(question.bncc_confirmado || question.bnccConfirmado || ""),
+    habilidade_bncc: sanitizeText(question.habilidade_bncc || question.habilidadeBncc || ""),
+    categoria_bncc: sanitizeText(question.categoria_bncc || question.categoriaBncc || ""),
+    saeb_equivalente: sanitizeText(question.saeb_equivalente || question.saebEquivalente || question.descritor || ""),
+    parana_equivalente: sanitizeText(question.parana_equivalente || question.paranaEquivalente || ""),
+    confianca_classificacao: sanitizeText(question.confianca_classificacao || question.confiancaClassificacao || "baixa"),
+    pontuacao_classificacao: Number(question.pontuacao_classificacao ?? question.pontuacaoClassificacao ?? 0),
+    justificativa_classificacao: sanitizeText(question.justificativa_classificacao || question.justificativaClassificacao || ""),
+    classificacao_confirmada: Boolean(question.classificacao_confirmada ?? question.classificacaoConfirmada ?? false),
+    data_confirmacao: question.data_confirmacao || question.dataConfirmacao || null,
+    professor_id: sanitizeText(question.professor_id || question.professorId || question.autorId || question.autor || "")
+  };
+}
+
 export function limparAlternativas(texto) {
   return String(texto || "")
     .split(/\r?\n/)
@@ -175,20 +283,47 @@ export function buildQuestionSearchText(payload) {
     .join(" ");
 
   return [
+    payload.instrucao,
     payload.tituloTextoApoio,
     payload.blocoTitulo,
     payload.textoApoio,
+    payload.fonteTextoApoio,
+    payload.imagemApoio,
+    payload.fonteImagemApoio,
+    payload.conteudo,
     payload.enunciado,
     alternativasTexto,
     payload.respostaEsperada,
     payload.disciplina,
     payload.anoEscolar,
     payload.descritor,
-    payload.descritorDescricao
+    payload.descritorDescricao,
+    payload.codigoHabilidadeBncc,
+    payload.habilidadeBncc,
+    payload.componenteCurricularBncc,
+    payload.unidadeTematicaBncc,
+    payload.objetoConhecimentoBncc,
+    payload.praticaLinguagemBncc,
+    payload.campoAtuacaoBncc,
+    payload.areaConhecimentoBncc,
+    payload.bncc?.codigoHabilidade,
+    payload.bncc?.habilidade,
+    payload.bncc?.componenteCurricular,
+    payload.bncc?.unidadeTematica,
+    payload.bncc?.objetoConhecimento,
+    payload.bncc?.praticaLinguagem,
+    payload.bncc?.campoAtuacao,
+    payload.bncc?.areaConhecimento
   ]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
+}
+
+function normalizeSupportImages(value = []) {
+  return (Array.isArray(value) ? value : [value])
+    .map(item => sanitizeText(item))
+    .filter(Boolean);
 }
 
 export function getDescritorInfo(disciplina, anoEscolar, descritor) {
@@ -251,6 +386,11 @@ export function buildQuestionRecord(payload, usuario) {
     ? []
     : normalizeAlternativesByType(tipoNormalizado, payload.alternativas, payload.respostaCorreta);
   const descritorInfo = getDescritorInfo(payload.disciplina, payload.anoEscolar, payload.descritor);
+  const bnccFields = buildBnccRecordFields(payload, descritorInfo);
+  const classificationFields = buildClassificationRecordFields(payload, bnccFields, usuario);
+  const imagensApoio = normalizeSupportImages(payload.imagensApoio);
+  const imagemApoio = sanitizeText(payload.imagemApoio);
+  const recursoImagem = imagensApoio[0] || sanitizeText(payload.recurso?.imagem || payload.imagem) || imagemApoio;
 
   return {
     tipo: tipoNormalizado,
@@ -266,12 +406,20 @@ export function buildQuestionRecord(payload, usuario) {
     descritorConfirmado: payload.descritor || "",
     professorAlterou: Boolean((payload.descritorSugerido || payload.descritorSugestaoIA?.descritor) && payload.descritor && (payload.descritorSugerido || payload.descritorSugestaoIA?.descritor) !== payload.descritor),
     confiancaDescritor: Number(payload.confiancaDescritor ?? payload.descritorSugestaoIA?.confianca ?? 0),
+    ...bnccFields,
+    ...classificationFields,
     formatoAlternativas: normalizeAlternativeFormat(payload.formatoAlternativas),
+    instrucao: sanitizeText(payload.instrucao),
     textoApoio: sanitizeText(payload.textoApoio),
+    fonteTextoApoio: sanitizeText(payload.fonteTextoApoio),
+    imagemApoio,
+    fonteImagemApoio: sanitizeText(payload.fonteImagemApoio),
     tituloTextoApoio: sanitizeText(payload.tituloTextoApoio || payload.tituloTexto || ""),
-    imagensApoio: (payload.imagensApoio || []).filter(Boolean),
+    imagensApoio,
     enunciado: sanitizeText(payload.enunciado),
     alternativas,
+    paginaOrigem: Number(payload.paginaOrigem || 0) || null,
+    imagemProvavel: Boolean(payload.imagemProvavel),
     resposta_correta: tipoNormalizado === QUESTION_TYPES.resposta_escrita
       ? null
       : alternativas.findIndex(item => item.correta),
@@ -279,6 +427,7 @@ export function buildQuestionRecord(payload, usuario) {
       ? sanitizeText(payload.respostaEsperada || payload.respostaEsperadaTexto)
       : "",
     nivelDificuldade: sanitizeText(payload.nivelDificuldade),
+    conteudo: sanitizeText(payload.conteudo),
     autor: usuario.uid,
     autorId: usuario.uid,
     autorNome: usuario.nome || "",
@@ -286,15 +435,36 @@ export function buildQuestionRecord(payload, usuario) {
     criadoEm: new Date(),
     atualizadoEm: new Date(),
     recurso: {
-      imagem: (payload.imagensApoio || [])[0] || sanitizeText(payload.imagem),
-      imagens: (payload.imagensApoio || []).filter(Boolean),
+      imagem: recursoImagem,
+      imagens: imagensApoio,
       audio: ""
     },
     origemCriacao: sanitizeText(payload.origemCriacao || "individual"),
+    importacaoId: sanitizeText(payload.importacaoId),
+    visibilidade: sanitizeText(payload.visibilidade || "privada"),
+    statusRevisao: sanitizeText(payload.statusRevisao || "revisada_professor"),
+    fonte: payload.fonte && typeof payload.fonte === "object"
+      ? {
+          nome: sanitizeText(payload.fonte.nome),
+          url: sanitizeText(payload.fonte.url),
+          observacao: sanitizeText(payload.fonte.observacao),
+          licenca: sanitizeText(payload.fonte.licenca)
+        }
+      : {
+          nome: "",
+          url: "",
+          observacao: "",
+          licenca: ""
+        },
     blocoId: sanitizeText(payload.blocoId),
+    referenciaBlocoId: sanitizeText(payload.referenciaBlocoId || payload.blocoId),
     blocoTitulo: sanitizeText(payload.blocoTitulo || payload.tituloTextoApoio || ""),
     ordemBloco: Number(payload.ordemBloco || 0),
-    searchText: buildQuestionSearchText(payload)
+    searchText: buildQuestionSearchText({
+      ...payload,
+      descritorDescricao: payload.descritorDescricao || descritorInfo?.nome || "",
+      ...bnccFields
+    })
   };
 }
 
@@ -303,6 +473,10 @@ export function normalizeLegacyQuestion(question = {}) {
   const alternativas = Array.isArray(question.alternativas)
     ? normalizeAlternatives(question.alternativas, question.resposta_correta)
     : [];
+  const bnccFields = buildBnccRecordFields(question);
+  const classificationFields = normalizeClassificationRecordFields(question);
+  const imagensApoio = normalizeSupportImages(question.imagensApoio || question.imagens || question.recurso?.imagens || []);
+  const imagemApoio = question.imagemApoio || "";
 
   return {
     id: question.id,
@@ -319,24 +493,38 @@ export function normalizeLegacyQuestion(question = {}) {
     descritorConfirmado: question.descritorConfirmado || question.descritor || "",
     professorAlterou: Boolean(question.professorAlterou),
     confiancaDescritor: Number(question.confiancaDescritor ?? question.descritorSugestaoIA?.confianca ?? 0),
+    ...bnccFields,
+    ...classificationFields,
     formatoAlternativas: normalizeAlternativeFormat(question.formatoAlternativas),
+    instrucao: question.instrucao || "",
     textoApoio: question.textoApoio || question.textoAntes || "",
+    fonteTextoApoio: question.fonteTextoApoio || "",
+    imagemApoio,
+    fonteImagemApoio: question.fonteImagemApoio || "",
     tituloTextoApoio: question.tituloTextoApoio || question.blocoTitulo || "",
-    imagensApoio: question.imagensApoio || question.imagens || (question.recurso?.imagem ? [question.recurso.imagem] : []),
+    imagensApoio: imagensApoio.length ? imagensApoio : (question.recurso?.imagem && !imagemApoio ? [question.recurso.imagem] : []),
     enunciado: question.enunciado || question.pergunta || "",
     alternativas,
+    paginaOrigem: Number(question.paginaOrigem || 0) || null,
+    imagemProvavel: Boolean(question.imagemProvavel),
     resposta_correta: typeof question.resposta_correta === "number" ? question.resposta_correta : alternativas.findIndex(item => item.correta),
     respostaEsperada: question.respostaEsperada || "",
     nivelDificuldade: question.nivelDificuldade || "",
+    conteudo: question.conteudo || "",
     autor: question.autor || question.autorId || "",
     autorId: question.autorId || question.autor || "",
     autorNome: question.autorNome || "",
     data_criacao: question.data_criacao || question.criadoEm || null,
     criadoEm: question.criadoEm || question.data_criacao || null,
     atualizadoEm: question.atualizadoEm || question.criadoEm || question.data_criacao || null,
-    recurso: question.recurso || { imagem: "", imagens: [], audio: "" },
+    recurso: question.recurso || { imagem: imagensApoio[0] || imagemApoio || "", imagens: imagensApoio, audio: "" },
     origemCriacao: question.origemCriacao || "banco",
+    importacaoId: question.importacaoId || "",
+    visibilidade: question.visibilidade || "privada",
+    statusRevisao: question.statusRevisao || "revisada_professor",
+    fonte: question.fonte || { nome: "", url: "", observacao: "", licenca: "" },
     blocoId: question.blocoId || "",
+    referenciaBlocoId: question.referenciaBlocoId || question.blocoId || "",
     blocoTitulo: question.blocoTitulo || question.tituloTextoApoio || "",
     ordemBloco: Number(question.ordemBloco || 0),
     origem: question.origem || "banco"
@@ -435,6 +623,9 @@ export async function getQuestionBlockById(blocoId) {
     blocoId: data.blocoId || doc.id,
     titulo: data.titulo || data.blocoTitulo || data.tituloTextoApoio || "",
     textoApoio: data.textoApoio || "",
+    fonteTextoApoio: data.fonteTextoApoio || "",
+    imagemApoio: data.imagemApoio || "",
+    fonteImagemApoio: data.fonteImagemApoio || "",
     imagensApoio: data.imagensApoio || data.imagens || [],
     anoEscolar: data.anoEscolar || data.ano_escolar || "",
     ano_escolar: data.ano_escolar || data.anoEscolar || "",
@@ -449,7 +640,20 @@ export async function getQuestionBlockById(blocoId) {
   };
 }
 
-export async function saveQuestionBlock({ blocoId, titulo, textoApoio, imagensApoio, anoEscolar, disciplina, questoes = [], minQuestoes = 1 }, usuario) {
+export async function saveQuestionBlock({
+  blocoId,
+  titulo,
+  textoApoio,
+  fonteTextoApoio = "",
+  imagemApoio = "",
+  fonteImagemApoio = "",
+  imagensApoio,
+  anoEscolar,
+  disciplina,
+  questoes = [],
+  minQuestoes = 1,
+  duplicarApoioNasQuestoes = true
+}, usuario) {
   const id = blocoId || `bloco_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
   if (!sanitizeText(titulo)) {
@@ -478,13 +682,19 @@ export async function saveQuestionBlock({ blocoId, titulo, textoApoio, imagensAp
 
   for (let index = 0; index < questoes.length; index += 1) {
     const item = questoes[index];
+    const itemImages = duplicarApoioNasQuestoes
+      ? (Array.isArray(item.imagensApoio) && item.imagensApoio.length ? item.imagensApoio : imagensApoio)
+      : [];
     const payload = {
       ...item,
       anoEscolar,
       disciplina,
       tituloTextoApoio: titulo,
-      textoApoio,
-      imagensApoio,
+      textoApoio: duplicarApoioNasQuestoes ? textoApoio : "",
+      fonteTextoApoio: duplicarApoioNasQuestoes ? (item.fonteTextoApoio || fonteTextoApoio) : "",
+      imagemApoio: duplicarApoioNasQuestoes ? (item.imagemApoio || imagemApoio) : "",
+      fonteImagemApoio: duplicarApoioNasQuestoes ? (item.fonteImagemApoio || fonteImagemApoio) : "",
+      imagensApoio: itemImages,
       origemCriacao: "bloco_texto",
       blocoId: id,
       blocoTitulo: titulo,
@@ -503,6 +713,9 @@ export async function saveQuestionBlock({ blocoId, titulo, textoApoio, imagensAp
     blocoId: id,
     titulo,
     textoApoio,
+    fonteTextoApoio: sanitizeText(fonteTextoApoio),
+    imagemApoio: sanitizeText(imagemApoio),
+    fonteImagemApoio: sanitizeText(fonteImagemApoio),
     imagensApoio: (imagensApoio || []).filter(Boolean),
     anoEscolar,
     disciplina,

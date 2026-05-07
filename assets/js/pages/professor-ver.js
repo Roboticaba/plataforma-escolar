@@ -36,7 +36,7 @@ function isCorrectAlternative(question, altIndex) {
 function renderAlternativas(question) {
   if (!(question.alternativas || []).length) {
     return `
-      <div class="alternativa" style="font-style:italic;color:#60738a;">
+      <div class="print-alternative" style="font-style:italic;color:#60738a;">
         Resposta escrita${question.respostaEsperada ? `: ${escapeHtml(question.respostaEsperada)}` : ""}
       </div>
     `;
@@ -46,10 +46,12 @@ function renderAlternativas(question) {
     const texto = typeof alt === "string" ? alt : alt?.texto || "";
     const imagem = typeof alt === "object" ? alt?.imagemUrl || alt?.url || "" : "";
     return `
-      <div class="alternativa ${isCorrectAlternative(question, altIndex) ? "correta" : ""}">
+      <div class="print-alternative">
         <strong>${escapeHtml(getAlternativeLabel(altIndex, question.formatoAlternativas))}</strong>
-        ${texto ? escapeHtml(texto) : ""}
+        <div>
+          ${texto ? escapeHtml(texto) : ""}
         ${imagem ? `<div style="margin-top:8px;"><img src="${imagem}" style="max-width:180px; max-height:120px; border-radius:10px; object-fit:contain;"></div>` : ""}
+        </div>
       </div>
     `;
   }).join("");
@@ -67,29 +69,11 @@ function renderSupport(textoApoio, imagensApoio = []) {
 }
 
 function renderQuestionCard(question, number, options = {}) {
-  const origem = question.origem === "banco"
-    ? "Questao individual"
-    : question.origem === "temporaria"
-      ? "Temporaria"
-      : question.origem === "bloco"
-        ? "Questao do bloco"
-        : "Legada";
-
   return `
-    <article class="question-card" style="padding:16px;">
-      <div class="question-card-header">
-        <div>
-          <h3 class="question-card-title">Questao ${number}</h3>
-          <div class="tag-row">
-            <span class="tag tag-primary">${escapeHtml(origem)}</span>
-            <span class="tag tag-neutral">${escapeHtml(getDisciplinaLabel(question.disciplina || provaAtual.disciplina))}</span>
-            <span class="tag tag-neutral">${escapeHtml(getAnoLabel(question.anoEscolar || question.ano_escolar || provaAtual.anoEscolar || provaAtual.ano))}</span>
-            ${question.descritor ? `<span class="tag tag-neutral">${escapeHtml(question.descritor)}</span>` : ""}
-          </div>
-        </div>
-      </div>
-      ${options.hideSupport ? "" : renderSupport(question.textoApoio, question.imagensApoio)}
-      <div class="question-card-title" style="font-size:1rem; line-height:1.6; margin-top:12px;">${escapeHtml(question.enunciado || question.pergunta || "")}</div>
+    <article class="print-question">
+      <div class="print-question-number">Questao ${number}</div>
+      ${options.hideSupport ? "" : `<div class="print-support">${renderSupport(question.textoApoio, question.imagensApoio)}</div>`}
+      <div style="font-size:1rem; line-height:1.7; font-weight:600; margin-top:12px;">${escapeHtml(question.enunciado || question.pergunta || "")}</div>
       ${renderAlternativas(question)}
     </article>
   `;
@@ -105,19 +89,11 @@ function renderBlock(block, startNumber) {
     .join("");
 
   return `
-    <article class="panel" style="padding:18px;">
-      <div class="panel-header">
-        <div>
-          <h3 class="panel-title" style="font-size:1.08rem;">${escapeHtml(block.titulo || "Bloco baseado em texto")}</h3>
-          <div class="tag-row" style="margin-top:8px;">
-            <span class="tag tag-success">Bloco baseado em texto</span>
-            <span class="tag tag-neutral">${block.questoes?.length || 0} questoes</span>
-          </div>
-        </div>
-      </div>
-      ${block.textoApoio ? `<div class="panel-subtitle" style="white-space:pre-wrap;">${escapeHtml(block.textoApoio)}</div>` : ""}
+    <article class="print-block">
+      <div style="font-size:1.05rem; font-weight:800; margin-bottom:10px;">${escapeHtml(block.titulo || "Bloco baseado em texto")}</div>
+      ${block.textoApoio ? `<div class="print-support">${escapeHtml(block.textoApoio)}</div>` : ""}
       ${images ? `<div style="margin-top:10px;">${images}</div>` : ""}
-      <div class="question-list" style="margin-top:14px;">${questions}</div>
+      <div style="margin-top:14px;">${questions}</div>
     </article>
   `;
 }
@@ -129,7 +105,7 @@ function renderQuestions() {
   }
 
   let questionNumber = 1;
-  elements.listaQuestoes.innerHTML = conteudoProva.map(item => {
+  const questoesMarkup = conteudoProva.map(item => {
     if (item.tipo === "bloco") {
       const html = renderBlock(item, questionNumber);
       questionNumber += item.questoes?.length || 0;
@@ -140,6 +116,21 @@ function renderQuestions() {
     questionNumber += 1;
     return html;
   }).join("");
+
+  elements.listaQuestoes.innerHTML = `
+    <section class="print-preview-sheet">
+      <header class="print-preview-header">
+        <div style="font-size:1.3rem; font-weight:800;">${escapeHtml(provaAtual?.titulo || provaAtual?.nome || "Prova")}</div>
+        <div class="print-preview-fields">
+          <div class="print-line"><strong>Aluno(a):</strong> <span style="flex:1;"></span></div>
+          <div class="print-line"><strong>Turma:</strong> <span style="flex:1;"></span></div>
+          <div class="print-line"><strong>Professor(a):</strong> <span style="flex:1;"></span></div>
+          <div class="print-line"><strong>Data:</strong> ___/___/_____</div>
+        </div>
+      </header>
+      ${questoesMarkup}
+    </section>
+  `;
 }
 
 async function loadProva() {

@@ -24,8 +24,12 @@ const state = {
     descritor: "",
     search: ""
   },
-  descritorSugestao: null
+  descritorSugestao: null,
+  pastedSupportImages: [],
+  pastedAlternativeImages: {}
 };
+
+const ACCEPTED_CLIPBOARD_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
 const elements = {
   formProva: document.getElementById("formProva"),
@@ -120,20 +124,43 @@ function updateBankDescritores() {
     .join("");
 }
 
+function getClipboardImageFile(event) {
+  const items = Array.from(event?.clipboardData?.items || []);
+  const imageItem = items.find(item => ACCEPTED_CLIPBOARD_IMAGE_TYPES.has(item.type));
+  return imageItem?.getAsFile() || null;
+}
+
+function makePasteTarget(element, onPaste) {
+  if (!element) return;
+  element.tabIndex = element.tabIndex >= 0 ? element.tabIndex : 0;
+  element.addEventListener("click", event => {
+    if (event.target?.matches?.("input, button, textarea, select, a")) return;
+    element.focus();
+  });
+  element.addEventListener("paste", onPaste);
+}
+
 function renderPreviewFiles(input, target) {
-  target.innerHTML = Array.from(input.files || []).map(file => `
+  const pasted = target === elements.questaoPreviewImagensApoio ? state.pastedSupportImages : [];
+  target.innerHTML = [
+    ...Array.from(input.files || []).map(file => `
     <div class="tag tag-neutral">${escapeHtml(file.name)}</div>
-  `).join("");
+    `),
+    ...pasted.map((url, index) => `
+      <div class="tag tag-success">Imagem colada ${index + 1}</div>
+    `)
+  ].join("");
 }
 
 function buildAlternativasFromForm() {
   const textos = limparAlternativas(elements.alternativasTexto.value);
   elements.alternativasUploads.innerHTML = textos.map((texto, index) => `
-    <div class="question-card" style="padding:14px;">
+    <div class="question-card" style="padding:14px;" data-alt-paste-zone="${index}" tabindex="0">
       <div class="question-card-title">Alternativa ${String.fromCharCode(65 + index)}: ${escapeHtml(texto)}</div>
       <div class="form-field" style="margin-top:10px;">
         <label>Imagem da alternativa (opcional)</label>
         <input type="file" accept="image/*" data-alt-file="${index}">
+        ${state.pastedAlternativeImages[index] ? `<div class="tag tag-success" style="margin-top:8px;">Imagem colada adicionada</div>` : ""}
       </div>
     </div>
   `).join("");
@@ -141,6 +168,10 @@ function buildAlternativasFromForm() {
   elements.respostaCorreta.innerHTML = '<option value="">Selecione</option>' + textos
     .map((texto, index) => `<option value="${index}">${String.fromCharCode(65 + index)} - ${escapeHtml(texto)}</option>`)
     .join("");
+
+  elements.alternativasUploads.querySelectorAll("[data-alt-paste-zone]").forEach(zone => {
+    makePasteTarget(zone, event => uploadAlternativeImageFromClipboard(event, Number(zone.dataset.altPasteZone)));
+  });
 }
 
 async function buildAlternativasComImagens() {
@@ -151,7 +182,7 @@ async function buildAlternativasComImagens() {
   for (let index = 0; index < textos.length; index += 1) {
     const fileInput = fileInputs.find(item => Number(item.dataset.altFile) === index);
     const file = fileInput?.files?.[0] || null;
-    const imagemUrl = file ? await uploadImagemCloudinary(file) : "";
+    const imagemUrl = state.pastedAlternativeImages[index] || (file ? await uploadImagemCloudinary(file) : "");
     alternativas.push({
       texto: textos[index],
       imagemUrl,
@@ -164,7 +195,10 @@ async function buildAlternativasComImagens() {
 
 async function getQuestionFormPayload() {
   const form = new FormData(elements.formQuestao);
-  const imagensApoio = await uploadMultiplasImagensCloudinary(elements.questaoImagensApoio.files);
+  const imagensApoio = [
+    ...state.pastedSupportImages,
+    ...(await uploadMultiplasImagensCloudinary(elements.questaoImagensApoio.files))
+  ];
   const tipo = form.get("tipo");
   const alternativas = tipo === "resposta_escrita" ? [] : await buildAlternativasComImagens();
   const selectedDescritor = form.get("descritor");
@@ -187,6 +221,39 @@ async function getQuestionFormPayload() {
     respostaEsperada: form.get("respostaEsperada"),
     nivelDificuldade: form.get("nivelDificuldade")
   };
+}
+
+async function uploadSupportImageFromClipboard(event) {
+  const file = getClipboardImageFile(event);
+  if (!file) return;
+
+  event.preventDefault();
+
+  try {
+    showFeedback(elements.feedbackQuestao, "success", "Enviando imagem de apoio colada...");
+    const url = await uploadImagemCloudinary(file);
+    state.pastedSupportImages.push(url);
+    renderPreviewFiles(elements.questaoImagensApoio, elements.questaoPreviewImagensApoio);
+    showFeedback(elements.feedbackQuestao, "success", "Imagem de apoio colada adicionada.");
+  } catch (error) {
+    showFeedback(elements.feedbackQuestao, "error", error.message || "Erro ao enviar imagem colada.");
+  }
+}
+
+async function uploadAlternativeImageFromClipboard(event, index) {
+  const file = getClipboardImageFile(event);
+  if (!file) return;
+
+  event.preventDefault();
+
+  try {
+    showFeedback(elements.feedbackQuestao, "success", `Enviando imagem colada para a alternativa ${index + 1}...`);
+    state.pastedAlternativeImages[index] = await uploadImagemCloudinary(file);
+    buildAlternativasFromForm();
+    showFeedback(elements.feedbackQuestao, "success", "Imagem colada adicionada a alternativa.");
+  } catch (error) {
+    showFeedback(elements.feedbackQuestao, "error", error.message || "Erro ao enviar imagem colada para a alternativa.");
+  }
 }
 
 function buildBancoGroups() {
@@ -537,6 +604,8 @@ async function handleCreateQuestion(event) {
     setTimeout(() => {
       closeModal(elements.modalQuestao);
       elements.formQuestao.reset();
+      state.pastedSupportImages = [];
+      state.pastedAlternativeImages = {};
       elements.questaoPreviewImagensApoio.innerHTML = "";
       elements.alternativasUploads.innerHTML = "";
       clearFeedback(elements.feedbackQuestao);
@@ -608,7 +677,13 @@ function bindEvents() {
   populateSelect(elements.questaoDisciplina, DISCIPLINAS, "Selecione");
 
   elements.btnAbrirBanco.addEventListener("click", () => openModal(elements.modalBanco));
-  elements.btnAbrirNovaQuestao.addEventListener("click", () => openModal(elements.modalQuestao));
+  elements.btnAbrirNovaQuestao.addEventListener("click", () => {
+    state.pastedSupportImages = [];
+    state.pastedAlternativeImages = {};
+    openModal(elements.modalQuestao);
+    renderPreviewFiles(elements.questaoImagensApoio, elements.questaoPreviewImagensApoio);
+    buildAlternativasFromForm();
+  });
 
   document.querySelectorAll("[data-close-modal='banco']").forEach(button => {
     button.addEventListener("click", () => closeModal(elements.modalBanco));
@@ -624,6 +699,7 @@ function bindEvents() {
   elements.formProva.addEventListener("submit", handleSaveProva);
   elements.alternativasTexto.addEventListener("input", buildAlternativasFromForm);
   elements.questaoImagensApoio.addEventListener("change", () => renderPreviewFiles(elements.questaoImagensApoio, elements.questaoPreviewImagensApoio));
+  makePasteTarget(elements.questaoImagensApoio.closest(".form-field"), uploadSupportImageFromClipboard);
   elements.btnSugerirDescritorQuestao.addEventListener("click", handleSuggestDescritor);
   elements.questaoDescritor.addEventListener("change", () => {
     if (elements.questaoDescritor.value) {

@@ -22,6 +22,7 @@
 <nav class="tabs">
   <button class="tab active" id="tab-turmas" onclick="mostrarTurmas()">📚 Turmas</button>
   <button class="tab" id="tab-questoes" onclick="mostrarQuestoes()">🧩 Banco de Questões</button>
+  <button class="tab" id="tab-importar" onclick="mostrarImportar()">📥 Importar Questões</button>
   <button class="tab" id="tab-banco" onclick="mostrarBanco()">📋 Banco de Provas</button>
   <button class="tab" id="tab-criar" onclick="mostrarCriar()">➕ Criar Prova</button>
 </nav>
@@ -29,6 +30,7 @@
 <main class="main">
   <iframe id="frame-turmas" class="tab-frame" src="professor-turmas.html"></iframe>
   <iframe id="frame-questoes" class="tab-frame" src="professor-questoes.html" style="display:none;"></iframe>
+  <iframe id="frame-importar" class="tab-frame" src="professor-importar-questoes.html" style="display:none;"></iframe>
   <iframe id="frame-banco" class="tab-frame" src="professor-banco.html" style="display:none;"></iframe>
   <iframe id="frame-criar" class="tab-frame" src="professor-criar.html" style="display:none;"></iframe>
 </main>
@@ -43,10 +45,12 @@ document.getElementById("nomeProfessor").textContent = usuario.nome || "Professo
 function mostrarTurmas() {
   document.getElementById("tab-turmas").classList.add("active");
   document.getElementById("tab-questoes").classList.remove("active");
+  document.getElementById("tab-importar").classList.remove("active");
   document.getElementById("tab-banco").classList.remove("active");
   document.getElementById("tab-criar").classList.remove("active");
   document.getElementById("frame-turmas").style.display = "block";
   document.getElementById("frame-questoes").style.display = "none";
+  document.getElementById("frame-importar").style.display = "none";
   document.getElementById("frame-banco").style.display = "none";
   document.getElementById("frame-criar").style.display = "none";
 }
@@ -54,10 +58,25 @@ function mostrarTurmas() {
 function mostrarQuestoes() {
   document.getElementById("tab-turmas").classList.remove("active");
   document.getElementById("tab-questoes").classList.add("active");
+  document.getElementById("tab-importar").classList.remove("active");
   document.getElementById("tab-banco").classList.remove("active");
   document.getElementById("tab-criar").classList.remove("active");
   document.getElementById("frame-turmas").style.display = "none";
   document.getElementById("frame-questoes").style.display = "block";
+  document.getElementById("frame-importar").style.display = "none";
+  document.getElementById("frame-banco").style.display = "none";
+  document.getElementById("frame-criar").style.display = "none";
+}
+
+function mostrarImportar() {
+  document.getElementById("tab-turmas").classList.remove("active");
+  document.getElementById("tab-questoes").classList.remove("active");
+  document.getElementById("tab-importar").classList.add("active");
+  document.getElementById("tab-banco").classList.remove("active");
+  document.getElementById("tab-criar").classList.remove("active");
+  document.getElementById("frame-turmas").style.display = "none";
+  document.getElementById("frame-questoes").style.display = "none";
+  document.getElementById("frame-importar").style.display = "block";
   document.getElementById("frame-banco").style.display = "none";
   document.getElementById("frame-criar").style.display = "none";
 }
@@ -65,10 +84,12 @@ function mostrarQuestoes() {
 function mostrarBanco() {
   document.getElementById("tab-turmas").classList.remove("active");
   document.getElementById("tab-questoes").classList.remove("active");
+  document.getElementById("tab-importar").classList.remove("active");
   document.getElementById("tab-banco").classList.add("active");
   document.getElementById("tab-criar").classList.remove("active");
   document.getElementById("frame-turmas").style.display = "none";
   document.getElementById("frame-questoes").style.display = "none";
+  document.getElementById("frame-importar").style.display = "none";
   document.getElementById("frame-banco").style.display = "block";
   document.getElementById("frame-criar").style.display = "none";
 }
@@ -76,10 +97,12 @@ function mostrarBanco() {
 function mostrarCriar() {
   document.getElementById("tab-turmas").classList.remove("active");
   document.getElementById("tab-questoes").classList.remove("active");
+  document.getElementById("tab-importar").classList.remove("active");
   document.getElementById("tab-banco").classList.remove("active");
   document.getElementById("tab-criar").classList.add("active");
   document.getElementById("frame-turmas").style.display = "none";
   document.getElementById("frame-questoes").style.display = "none";
+  document.getElementById("frame-importar").style.display = "none";
   document.getElementById("frame-banco").style.display = "none";
   document.getElementById("frame-criar").style.display = "block";
 }
