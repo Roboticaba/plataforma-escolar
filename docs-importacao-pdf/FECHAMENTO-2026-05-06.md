@@ -2,7 +2,7 @@
 
 ## Contexto
 
-Trabalho realizado no projeto `E:\plataforma-escolar-main`, com foco na importacao de questoes por PDF para a tela `professor-importar-questoes.html`.
+Trabalho realizado na pasta local do projeto, com foco na importacao de questoes por PDF para a tela `professor-importar-questoes.html`.
 
 O pedido recorrente foi preservar UI e salvamento, alterando apenas parser, limpeza e heuristicas de extracao do PDF, exceto quando houve um ajuste pontual anterior na ordem visual dos campos no card.
 
@@ -77,7 +77,7 @@ Esse aviso ja existia no fluxo de teste e nao impediu as regressoes.
 - Servidor local estava sendo usado em `http://127.0.0.1:8766/`.
 - Browser estava em `http://127.0.0.1:8766/professor.html`.
 - Ainda ha alteracoes locais nao commitadas e arquivos novos no projeto.
-- A copia/clone local correta fica em `C:\Users\USUARIO\Documents\Plataforma\plataforma-escolar-main-clone`.
+- A copia/clone local de seguranca fica fora do repositorio e nao deve ser versionada.
 - Antes de publicar ou limpar debug, revisar se os logs temporarios e `window.__importedQuestionsDebug` devem permanecer.
 
 ## Proximos passos sugeridos

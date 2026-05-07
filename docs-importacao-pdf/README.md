@@ -254,7 +254,7 @@ node --check assets\js\pages\professor-importar-questoes.js
 
 Estado atual para continuar amanha:
 
-- O projeto usado nesta conversa esta em `E:\plataforma-escolar-main`.
+- O projeto usado nesta conversa esta na pasta local de trabalho.
 - A tela visual de teste esta em `http://127.0.0.1:8765/professor-importar-questoes.html`.
 - O servidor local foi mantido na porta `8765` durante os testes da sessao.
 - O runner tecnico esta em `http://127.0.0.1:8765/tmp-import-tests/test-runner.html`, mas ele mostra JSON/codigo e nao a UI final.

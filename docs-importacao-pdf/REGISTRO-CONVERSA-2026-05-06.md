@@ -4,7 +4,7 @@ Este arquivo registra os pedidos e decisoes principais da conversa para retomada
 
 ## Inicio do contexto
 
-- Projeto informado em `E:\plataforma-escolar-main`.
+- Projeto informado na pasta local de trabalho.
 - Pedido para abrir `docs-importacao-pdf/README.md` e continuar a partir do contexto salvo.
 - Trabalho central: importacao de questoes por PDF, com foco no parser e na limpeza.
 
@@ -116,6 +116,5 @@ Decisao implementada:
 
 - Foi criado `docs-importacao-pdf/FECHAMENTO-2026-05-06.md`.
 - Foi criado este registro de conversa.
-- A copia/clone local correta foi criada em `C:\Users\USUARIO\Documents\Plataforma\plataforma-escolar-main-clone`.
-- Foi criado `tools\sync-local-clone.ps1` para sincronizar o clone local.
-- Foi criada uma automacao horaria chamada `Sincronizar clone local`.
+- A copia/clone local de seguranca foi criada fora do repositorio.
+- A sincronizacao do clone local deve permanecer apenas na maquina local, sem arquivos versionados com caminhos pessoais.
