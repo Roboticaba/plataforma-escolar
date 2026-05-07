@@ -15,6 +15,21 @@ A evolucao sera feita com:
 
 IA real podera ser integrada no futuro se o projeto crescer, monetizar e houver controle de custos.
 
+## Atualizacao - 2026-05-06
+
+A importacao de PDF recebeu uma correcao validada no PDF real para detectar imagens que o PDF.js nao consegue decodificar.
+
+Estado atual:
+
+- deteccao generica de nomes `img_pN_*`;
+- conversao para pagina visual com `N + 1`;
+- `img_p5_1` confirmado como pagina `6`;
+- Q11 confirmada com `imagemProvavel = true` e `imagemApoio = "[imagem aqui]"`;
+- diagnosticos estruturados mantidos em `imageNamesFound`, `pagesWithImageDecodeError` e `imageDecodeErrors`;
+- logs temporarios removidos para producao;
+- regressao sintetica mantida em `tmp-import-tests/pdf-regression-tests.mjs`;
+- detalhes da retomada salvos em `docs-importacao-pdf/RETOMADA-2026-05-06.md`.
+
 ## Objetivo
 
 Permitir que professores importem materiais prontos sem cadastrar questao por questao manualmente.

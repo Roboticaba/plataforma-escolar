@@ -637,13 +637,16 @@ export async function saveQuestionBlock({ blocoId, titulo, textoApoio, imagensAp
 
   for (let index = 0; index < questoes.length; index += 1) {
     const item = questoes[index];
+    const itemImages = Array.isArray(item.imagensApoio) && item.imagensApoio.length
+      ? item.imagensApoio
+      : imagensApoio;
     const payload = {
       ...item,
       anoEscolar,
       disciplina,
       tituloTextoApoio: titulo,
       textoApoio,
-      imagensApoio,
+      imagensApoio: itemImages,
       origemCriacao: "bloco_texto",
       blocoId: id,
       blocoTitulo: titulo,
